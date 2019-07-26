@@ -74,6 +74,8 @@ def parse_arguments():
     parser.add_argument("--sample_iterations", type=int, default=1,
                         help="The number of sampling iterations to perform. Default = 1")
     parser.add_argument("--degrees", action="store_true", help="Save vertex degrees and exit.")
+    parser.add_argument("-a", "--batch_size", type=int, default=1,
+                        help="The batch size to use.")
     args = parser.parse_args()
     return args
 # End of parse_arguments()
@@ -102,7 +104,7 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace) -> Tuple[
             print("\nMerging down blocks from {} to {}".format(partition.num_blocks,
                                                                partition.num_blocks - partition.num_blocks_to_merge))
         
-        partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
+        partition = merge_blocks(partition, graph.out_neighbors, evaluation, args)
 
         t_nodal_update_start = timeit.default_timer()
 
