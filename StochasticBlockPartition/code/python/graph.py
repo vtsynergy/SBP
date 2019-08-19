@@ -78,8 +78,12 @@ class Graph():
                 graph.update(_load_graph(input_filename, load_true_partition=False, part_num=part, graph=graph))
         else:
             graph = _load_graph(input_filename, load_true_partition=True)
-            if args.degrees:
-                _save_degree_distribution(args, graph.out_neighbors, graph.in_neighbors)
+
+        if args.verbose:
+            print('Number of nodes: {}'.format(graph.num_nodes))
+            print('Number of edges: {}'.format(graph.num_edges))
+        if args.degrees:
+            _save_degree_distribution(args, graph.out_neighbors, graph.in_neighbors)
         return graph
     # End of load()
 

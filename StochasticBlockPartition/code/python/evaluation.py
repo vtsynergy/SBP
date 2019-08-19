@@ -25,8 +25,12 @@ class Evaluation(object):
         'num vertices',
         'num edges',
         'blocks retained (%)',
-        'difference in within to between edge ratios',
+        'within to between edge ratio',
         'difference from ideal sample',
+        'expansion quality',
+        'subgraph clustering coefficient',
+        'full graph clustering coefficient',
+        'subgraph within to between edge ratio',
         'subgraph num blocks in algorithm partition',
         'subgraph num blocks in truth partition',
         'subgraph accuracy',
@@ -109,8 +113,12 @@ class Evaluation(object):
         self.num_edges = graph.num_edges
         # Sampling evaluation
         self.blocks_retained = 0.0
-        self.edge_ratio_diff = 0.0
+        self.graph_edge_ratio = 0.0
         self.difference_from_ideal_sample = 0.0
+        self.expansion_quality = 0.0
+        self.subgraph_clustering_coefficient = 0.0
+        self.full_graph_clustering_coefficient = 0.0
+        self.subgraph_edge_ratio = 0.0
         self.subgraph_num_blocks_algorithm = 0
         self.subgraph_num_blocks_truth = 0
         self.subgraph_accuracy = 0.0
@@ -173,8 +181,23 @@ class Evaluation(object):
 
 
     def evaluate_subgraph_sampling(self, full_graph: Graph, subgraph: Graph, full_partition: 'partition.Partition',
-        subgraph_partition: 'partition.Partition', mapping: Dict[int, int]):
+        subgraph_partition: 'partition.Partition', block_mapping: Dict[int, int], vertex_mapping: Dict[int, int]):
         """Evaluates the goodness of the samples returned by the subgraph.
+
+        Parameters
+        ----------
+        full_graph : Graph
+            the full, unsampled Graph object
+        subgraph : Graph
+            the sampled subgraph
+        full_partition : Partition
+            the partitioning results on the full graph
+        subgraph_partition : Partition
+            the partitioning results on the sampled subgraph
+        block_mapping : Dict[int, int]
+            the mapping of blocks from the full graph to the subgraph
+        vertex_mapping : Dict[int, int]
+            the mapping of vertices from the full graph to the subgraph
         """
         #####
         # % of communities retained
@@ -190,12 +213,11 @@ class Evaluation(object):
         true_subgraph_partition = subgraph_partition.clone_with_true_block_membership(subgraph.out_neighbors,
                                                                                       subgraph.true_block_assignment)
         subgraph_blockmatrix = true_subgraph_partition.interblock_edge_count
-        subgraph_edge_ratio = subgraph_blockmatrix.trace() / subgraph_blockmatrix.sum()
+        self.subgraph_edge_ratio = subgraph_blockmatrix.trace() / subgraph_blockmatrix.sum()
         true_full_partition = full_partition.clone_with_true_block_membership(full_graph.out_neighbors,
                                                                               full_graph.true_block_assignment)
         full_blockmatrix = true_full_partition.interblock_edge_count
-        graph_edge_ratio = full_blockmatrix.trace() / full_blockmatrix.sum()
-        self.edge_ratio_diff = graph_edge_ratio / subgraph_edge_ratio
+        self.graph_edge_ratio = full_blockmatrix.trace() / full_blockmatrix.sum()
 
         #####
         # Normalized difference from ideal-block membership
@@ -205,12 +227,33 @@ class Evaluation(object):
             full_graph_membership_nums[block_membership] += 1
         subgraph_membership_nums = np.zeros(full_graph_num_blocks)
         # invert dict to map subgraph block id to full graph block id
-        true_block_mapping = dict([(v, k) for k, v in mapping.items()])
+        true_block_mapping = dict([(v, k) for k, v in block_mapping.items()])
         for block_membership in subgraph.true_block_assignment:
             subgraph_membership_nums[true_block_mapping[block_membership]] += 1
         ideal_block_membership_nums = full_graph_membership_nums * (subgraph.num_nodes / full_graph.num_nodes)
         difference_from_ideal_block_membership_nums = np.abs(ideal_block_membership_nums - subgraph_membership_nums)
         self.difference_from_ideal_sample = np.sum(difference_from_ideal_block_membership_nums / subgraph.num_nodes)
+
+        ######
+        # Expansion quality (http://portal.acm.org/citation.cfm?doid=1772690.1772762)
+        ######
+        # Expansion factor = Neighbors of sample / size of sample
+        # Maximum expansion factor = (size of graph - size of sample) / size of sample
+        # Expansion quality = Neighbors of sample / (size of graph - size of sample)
+        # Expansion quality = 1 means sample is at most 1 edge away from entire graph
+        subgraph_vertices = set(vertex_mapping.keys())
+        neighbors = set()
+        for vertex in subgraph_vertices:
+            for neighbor in full_graph.out_neighbors[vertex]:
+                neighbors.add(neighbor[0])
+        neighbors = neighbors - subgraph_vertices
+        self.expansion_quality = len(neighbors) / (full_graph.num_nodes - subgraph.num_nodes)
+
+        ######
+        # Clustering coefficient
+        ######
+        self.subgraph_clustering_coefficient = self.clustering_coefficient(subgraph)
+        self.full_graph_clustering_coefficient = self.clustering_coefficient(full_graph)
     # End of evaluate_subgraph_sampling()
 
     def update_timings(self, block_merge_start_t: float, node_update_start_t: float, prepare_next_start_t: float,
@@ -251,6 +294,33 @@ class Evaluation(object):
         self.total_partition_time = runtime
     # End of total_runtime()
 
+    def clustering_coefficient(self, graph: Graph) -> float:
+        """Calculates the clustering coefficient of a given graph.
+
+        Clustering coefficient = number of closed triangles / total possible number of triangles.
+
+        Current version also counts self-connections as triangles as well.
+
+            Parameters
+            ---------
+            graph : Graph
+                the graph whose clustering coefficient is of interest
+            
+            Returns
+            -------
+            clustering_coefficient : float
+                the clustering coefficient of said graph
+        """
+        n_triangles_sample = 0
+        for vertex in range(graph.num_nodes):
+            for neighbor in graph.out_neighbors[vertex]:
+                for neighbor2 in graph.out_neighbors[vertex]:
+                    # TODO: If not counting self-links, add check for that here
+                    if neighbor2[0] in graph.out_neighbors[neighbor[0]]:
+                        n_triangles_sample += 1
+        return n_triangles_sample / (graph.num_nodes * (graph.num_nodes - 1))
+    # End of clustering_coefficient()
+
     def save(self):
         """Saves the evaluation to a CSV file. Creates a new CSV file one the path of csv_file doesn't exist. Appends
         results to the CSV file if it does.
@@ -272,8 +342,12 @@ class Evaluation(object):
                 self.num_nodes,
                 self.num_edges,
                 self.blocks_retained,
-                self.edge_ratio_diff,
+                self.graph_edge_ratio,
                 self.difference_from_ideal_sample,
+                self.expansion_quality,
+                self.subgraph_clustering_coefficient,
+                self.full_graph_clustering_coefficient,
+                self.subgraph_edge_ratio,
                 self.subgraph_num_blocks_algorithm,
                 self.subgraph_num_blocks_truth,
                 self.subgraph_accuracy,
