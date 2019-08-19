@@ -269,12 +269,10 @@ class Sample():
                 if not (index_flag[_neighbor] or neighbors_flag[_neighbor]): new_neighbors += 1
             contribution[neighbor] += new_neighbors
         while len(index_set) < sample_num:
-            if len(neighbors) == 0:
-                vertex = np.random.randint(num_vertices)
-                if index_flag[vertex]:
-                    continue
+            if len(neighbors) == 0 or max(contribution) == 0:
+                vertex = np.random.choice(list(set(range(num_vertices)) - set(index_set)))
                 index_set.append(vertex)
-                for neighbor in old_out_neighbors[start][:,0]:
+                for neighbor in old_out_neighbors[vertex][:,0]:
                     if not neighbors_flag[neighbor]:
                         Sample._add_neighbor(neighbor, contribution, index_flag, neighbors_flag,
                                              old_out_neighbors[neighbor][:,0], old_in_neighbors[neighbor][:,0],
