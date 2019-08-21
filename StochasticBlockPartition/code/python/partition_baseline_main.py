@@ -69,7 +69,7 @@ def parse_arguments():
                         help="The percent of total nodes to use as sample. Default = 100 (no sampling)")
     parser.add_argument("-m", "--sample_type", type=str, default="none", 
                         choices=["uniform_random", "random_walk", "random_jump", "degree_weighted",
-                                 "random_node_neighbor", "forest_fire", "none"],
+                                 "random_node_neighbor", "forest_fire", "expansion_snowball", "none"],
                         help="""Sampling algorithm to use. Default = none""")
     parser.add_argument("--sample_iterations", type=int, default=1,
                         help="The number of sampling iterations to perform. Default = 1")
@@ -88,6 +88,7 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace) -> Tuple[
     evaluation = Evaluation(args, graph)
 
     partition = Partition(graph.num_nodes, graph.out_neighbors, args)
+    # print(partition.interblock_edge_count._matrix)
 
     # initialize items before iterations to find the partition with the optimal number of blocks
     partition_triplet = PartitionTriplet()
