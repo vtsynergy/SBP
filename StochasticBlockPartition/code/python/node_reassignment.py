@@ -45,6 +45,7 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         partition : Partition
                 the updated partitioning results
     """
+    reassign_nodes_batches(partition, graph, partition_triplet, evaluation, args)
     # nodal partition updates parameters
     # delta_entropy_threshold1 = 5e-4  # stop iterating when the change in entropy falls below this fraction of the overall entropy
                                     # lowering this threshold results in more nodal update iterations and likely better performance, but longer runtime
@@ -378,3 +379,44 @@ def fine_tune_membership(partition: Partition, graph: Graph, evaluation: Evaluat
 
     return partition
 # End of reassign_nodes()
+
+
+def reassign_nodes_batches(partition: Partition, graph: Graph, partition_triplet: PartitionTriplet, evaluation: Evaluation,
+    args: Namespace) -> Partition:
+    """Reassigns nodes to different blocks based on Bayesian statistics.
+
+        Parameters
+        ---------
+        partition : Partition
+                the current partitioning results
+        graph : Graph
+                the loaded Graph object
+        partition_triplet : PartitionTriplet
+                the triplet of partitions with the lowest overall entropy scores so far
+        evaluation : Evaluation
+                stores the evaluation metrics
+        args : Namespace
+                the command-line arguments
+
+        Returns
+        -------
+        partition : Partition
+                the updated partitioning results
+    """
+    # TODO - break this down into multiple batches
+    adjacency_matrix = Partition(graph.num_nodes, graph.out_neighbors, args).interblock_edge_count
+    neighbor_matrix = adjacency_matrix + adjacency_matrix.T
+    vertex_degrees = neighbor_matrix.sum(axis=1)
+    probabilities = neighbor_matrix / vertex_degrees[:, None]  # row divide to get selection probabilities
+    selected = np.asarray([np.random.multinomial(1, row) for row in probabilities])
+    selected_blocks = np.matmul(selected, np.reshape(partition.block_assignment, (graph.num_nodes, 1)))
+    p_uniform_random_proposal = partition.num_blocks / (partition.block_degrees[selected_blocks] + partition.num_blocks).ravel()
+    p_block_transition = (partition.interblock_edge_count + partition.interblock_edge_count.T) / partition.block_degrees[:, None]
+    p_block_proposal = p_block_transition[selected_blocks].reshape(graph.num_nodes, partition.num_blocks)
+    uniform_random_proposals = np.random.randint(0, high=partition.num_blocks, size=graph.num_nodes)
+    neighborhood_proposals = np.asarray([np.argmax(np.random.multinomial(1, row)) for row in p_block_proposal])
+    x = np.random.uniform(0.0, 1.0, size=graph.num_nodes)
+    proposal_selector = x <= p_uniform_random_proposal
+    proposals = (uniform_random_proposals * proposal_selector) + (neighborhood_proposals * (1 - proposal_selector))
+    exit()
+# End of reassign_nodes_batches()
