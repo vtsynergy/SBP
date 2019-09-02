@@ -532,7 +532,7 @@ class DictMatrix(SparseMatrix):
         return result
         # return list(rowdict.keys()), list(rowdict.values())
     # End of getrow()
-    
+
     def getcol(self, col: int):  #  -> Tuple[List[int], List[int]]:
         result = np.zeros(self.nrows, dtype=int)
         for row in range(self.nrows):

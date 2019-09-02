@@ -17,8 +17,8 @@ from evaluation import Evaluation
 from block_merge_timings import BlockMergeTimings
 
 
-def merge_blocks(partition: Partition, # num_agg_proposals_per_block: int, use_sparse_matrix: bool,
-    out_neighbors: np.array, evaluation: Evaluation, args: 'argparse.Namespace') -> Partition:
+def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_sparse_matrix: bool,
+    out_neighbors: np.array, evaluation: Evaluation) -> Partition:
     """The block merge portion of the algorithm.
 
         Parameters:
@@ -33,8 +33,6 @@ def merge_blocks(partition: Partition, # num_agg_proposals_per_block: int, use_s
                 the matrix representing neighboring blocks
         evaluation : Evaluation
                 stores the evaluation metrics
-        args : arparse.Namespace
-                the command-line arguments passed in by the user
 
         Returns:
         -------
@@ -49,28 +47,15 @@ def merge_blocks(partition: Partition, # num_agg_proposals_per_block: int, use_s
     block_partition = range(partition.num_blocks)
     block_merge_timings.t_initialization()
 
-    for batch_index in np.arange(0, partition.num_blocks, args.batch_size):  # evaluate agglomerative updates for each block
-        current_blocks = np.arange(batch_index, min(args.batch_size, partition.num_blocks-batch_index))
-        proposed_blocks = np.zeros((args.batch_size, args.blockProposals))
-        delta_entropy_per_proposal = np.zeros_like(proposed_blocks)
-        for index in range(args.blockProposals):
-            proposals, delta_entropies = propose_merge(current_blocks, partition, args.sparse, block_partition,
-                                                       block_merge_timings)
+    for current_block in range(partition.num_blocks):  # evaluate agglomerative updates for each block
+        for _ in range(num_agg_proposals_per_block):
+            proposal, delta_entropy = propose_merge(current_block, partition, use_sparse_matrix, block_partition,
+                                                    block_merge_timings)
             block_merge_timings.t_acceptance()
-            proposed_blocks[:,index] = proposals
-            delta_entropy_per_proposal[:,index] = delta_entropies
+            if delta_entropy < delta_entropy_for_each_block[current_block]:  # a better block candidate was found
+                best_merge_for_each_block[current_block] = proposal
+                delta_entropy_for_each_block[current_block] = delta_entropy
             block_merge_timings.t_acceptance()
-        print(proposed_blocks)
-        print(delta_entropy_per_proposal)
-        block_merge_timings.t_acceptance()
-        best_merge_indexes = delta_entropy_per_proposal.argmax(axis=1)
-        print(best_merge_indexes)
-        best_merge_for_each_block = proposed_blocks[np.arange(args.batch_size),best_merge_indexes]
-        delta_entropy_for_each_block = delta_entropy_per_proposal[np.arange(args.batch_size),best_merge_indexes]
-        print(best_merge_for_each_block)
-        print(delta_entropy_for_each_block)
-        exit()
-        block_merge_timings.t_acceptance()
 
     # carry out the best merges
     block_merge_timings.t_merging()
@@ -79,7 +64,7 @@ def merge_blocks(partition: Partition, # num_agg_proposals_per_block: int, use_s
 
     # re-initialize edge counts and block degrees
     block_merge_timings.t_re_counting_edges()
-    partition.initialize_edge_counts(out_neighbors, args.sparse)
+    partition.initialize_edge_counts(out_neighbors, use_sparse_matrix)
     block_merge_timings.t_re_counting_edges()
 
     return partition
@@ -113,9 +98,7 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
     # populate edges to neighboring blocks
     block_merge_timings.t_indexing()
     out_blocks = outgoing_edges(partition.interblock_edge_count, current_block, use_sparse_matrix)
-    print("OUT", out_blocks)
     in_blocks = incoming_edges(partition.interblock_edge_count, current_block, use_sparse_matrix)
-    print("IN", in_blocks)
     block_merge_timings.t_indexing()
 
     # propose a new block to merge with
@@ -180,22 +163,8 @@ def outgoing_edges(adjacency_matrix: np.array, block: int, use_sparse_matrix: bo
         out_blocks_nonzero = out_blocks.nonzero()[0]  # indices
         out_blocks = np.vstack((out_blocks_nonzero, out_blocks[out_blocks_nonzero])).T  # np.transpose([out_blocks_nonzero[0]]), np.transpose([out_blocks[out_blocks_nonzero]])))
     else:
-        out_blocks = adjacency_matrix[block]
-        # print("===============INDEXING================")
-        # print(out_blocks)
-        out_blocks = [np.nonzero(row) for row in out_blocks] # .nonzero()
-        max_len_out_blocks = max([len(row[0]) for row in out_blocks])
-        out_blocks_padded = np.zeros((len(block), max_len_out_blocks))
-        for index, row in enumerate(out_blocks):
-            out_blocks_padded[index,0:len(row[0])] = row[0]
-        # print("===============NONZERO================")
-        # print(out_blocks)
-        out_blocks = [np.hstack((np.array(out_block).T, adjacency_matrix[b, out_block].T))
-                      for b, out_block in zip(block, out_blocks)]
-        # out_blocks = np.hstack((np.array(out_blocks).transpose(), adjacency_matrix[block, out_blocks].transpose()))
-        # print("===============STACKED================")
-        # print(out_blocks)
-        # exit()
+        out_blocks = adjacency_matrix[block, :].nonzero()
+        out_blocks = np.hstack((np.array(out_blocks).transpose(), adjacency_matrix[block, out_blocks].transpose()))
     return out_blocks
 # End of outgoing_edges()
 
@@ -234,11 +203,7 @@ def incoming_edges(adjacency_matrix: np.array, block: int, use_sparse_matrix: bo
         # in_blocks = np.hstack(
             # (in_blocks.reshape([len(in_blocks), 1]), adjacency_matrix[in_blocks, block].toarray()))
     else:
-        in_blocks = adjacency_matrix[:, block]  # .nonzero()
-        print(in_blocks)
-        in_blocks = [np.nonzero(row) for row in in_blocks]
-        in_blocks = [np.hstack((np.array(in_block).T, adjacency_matrix[in_block, b].T))
-                     for b, in_block in zip(block, in_blocks)]
-        # in_blocks = np.hstack((np.array(in_blocks).transpose(), adjacency_matrix[in_blocks, block].transpose()))
+        in_blocks = adjacency_matrix[:, block].nonzero()
+        in_blocks = np.hstack((np.array(in_blocks).transpose(), adjacency_matrix[in_blocks, block].transpose()))
     return in_blocks
 # End of incoming_edges()

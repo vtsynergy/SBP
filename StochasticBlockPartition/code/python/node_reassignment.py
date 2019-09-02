@@ -385,6 +385,8 @@ def reassign_nodes_batches(partition: Partition, graph: Graph, partition_triplet
     args: Namespace) -> Partition:
     """Reassigns nodes to different blocks based on Bayesian statistics.
 
+        @see appendix B in https://arxiv.org/pdf/1708.07883.pdf
+
         Parameters
         ---------
         partition : Partition
@@ -404,19 +406,29 @@ def reassign_nodes_batches(partition: Partition, graph: Graph, partition_triplet
                 the updated partitioning results
     """
     # TODO - break this down into multiple batches
-    adjacency_matrix = Partition(graph.num_nodes, graph.out_neighbors, args).interblock_edge_count
-    neighbor_matrix = adjacency_matrix + adjacency_matrix.T
-    vertex_degrees = neighbor_matrix.sum(axis=1)
-    probabilities = neighbor_matrix / vertex_degrees[:, None]  # row divide to get selection probabilities
-    selected = np.asarray([np.random.multinomial(1, row) for row in probabilities])
-    selected_blocks = np.matmul(selected, np.reshape(partition.block_assignment, (graph.num_nodes, 1)))
-    p_uniform_random_proposal = partition.num_blocks / (partition.block_degrees[selected_blocks] + partition.num_blocks).ravel()
-    p_block_transition = (partition.interblock_edge_count + partition.interblock_edge_count.T) / partition.block_degrees[:, None]
-    p_block_proposal = p_block_transition[selected_blocks].reshape(graph.num_nodes, partition.num_blocks)
-    uniform_random_proposals = np.random.randint(0, high=partition.num_blocks, size=graph.num_nodes)
-    neighborhood_proposals = np.asarray([np.argmax(np.random.multinomial(1, row)) for row in p_block_proposal])
-    x = np.random.uniform(0.0, 1.0, size=graph.num_nodes)
-    proposal_selector = x <= p_uniform_random_proposal
-    proposals = (uniform_random_proposals * proposal_selector) + (neighborhood_proposals * (1 - proposal_selector))
+    # Propose new block membership for each node
+    adjacency_matrix = Partition(graph.num_nodes, graph.out_neighbors, args).interblock_edge_count  # A = N X N
+    neighbor_matrix = adjacency_matrix + adjacency_matrix.T  # A + A^T = N X N
+    vertex_degrees = neighbor_matrix.sum(axis=1)  # k = N
+    block_assignment = np.eye(partition.num_blocks)[partition.block_assignment]  # Gamma^- N X 1
+    # block_assignment = np.reshape(partition.block_assignment, (graph.num_nodes, 1))  # Gamma^- N X 1
+    probabilities = neighbor_matrix / vertex_degrees[:, None]  # row divide to get selection probabilities P_Nbr = N X N
+    selected = np.asarray([np.random.multinomial(1, row) for row in probabilities])  # Nbr = N X N
+    selected_blocks = np.matmul(selected, block_assignment)  # (Nbr)(Gamma^-) = N X 1
+    p_uniform_random_proposal = partition.num_blocks / (partition.block_degrees[selected_blocks] + partition.num_blocks).ravel()  # P_UnifProp = B
+    p_block_transition = (partition.interblock_edge_count + partition.interblock_edge_count.T) / partition.block_degrees[:, None]  # P_BlkTran = B X B
+    p_block_proposal = p_block_transition[selected_blocks].reshape(graph.num_nodes, partition.num_blocks)  # P_BlkProp = N X B
+    uniform_random_proposals = np.eye(partition.num_blocks)[np.random.randint(0, high=partition.num_blocks, size=graph.num_nodes)]  # Gamma_Unif = N X B
+    print(uniform_random_proposals.shape)
+    neighborhood_proposals = np.asarray([np.random.multinomial(1, row) for row in p_block_proposal])  # Gamma_Nbr = N X B
+    x = np.random.uniform(0.0, 1.0, size=graph.num_nodes)  # x = N
+    proposal_selector = x <= p_uniform_random_proposal  # I_UnifProp = N
+    proposals = (uniform_random_proposals * proposal_selector) + (neighborhood_proposals * (1 - proposal_selector))  # Gamma^P = N
+    # Count neighbors for every vertex
+    delta_M_row = np.matmul(adjacency_matrix, block_assignment)  # N X B
+    delta_M_col = np.matmul(adjacency_matrix.T, block_assignment)  # N X B
+    print(delta_M_row.shape)
+    print(delta_M_col.shape)
+    # Compute edge count updates
     exit()
 # End of reassign_nodes_batches()
