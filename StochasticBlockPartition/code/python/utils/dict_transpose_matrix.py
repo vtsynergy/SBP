@@ -634,6 +634,17 @@ class DictTransposeMatrix(SparseMatrix):
             mat_copy._matrix_T[index] = self._matrix_T[index].copy()
         return mat_copy
     # End of copy()
+
+    def trace(self) -> float:
+        """Returns the sum of the matrix across the main diagonal.
+        """
+        result = 0.0
+        for i in range(min(self.ncols, self.nrows)):
+            row = self._matrix[i]
+            if i in row:
+                result += row[i]
+        return result
+    # End of trace()
 # End of DictMatrix()
 
 if __name__ == "__main__":
