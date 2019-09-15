@@ -48,6 +48,7 @@ class Evaluation(object):
         'num block proposals',
         'beta',
         'sample size (%)',
+        'sampling iterations',
         'sampling algorithm',
         'sparse',
         'delta entropy threshold',
@@ -137,6 +138,7 @@ class Evaluation(object):
         self.num_block_proposals = args.blockProposals
         self.beta = args.beta
         self.sample_size = args.sample_size
+        self.sampling_iterations = args.sample_iterations
         self.sampling_algorithm = args.sample_type
         self.sparse = args.sparse
         self.delta_entropy_threshold = args.threshold
@@ -365,6 +367,7 @@ class Evaluation(object):
                 self.num_block_proposals,
                 self.beta,
                 self.sample_size,
+                self.sampling_iterations,
                 self.sampling_algorithm,
                 self.sparse,
                 self.delta_entropy_threshold,
