@@ -13,9 +13,6 @@
 from typing import Tuple, Union
 import timeit
 
-import warnings
-warnings.filterwarnings("error")
-
 import numpy as np
 from scipy import sparse as sparse
 use_graph_tool_options = False # for visualiziing graph partitions (optional)
