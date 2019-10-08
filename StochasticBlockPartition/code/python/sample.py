@@ -6,70 +6,70 @@ from copy import copy
 
 import numpy as np
 
+from samplestate import SampleState, UniformRandomSampleState
+
 
 class Sample():
     """Stores the variables needed to create a subgraph.
     """
 
-    # def __init__(self, sample_num: int, new_out_neighbors: List[np.ndarray], new_in_neighbors: List[np.ndarray],
-    #     num_edges: int, true_block_assignment: np.ndarray, mapping: Dict[int,int],
-    #     true_blocks_mapping: Dict[int,int]) -> None:
-    def __init__(self, sample_idx: np.ndarray, old_out_neighbors: List[np.ndarray], old_in_neighbors: List[np.ndarray],
+    def __init__(self, state: SampleState, old_out_neighbors: List[np.ndarray], old_in_neighbors: List[np.ndarray],
         old_true_block_assignment: np.ndarray) -> None:
         """Creates a new Sample object.
         """
-        self.vertex_mapping = dict([(v, k) for k,v in enumerate(sample_idx)])
+        self.state = state
+        self.vertex_mapping = dict([(v, k) for k,v in enumerate(state.sample_idx)])
         self.out_neighbors = list()  # type: List[np.ndarray]
         self.in_neighbors = list()  # type: List[np.ndarray]
         self.num_edges = 0
-        for index in sample_idx:
+        for index in state.sample_idx:
             out_neighbors = old_out_neighbors[index]
-            out_mask = np.isin(out_neighbors[:,0], sample_idx, assume_unique=False)
+            out_mask = np.isin(out_neighbors[:,0], state.sample_idx, assume_unique=False)
             sampled_out_neighbors = out_neighbors[out_mask]
             for out_neighbor in sampled_out_neighbors:
                 out_neighbor[0] = self.vertex_mapping[out_neighbor[0]]
             self.out_neighbors.append(sampled_out_neighbors)
             in_neighbors = old_in_neighbors[index]
-            in_mask = np.isin(in_neighbors[:,0], sample_idx, assume_unique=False)
+            in_mask = np.isin(in_neighbors[:,0], state.sample_idx, assume_unique=False)
             sampled_in_neighbors = in_neighbors[in_mask]
             for in_neighbor in sampled_in_neighbors:
                 in_neighbor[0] = self.vertex_mapping[in_neighbor[0]]
             self.in_neighbors.append(sampled_in_neighbors)
             self.num_edges += np.sum(out_mask) + np.sum(in_mask)
-        true_block_assignment = old_true_block_assignment[sample_idx]
+        true_block_assignment = old_true_block_assignment[state.sample_idx]
         true_blocks = list(set(true_block_assignment))
         self.true_blocks_mapping = dict([(v, k) for k,v in enumerate(true_blocks)])
         self.true_block_assignment = np.asarray([self.true_blocks_mapping[b] for b in true_block_assignment])
-        self.sample_num = len(sample_idx)
+        self.sample_num = len(state.sample_idx)
     # End of __init__()
 
     @staticmethod
     def create_sample(num_vertices: int, old_out_neighbors: List[np.ndarray],
         old_in_neighbors: List[np.ndarray], old_true_block_assignment: np.ndarray,
-        args: 'argparse.Namespace') -> 'Sample':
+        args: 'argparse.Namespace', prev_state: SampleState = SampleState()) -> 'Sample':
         """Performs sampling according to the sample type in args.
         """
         if args.sample_type == "uniform_random":
             return Sample.uniform_random_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                old_true_block_assignment, args)
+                                                old_true_block_assignment, prev_state, args)
         elif args.sample_type == "random_walk":
             return Sample.random_walk_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                             old_true_block_assignment, args)
+                                             old_true_block_assignment, prev_state, args)
         elif args.sample_type == "random_jump":
             return Sample.random_jump_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                old_true_block_assignment, args)
+                                                old_true_block_assignment, prev_state, args)
         elif args.sample_type == "degree_weighted":
             return Sample.degree_weighted_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                 old_true_block_assignment, args)
+                                                 old_true_block_assignment, prev_state, args)
         elif args.sample_type == "random_node_neighbor":
             return Sample.random_node_neighbor_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                      old_true_block_assignment, args)
+                                                      old_true_block_assignment, prev_state, args)
         elif args.sample_type == "forest_fire":
             return Sample.forest_fire_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                             old_true_block_assignment, args)
+                                             old_true_block_assignment, prev_state, args)
         elif args.sample_type == "expansion_snowball":
             return Sample.expansion_snowball_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                    old_true_block_assignment, args)
+                                                    old_true_block_assignment, prev_state, args)
         else:
             raise NotImplementedError("Sample type: {} is not implemented!".format(args.sample_type))
     # End of create_sample()
@@ -77,13 +77,18 @@ class Sample():
     @staticmethod
     def uniform_random_sample(num_vertices: int, old_out_neighbors: List[np.ndarray],
         old_in_neighbors: List[np.ndarray], old_true_block_assignment: np.ndarray,
-        args: 'argparse.Namespace') -> 'Sample':
+        prev_state: UniformRandomSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Uniform random sampling.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
-        sample_idx = np.random.choice(num_vertices, sample_num, replace=False)
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+        choices = np.setdiff1d(np.asarray(range(num_vertices)), state.sample_idx)
+        state.sample_idx = np.concatenate(
+            (state.sample_idx, np.random.choice(choices, sample_num, replace=False)),
+            axis=None
+        )
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of uniform_random_sampling()
 
     @staticmethod
@@ -300,14 +305,6 @@ class Sample():
         neighbor_flag[vertex] = True
         if contribution[vertex] == 0:
             Sample._calculate_contribution(vertex, contribution, index_flag, neighbor_flag, out_neighbors, in_neighbors)
-        # # Compute contribution of this vertex
-        # for out_neighbor in out_neighbors:
-        #     if not (index_flag[out_neighbor] or neighbor_flag[out_neighbor]):
-        #         contribution[vertex] += 1
-        # # Decrease contribution of all neighbors with out links to this vertex
-        # for in_neighbor in in_neighbors:
-        #     if contribution[in_neighbor] > 0:
-        #         contribution[in_neighbor] -= 1
         return contribution, neighbor_flag
     # End of _add_neighbor()
 
