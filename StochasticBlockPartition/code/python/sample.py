@@ -106,8 +106,6 @@ class Sample():
         state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: RandomWalkSampleState
         sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
-        # sampled_marker = [False] * num_vertices
-        # index_set = list()  # type: List[int]
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
         vertex = start
@@ -142,8 +140,6 @@ class Sample():
         state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: RandomJumpSampleState
         sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
-        # sampled_marker = [False] * num_vertices
-        # index_set = list()  # type: List[int]
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
         vertex = start
@@ -200,8 +196,6 @@ class Sample():
         print("Sampling {} vertices from graph".format(sample_num))
         choices = np.setdiff1d(np.asarray(range(num_vertices)), state.sample_idx)
         random_samples = np.random.choice(choices, sample_num, replace=False)
-        # sampled_marker = [False] * num_vertices
-        # index_set = list()  # type: List[int]
         for vertex in random_samples:
             if not state.sampled_marker[vertex]:
                 state.index_set.append(vertex)
@@ -225,11 +219,6 @@ class Sample():
         sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         original_size = len(state.index_set)
         print("Sampling {} vertices from graph".format(sample_num))
-        # sampled_marker = [False] * num_vertices
-        # burnt_marker = [False] * num_vertices
-        # current_fire_front = [np.random.randint(num_vertices)]
-        # next_fire_front = list()  # type: List[int]
-        # index_set = list()  # type: List[int]
         while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
             for vertex in state.current_fire_front:
                 # add vertex to index set
@@ -277,15 +266,9 @@ class Sample():
         state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: ExpansionSnowballSampleState
         sample_num = int(num_vertices * (args.sample_size / 100))
         print("Sampling {} vertices from graph".format(sample_num))
-        # start = np.random.randint(num_vertices)
-        # index_flag = [False] * num_vertices
-        # index_flag[start] = True
-        # index_set = [start]
         if not state.neighbors:
             state.neighbors = list(old_out_neighbors[state.start][:,0])
             # Set up the initial contributions counts and flag currently neighboring vertices
-            # neighbors_flag = [False] * num_vertices
-            # contribution = [0] * num_vertices
             for neighbor in old_out_neighbors[state.start][:,0]:
                 state.neighbors_flag[neighbor] = True
                 new_neighbors = 0
