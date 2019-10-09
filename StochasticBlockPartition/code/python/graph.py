@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from sample import Sample
+from samplestate import SampleState
 
 
 class Graph():
@@ -87,7 +88,7 @@ class Graph():
         return graph
     # End of load()
 
-    def sample(self, args: argparse.Namespace) -> Tuple['Graph', Dict[int,int], Dict[int,int]]:
+    def sample(self, args: argparse.Namespace, prev_state: SampleState = SampleState()) -> Tuple[SampleState, 'Graph', Dict[int,int], Dict[int,int]]:
         """Sample a set of vertices from the graph.
 
             Parameters
@@ -105,10 +106,10 @@ class Graph():
                     the mapping of block ids in full graph to block ids in subgraph
         """
         sample = Sample.create_sample(self.num_nodes, self.out_neighbors, self.in_neighbors, self.true_block_assignment,
-                                      args)
+                                      args, prev_state)
         subgraph = Graph(sample.out_neighbors, sample.in_neighbors, sample.sample_num, sample.num_edges,
                          sample.true_block_assignment)
-        return subgraph, sample.vertex_mapping, sample.true_blocks_mapping
+        return sample.state, subgraph, sample.vertex_mapping, sample.true_blocks_mapping
     # End of sample()
 # End of Graph()
 

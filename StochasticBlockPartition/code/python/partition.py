@@ -118,6 +118,41 @@ class Partition():
     # End of clone_with_true_block_membership()
 
     @staticmethod
+    def extend_sample(num_blocks: int, out_neighbors: List[np.ndarray],
+        sample_block_assignment: np.ndarray, mapping: Dict[int,int], args: 'argparse.Namespace') -> 'Partition':
+        """Creates a new Partition object from the block assignment array.
+
+            Parameters
+            ----------
+            num_blocks : int
+                    the number of blocks in the current partition
+            out_neighbors : List[np.ndarray]
+                    list of outgoing edges for each node
+            sample_block_assignment : np.ndarray [int]
+                    the partitioning results on the sample
+            mapping : Dict[int,int]
+                    the mapping of sample vertex indices to full graph vertex indices
+            args : argparse.Namespace
+                    the command-line args passed to the program
+
+            Returns
+            -------
+            partition : Partition
+                    the partition created from the sample
+        """
+        block_assignment = np.full(len(out_neighbors), -1)
+        for key, value in mapping.items():
+            block_assignment[key] = sample_block_assignment[value]
+        next_block = num_blocks
+        for vertex in range(len(out_neighbors)):
+            if block_assignment[vertex] == -1:
+                block_assignment[vertex] = next_block
+                next_block += 1
+        new_num_blocks = next_block - 1
+        return Partition(new_num_blocks, out_neighbors, args, block_assignment)
+    # End of from_sample()
+
+    @staticmethod
     def from_sample(num_blocks: int, out_neighbors: List[np.ndarray],
         sample_block_assignment: np.ndarray, mapping: Dict[int,int], args: 'argparse.Namespace') -> 'Partition':
         """Creates a new Partition object from the block assignment array.
