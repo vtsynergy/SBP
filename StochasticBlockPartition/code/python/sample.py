@@ -6,7 +6,14 @@ from copy import copy
 
 import numpy as np
 
-from samplestate import SampleState, UniformRandomSampleState, ExpansionSnowballSampleState
+from samplestate import SampleState
+from samplestate import UniformRandomSampleState
+from samplestate import RandomWalkSampleState
+from samplestate import RandomJumpSampleState
+from samplestate import DegreeWeightedSampleState
+from samplestate import RandomNodeNeighborSampleState
+from samplestate import ForestFireSampleState
+from samplestate import ExpansionSnowballSampleState
 
 
 class Sample():
@@ -93,22 +100,23 @@ class Sample():
 
     @staticmethod
     def random_walk_sample(num_vertices: int, old_out_neighbors: List[np.ndarray], old_in_neighbors: List[np.ndarray],
-        old_true_block_assignment: np.ndarray, args: 'argparse.Namespace') -> 'Sample':
+        old_true_block_assignment: np.ndarray, prev_state: RandomWalkSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Random walk sampling.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: RandomWalkSampleState
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
-        sampled_marker = [False] * num_vertices
-        index_set = list()  # type: List[int]
+        # sampled_marker = [False] * num_vertices
+        # index_set = list()  # type: List[int]
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
         vertex = start
 
-        while len(index_set) < sample_num:
+        while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
             num_tries += 1
-            if not sampled_marker[vertex]:
-                index_set.append(vertex)
-                sampled_marker[vertex] = True
+            if not state.sampled_marker[vertex]:
+                state.index_set.append(vertex)
+                state.sampled_marker[vertex] = True
             if num_tries % sample_num == 0:  # If the number of tries is large, restart from new random vertex
                 start = np.random.randint(sample_num)
                 vertex = start
@@ -122,28 +130,29 @@ class Sample():
                     start = np.random.randint(sample_num)
                 vertex = start
             
-        sample_idx = np.asarray(index_set)
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+        state.sample_idx = np.asarray(state.index_set)
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of Random_walk_sampling()
 
     @staticmethod
     def random_jump_sample(num_vertices: int, old_out_neighbors: List[np.ndarray], old_in_neighbors: List[np.ndarray],
-        old_true_block_assignment: np.ndarray, args: 'argparse.Namespace') -> 'Sample':
+        old_true_block_assignment: np.ndarray, prev_state: RandomJumpSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Random jump sampling.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: RandomJumpSampleState
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
-        sampled_marker = [False] * num_vertices
-        index_set = list()  # type: List[int]
+        # sampled_marker = [False] * num_vertices
+        # index_set = list()  # type: List[int]
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
         vertex = start
 
-        while len(index_set) < sample_num:
+        while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
             num_tries += 1
-            if not sampled_marker[vertex]:
-                index_set.append(vertex)
-                sampled_marker[vertex] = True
+            if not state.sampled_marker[vertex]:
+                state.index_set.append(vertex)
+                state.sampled_marker[vertex] = True
             # If the number of tries is large, or with a probability of 0.15, start from new random vertex
             if num_tries % sample_num == 0 or np.random.random() < 0.15:
                 start = np.random.randint(sample_num)
@@ -156,69 +165,78 @@ class Sample():
                     start = np.random.randint(sample_num)
                 vertex = start
             
-        sample_idx = np.asarray(index_set)
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+        state.sample_idx = np.asarray(state.index_set)
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of random_jump_sample()
 
     @staticmethod
     def degree_weighted_sample(num_vertices: int, old_out_neighbors: List[np.ndarray],
         old_in_neighbors: List[np.ndarray], old_true_block_assignment: np.ndarray,
-        args: 'argparse.Namespace') -> 'Sample':
+        prev_state: DegreeWeightedSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Degree-weighted sampling, where the probability of picking a vertex is proportional to its degree.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         print("Sampling {} vertices from graph".format(sample_num))
         vertex_degrees = np.add([len(neighbors) for neighbors in old_out_neighbors], 
                                 [len(neighbors) for neighbors in old_in_neighbors])
-        sample_idx = np.random.choice(num_vertices, sample_num, replace=False, p=vertex_degrees/np.sum(vertex_degrees))
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+        vertex_degrees[state.sample_idx] = 0
+        state.sample_idx = np.concatenate(
+            (state.sample_idx, np.random.choice(num_vertices, sample_num, replace=False, p=vertex_degrees/np.sum(vertex_degrees)))
+        )
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of Random_walk_sampling()
 
     @staticmethod
     def random_node_neighbor_sample(num_vertices: int, old_out_neighbors: List[np.ndarray],
         old_in_neighbors: List[np.ndarray], old_true_block_assignment: np.ndarray,
-        args: 'argparse.Namespace') -> 'Sample':
+        prev_state: RandomNodeNeighborSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Random node neighbor sampling, where whenever a single node is sampled, all its out neighbors are sampled
         as well.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: RandomNodeNeighborSampleState
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
+        original_size = len(state.index_set)
         print("Sampling {} vertices from graph".format(sample_num))
-        random_samples = np.random.choice(num_vertices, sample_num, replace=False)
-        sampled_marker = [False] * num_vertices
-        index_set = list()  # type: List[int]
+        choices = np.setdiff1d(np.asarray(range(num_vertices)), state.sample_idx)
+        random_samples = np.random.choice(choices, sample_num, replace=False)
+        # sampled_marker = [False] * num_vertices
+        # index_set = list()  # type: List[int]
         for vertex in random_samples:
-            if not sampled_marker[vertex]:
-                index_set.append(vertex)
-                sampled_marker[vertex] = True
+            if not state.sampled_marker[vertex]:
+                state.index_set.append(vertex)
+                state.sampled_marker[vertex] = True
             for neighbor in old_out_neighbors[vertex]:
-                if not sampled_marker[neighbor[0]]:
-                    index_set.append(neighbor[0])
-                    sampled_marker[neighbor[0]] = True
-            if len(index_set) >= sample_num:
+                if not state.sampled_marker[neighbor[0]]:
+                    state.index_set.append(neighbor[0])
+                    state.sampled_marker[neighbor[0]] = True
+            if len(state.index_set) >= sample_num:
                 break
-        sample_idx = np.asarray(index_set[:sample_num])
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+        state.sample_idx = np.asarray(state.index_set[:original_size+sample_num])
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of random_node_neighbor_sample()
 
     @staticmethod
     def forest_fire_sample(num_vertices: int, old_out_neighbors: List[np.ndarray], old_in_neighbors: List[np.ndarray],
-        old_true_block_assignment: np.ndarray, args: 'argparse.Namespace') -> 'Sample':
+        old_true_block_assignment: np.ndarray, prev_state: ForestFireSampleState, args: 'argparse.Namespace') -> 'Sample':
         """Forest-fire sampling with forward probability = 0.7.
         """
-        sample_num = int(num_vertices * (args.sample_size / 100))
+        state = SampleState.create_sample_state(num_vertices, prev_state, args)  # type: ForestFireSampleState
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
+        original_size = len(state.index_set)
         print("Sampling {} vertices from graph".format(sample_num))
-        sampled_marker = [False] * num_vertices
-        burnt_marker = [False] * num_vertices
-        current_fire_front = [np.random.randint(num_vertices)]
-        next_fire_front = list()  # type: List[int]
-        index_set = list()  # type: List[int]
-        while len(index_set) < sample_num:
-            for vertex in current_fire_front:
+        # sampled_marker = [False] * num_vertices
+        # burnt_marker = [False] * num_vertices
+        # current_fire_front = [np.random.randint(num_vertices)]
+        # next_fire_front = list()  # type: List[int]
+        # index_set = list()  # type: List[int]
+        while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
+            for vertex in state.current_fire_front:
                 # add vertex to index set
-                if not sampled_marker[vertex]:
-                    sampled_marker[vertex] = True
-                    burnt_marker[vertex] = True
-                    index_set.append(vertex)
+                if not state.sampled_marker[vertex]:
+                    state.sampled_marker[vertex] = True
+                    state.burnt_marker[vertex] = True
+                    state.index_set.append(vertex)
                 # select edges to burn
                 num_to_choose = np.random.geometric(0.7)
                 out_neighbors = old_out_neighbors[vertex]
@@ -232,21 +250,21 @@ class Sample():
                 for index, value in enumerate(mask):
                     neighbor = out_neighbors[index][0]
                     if value == 1:  # if chosen, add to next frontier
-                        if not burnt_marker[neighbor]:
-                            next_fire_front.append(neighbor)
-                    burnt_marker[neighbor] = True  # mark all neighbors as visited
-            if np.sum(burnt_marker) == num_vertices:  # all samples are burnt, restart
-                burnt_marker = [False] * num_vertices
-                current_fire_front = [np.random.randint(num_vertices)]
-                next_fire_front = list()
+                        if not state.burnt_marker[neighbor]:
+                            state.next_fire_front.append(neighbor)
+                    state.burnt_marker[neighbor] = True  # mark all neighbors as visited
+            if np.sum(state.burnt_marker) == num_vertices:  # all samples are burnt, restart
+                state.burnt_marker = [False] * num_vertices
+                state.current_fire_front = [np.random.randint(num_vertices)]
+                state.next_fire_front = list()
                 continue
-            if len(next_fire_front) == 0:  # if fire is burnt-out
-                current_fire_front = [np.random.randint(num_vertices)]
+            if len(state.next_fire_front) == 0:  # if fire is burnt-out
+                state.current_fire_front = [np.random.randint(num_vertices)]
             else:
-                current_fire_front = copy(next_fire_front)
-                next_fire_front = list()
-        sample_idx = np.asarray(index_set[:sample_num])
-        return Sample(sample_idx, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
+                state.current_fire_front = copy(state.next_fire_front)
+                state.next_fire_front = list()
+        state.sample_idx = np.asarray(state.index_set[:original_size+sample_num])
+        return Sample(state, old_out_neighbors, old_in_neighbors, old_true_block_assignment)
     # End of forest_fire_sample()
 
     @staticmethod

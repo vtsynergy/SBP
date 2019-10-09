@@ -27,14 +27,11 @@ class SampleState():
         elif args.sample_type == "random_jump":
             return RandomJumpSampleState(num_vertices, prev_state)
         elif args.sample_type == "degree_weighted":
-            return Sample.degree_weighted_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                 old_true_block_assignment, args)
+            return DegreeWeightedSampleState(prev_state)
         elif args.sample_type == "random_node_neighbor":
-            return Sample.random_node_neighbor_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                      old_true_block_assignment, args)
+            return RandomNodeNeighborSampleState(num_vertices, prev_state)
         elif args.sample_type == "forest_fire":
-            return Sample.forest_fire_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                             old_true_block_assignment, args)
+            return ForestFireSampleState(num_vertices, prev_state)
         elif args.sample_type == "expansion_snowball":
             return ExpansionSnowballSampleState(num_vertices, prev_state)
         else:
@@ -76,6 +73,47 @@ class RandomJumpSampleState(SampleState):
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of RandomJumpSampleState
+
+class DegreeWeightedSampleState(SampleState):
+    def __init__(self, prev_state: 'DegreeWeightedSampleState') -> None:
+        SampleState.__init__(self)
+        self.empty = False
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of DegreeWeightedSampleState
+
+class RandomNodeNeighborSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'RandomNodeNeighborSampleState') -> None:
+        SampleState.__init__(self)
+        self.empty = False
+        self.sampled_marker = [False] * num_vertices
+        self.index_set = list()  # type: List[int]
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+            self.sampled_marker = copy(prev_state.sampled_marker)
+            self.index_set = copy(prev_state.index_set)
+    # End of __init__()
+# End of RandomNodeNeighborSampleState
+
+class ForestFireSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'ForestFireSampleState') -> None:
+        SampleState.__init__(self)
+        self.empty = False
+        self.sampled_marker = [False] * num_vertices
+        self.burnt_marker = [False] * num_vertices
+        self.current_fire_front = [np.random.randint(num_vertices)]
+        self.next_fire_front = list()  # type: List[int]
+        self.index_set = list()  # type: List[int]
+        if not prev_state.empty:
+            self.sampled_marker = copy(prev_state.sampled_marker)
+            self.burnt_marker = copy(prev_state.burnt_marker)
+            self.current_fire_front = copy(prev_state.current_fire_front)
+            self.next_fire_front = copy(prev_state.next_fire_front)
+            self.index_set = copy(prev_state.index_set)
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of ForestFireSampleState
 
 class ExpansionSnowballSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ExpansionSnowballSampleState') -> None:
