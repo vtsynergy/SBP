@@ -36,8 +36,7 @@ class SampleState():
             return Sample.forest_fire_sample(num_vertices, old_out_neighbors, old_in_neighbors,
                                              old_true_block_assignment, args)
         elif args.sample_type == "expansion_snowball":
-            return Sample.expansion_snowball_sample(num_vertices, old_out_neighbors, old_in_neighbors,
-                                                    old_true_block_assignment, args)
+            return ExpansionSnowballSampleState(num_vertices, prev_state)
         else:
             raise NotImplementedError("Sample type: {} is not implemented!".format(args.sample_type))
     # End of create_sample()
@@ -77,3 +76,25 @@ class RandomJumpSampleState(SampleState):
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of RandomJumpSampleState
+
+class ExpansionSnowballSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'ExpansionSnowballSampleState') -> None:
+        SampleState.__init__(self)
+        self.empty = False
+        self.start = np.random.randint(num_vertices)
+        self.index_flag = [False] * num_vertices
+        self.index_flag[self.start] = True
+        self.index_set = [self.start]
+        self.neighbors = list()  # type: List[int]
+        self.neighbors_flag = [False] * num_vertices
+        self.contribution = [0] * num_vertices
+        if not prev_state.empty:
+            self.start = copy(prev_state.start)
+            self.index_flag = copy(prev_state.index_flag)
+            self.index_set = copy(prev_state.index_set)
+            self.neighbors = copy(prev_state.neighbors)
+            self.neighbors_flag = copy(prev_state.neighbors_flag)
+            self.contribution = copy(prev_state.contribution)
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of ExpansionSnowballSampleState
