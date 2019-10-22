@@ -81,9 +81,9 @@ if __name__ == "__main__":
     if args.sample_type != "none":
         samplestack = SampleStack(args)
         # graph, vertex_mapping, block_mapping = samplestack.tail()
-        print("Performing stochastic block partitioning on sampled subgraph after {} sampling iterations".format(
-            args.sample_iterations
-        ))
+        # print("Performing stochastic block partitioning on sampled subgraph after {} sampling iterations".format(
+        #     args.sample_iterations
+        # ))
         # partition, evaluation = stochastic_block_partition(graph, args)
         # print('Combining sampled partition with full graph')
         subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)

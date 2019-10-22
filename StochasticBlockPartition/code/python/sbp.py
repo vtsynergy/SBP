@@ -17,7 +17,7 @@ from partition_baseline_support import prepare_for_partition_on_next_num_blocks
 def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
     init_partition: Partition = None, init_evaluation: Evaluation = None) -> Tuple[Partition, Evaluation]:
     """The stochastic block partitioning algorithm
-    """ 
+    """
     visualize_graph = False
 
     if init_partition is None and init_evaluation is None:
@@ -27,6 +27,7 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
         partition = init_partition
         evaluation = init_evaluation
     # print(partition.interblock_edge_count._matrix)
+    print("Performing stochastic block partitioning on graph with {} vertices and {} blocks.".format(graph.num_nodes, partition.num_blocks))
 
     # initialize items before iterations to find the partition with the optimal number of blocks
     partition_triplet = PartitionTriplet()

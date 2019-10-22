@@ -79,11 +79,11 @@ class SampleStack(object):
         # Propagate results back through the stack
         subgraph, vertex_mapping, block_mapping = self._pop()
         subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation)
-        while len(self.stack) > 1:
+        while len(self.stack) > 0:
             t1 = timeit.default_timer()
             subgraph, vertex_mapping, block_mapping = self._pop()
             subgraph_partition = Partition.extend_sample(subgraph_partition.num_blocks, subgraph.out_neighbors,
-                                                         subgraph_partition.block_assignment, vertex_mapping, args)
+                                                         subgraph_partition.block_assignment, args)
             t2 = timeit.default_timer()
             subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation)
             evaluation.propagate_membership += (t2 - t1)
