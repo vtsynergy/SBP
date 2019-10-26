@@ -78,14 +78,26 @@ class SampleStack(object):
         """
         # Propagate results back through the stack
         subgraph, vertex_mapping, block_mapping = self._pop()
-        subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation)
+        min_num_blocks = 0
+        denominator = 2
+        if args.sample_iterations > 1:
+            min_num_blocks = int(subgraph.num_nodes / denominator)
+            min_num_blocks = 0
+        subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation,
+                                                                    min_num_blocks)
         while len(self.stack) > 0:
             t1 = timeit.default_timer()
             subgraph, vertex_mapping, block_mapping = self._pop()
             subgraph_partition = Partition.extend_sample(subgraph_partition.num_blocks, subgraph.out_neighbors,
                                                          subgraph_partition.block_assignment, args)
             t2 = timeit.default_timer()
-            subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation)
+            denominator *= 2
+            min_num_blocks = int(subgraph_partition.num_blocks / denominator)
+            min_num_blocks = 0
+            if len(self.stack) == 0:
+                min_num_blocks = 0
+            subgraph_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation,
+                                                                        min_num_blocks)
             evaluation.propagate_membership += (t2 - t1)
         return subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation
     # End of unstack()

@@ -42,7 +42,8 @@ class Partition():
         self.block_degrees_in = np.zeros(num_blocks)
         self._args = args
         self.num_blocks_to_merge = int(self.num_blocks * args.blockReductionRate)
-        self.initialize_edge_counts(out_neighbors, args.sparse)
+        if out_neighbors:
+            self.initialize_edge_counts(out_neighbors, args.sparse)
     # End of __init__()
 
     def initialize_edge_counts(self, out_neighbors: List[np.ndarray], use_sparse: bool):
@@ -192,24 +193,44 @@ class Partition():
         return Partition(num_blocks, out_neighbors, args, block_assignment)
     # End of from_sample()
 
+    def copy(self) -> 'Partition':
+        """Returns a copy of this partition.
+
+            Returns
+            -------
+            partition_copy : Partition
+                a copy of this partition
+        """
+        partition_copy = Partition(self.num_blocks, [], self._args)
+        partition_copy.block_assignment = self.block_assignment.copy()
+        partition_copy.overall_entropy = self.overall_entropy
+        partition_copy.interblock_edge_count = self.interblock_edge_count.copy()
+        partition_copy.block_degrees = self.block_degrees.copy()
+        partition_copy.block_degrees_out = self.block_degrees_out.copy()
+        partition_copy.block_degrees_in = self.block_degrees_in.copy()
+        partition_copy.num_blocks_to_merge = 0
+        return partition_copy
+        # self.overall_entropy = np.inf
+        # self.interblock_edge_count = [[]]  # type: np.array
+        # self.block_degrees = np.zeros(num_blocks)
+        # self.block_degrees_out = np.zeros(num_blocks)
+        # self.block_degrees_in = np.zeros(num_blocks)
+        # self._args = args
+        # self.num_blocks_to_merge = int(self.num_blocks * args.blockReductionRate)
+        # self.initialize_edge_counts(out_neighbors, args.sparse)
+    # End of copy()
+# End of Partition
+
 
 class PartitionTriplet():
+    """Used for the fibonacci search to find the optimal number of blocks. Stores 3 partitioning results, with the
+    partition with the lowest entropy (overall description length) in the middle.
+    """
+
     def __init__(self) -> None:
-        # partition for the high, best, and low number of blocks so far
-        self.block_assignment = [[], [], []]  # type: List[np.array]
-        # edge count matrix for the high, best, and low number of blocks so far
-        self.interblock_edge_count = [[], [], []]  # type: List[np.array]
-        # block degrees for the high, best, and low number of blocks so far
-        self.block_degrees = [[], [], []]  # type: List[np.array]
-        # out block degrees for the high, best, and low number of blocks so far
-        self.block_degrees_out = [[], [], []]  # type: List[np.array]
-        # in block degrees for the high, best, and low number of blocks so far
-        self.block_degrees_in = [[], [], []]  # type: List[np.array]
-        # overall entropy for the high, best, and low number of blocks so far
-        self.overall_entropy = [np.Inf, np.Inf, np.Inf]  # type: List[float]
-        # number of blocks for the high, best, and low number of blocks so far
-        self.num_blocks = [0, 0, 0]  # type: List[int]
+        self.partitions = [None, None, None]  # type: List[Partition]
         self.optimal_num_blocks_found = False
+    # End of __init__()
     
     def update(self, partition: Partition):
         """If the entropy of the current partition is the best so far, moves the middle triplet
@@ -222,41 +243,34 @@ class PartitionTriplet():
             partition : Partition
                     the most recent partitioning results
         """
-        if partition.overall_entropy <= self.overall_entropy[1]:  # if the current partition is the best so far
-            old_index = 0 if self.num_blocks[1] > partition.num_blocks else 2
-            self.block_assignment[old_index] = self.block_assignment[1]
-            self.interblock_edge_count[old_index] = self.interblock_edge_count[1]
-            self.block_degrees[old_index] = self.block_degrees[1]
-            self.block_degrees_out[old_index] = self.block_degrees_out[1]
-            self.block_degrees_in[old_index] = self.block_degrees_in[1]
-            self.overall_entropy[old_index] = self.overall_entropy[1]
-            self.num_blocks[old_index] = self.num_blocks[1]
+        if self.partitions[1] is None:
             index = 1
-        else:  # the current partition is not the best so far
-            # if the current number of blocks is smaller than the best number of blocks so far
-            index = 2 if self.num_blocks[1] > partition.num_blocks else 0
-
-        self.block_assignment[index] = partition.block_assignment
-        self.interblock_edge_count[index] = partition.interblock_edge_count
-        self.block_degrees[index] = partition.block_degrees
-        self.block_degrees_out[index] = partition.block_degrees_out
-        self.block_degrees_in[index] = partition.block_degrees_in
-        self.overall_entropy[index] = partition.overall_entropy
-        self.num_blocks[index] = partition.num_blocks
+        elif partition.overall_entropy <= self.partitions[1].overall_entropy:
+            old_index = 0 if self.partitions[1].num_blocks > partition.num_blocks else 2
+            self.partitions[old_index] = self.partitions[1]
+            index = 1
+        else:
+            index = 2 if self.partitions[1].num_blocks > partition.num_blocks else 0
+        self.partitions[index] = partition
     # End of update()
 
-    def extract_partition(self, index: int) -> Partition:
-        """Extracts a partition from the given triplet indexes.
-
-            Parameters
-            ----------
-            index : int
-                    the triplet index from which to extract the partition
-            
-            Returns:
-            --------
-            partition : Partition
-                    the extracted partition
+    def status(self):
+        """Prints the status of the partition triplet.
         """
-        raise NotImplementedError()
-    # End of extract_partition()
+        entropies = list()
+        num_blocks = list()
+        for i in [0, 1, 2]:
+            if self.partitions[i] is None:
+                entropies.append(-np.inf)
+                num_blocks.append(0)
+            else:
+                entropies.append(self.partitions[i].overall_entropy)
+                num_blocks.append(self.partitions[i].num_blocks)
+        print("Overall entropy: {}".format(entropies))
+        print("Number of blocks: {}".format(num_blocks))
+        if self.optimal_num_blocks_found:
+            print("Optimal partition found with {} blocks".format(self.partitions[1].num_blocks))
+        if self.partitions[2] is not None:
+            print("Golden ratio has been established.")
+    # End of status()
+# End of PartitionTriplet

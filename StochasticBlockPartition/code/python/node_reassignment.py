@@ -83,7 +83,7 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         # exit MCMC if the recent change in entropy falls below a small fraction of the overall entropy
         mcmc_timings.t_early_stopping()
         if itr >= (delta_entropy_moving_avg_window - 1):
-            if not (np.all(np.isfinite(partition_triplet.overall_entropy))):  # golden ratio bracket not yet established
+            if partition_triplet.partitions[2] is None:  # golden ratio bracket not yet established
                 if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
                     delta_entropy_threshold1 * partition.overall_entropy)):
                     mcmc_timings.t_early_stopping()

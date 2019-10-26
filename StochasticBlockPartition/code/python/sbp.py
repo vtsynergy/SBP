@@ -15,25 +15,32 @@ from partition_baseline_support import prepare_for_partition_on_next_num_blocks
 
 
 def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
-    init_partition: Partition = None, init_evaluation: Evaluation = None) -> Tuple[Partition, Evaluation]:
+    init_partition: Partition = None, init_evaluation: Evaluation = None,
+    min_num_blocks: int = 0) -> Tuple[Partition, Evaluation]:
     """The stochastic block partitioning algorithm
     """
     visualize_graph = False
 
+    partition = init_partition  # type: Partition
+    evaluation = init_evaluation  # type: Evaluation
+
     if init_partition is None and init_evaluation is None:
         partition = Partition(graph.num_nodes, graph.out_neighbors, args)
         evaluation = Evaluation(args, graph)
-    else:
-        partition = init_partition
-        evaluation = init_evaluation
+
     # print(partition.interblock_edge_count._matrix)
-    print("Performing stochastic block partitioning on graph with {} vertices and {} blocks.".format(graph.num_nodes, partition.num_blocks))
+    print("Performing stochastic block partitioning on graph with {} vertices and {} blocks".format(
+        graph.num_nodes, partition.num_blocks)
+    )
+    if min_num_blocks > 0:
+        print("Partitioning until number of blocks is <= {}".format(min_num_blocks))
 
     # initialize items before iterations to find the partition with the optimal number of blocks
     partition_triplet = PartitionTriplet()
     graph_object = None
     
-    while not partition_triplet.optimal_num_blocks_found:
+    # while not partition_triplet.optimal_num_blocks_found:
+    while not exit_condition(partition, partition_triplet, min_num_blocks):
         ##################
         # BLOCK MERGING
         ##################
@@ -70,9 +77,34 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
         evaluation.num_iterations += 1
 
         if args.verbose:
-            print('Overall entropy: {}'.format(partition_triplet.overall_entropy))
-            print('Number of blocks: {}'.format(partition_triplet.num_blocks))
-            if partition_triplet.optimal_num_blocks_found:
-                print('\nOptimal partition found with {} blocks'.format(partition.num_blocks))
+            partition_triplet.status()
     return partition, evaluation
 # End of stochastic_block_partition()
+
+def exit_condition(partition: Partition, partition_triplet: PartitionTriplet, min_num_blocks: int = 0):
+    """True if exit condition is met, false if it isn't.
+
+        Normal exit condition is optimal number of blocks found. But, if min_num_blocks is > 0, then the exit condition
+        is either a) the golden ratio has been reached, or b) num_blocks <= min_num_blocks.
+
+        Parameters
+        ----------
+        partition : Partition
+            the current partitioning results
+        partition_triplet : PartitionTriplet
+            needed to check if golden ratio has been reached
+        min_num_blocks : int
+            the minimum number of blocks. Default = 0
+        
+        Returns
+        -------
+        stop : bool
+            True if the exit condition has been reached, False otherwise
+    """
+    if min_num_blocks > 0:
+        if partition.num_blocks <= min_num_blocks or partition_triplet.partitions[2] is not None:
+            return True
+    if partition_triplet.optimal_num_blocks_found:
+        return True
+    return False
+# End of exit_condition()
