@@ -210,14 +210,6 @@ class Partition():
         partition_copy.block_degrees_in = self.block_degrees_in.copy()
         partition_copy.num_blocks_to_merge = 0
         return partition_copy
-        # self.overall_entropy = np.inf
-        # self.interblock_edge_count = [[]]  # type: np.array
-        # self.block_degrees = np.zeros(num_blocks)
-        # self.block_degrees_out = np.zeros(num_blocks)
-        # self.block_degrees_in = np.zeros(num_blocks)
-        # self._args = args
-        # self.num_blocks_to_merge = int(self.num_blocks * args.blockReductionRate)
-        # self.initialize_edge_counts(out_neighbors, args.sparse)
     # End of copy()
 # End of Partition
 
