@@ -25,35 +25,36 @@ class Sample():
         """Creates a new Sample object.
         """
         self.state = state
-        self.vertex_mapping = dict([(v, k) for k,v in enumerate(state.sample_idx)])
+        sampled_vertices = state.sample_idx[-state.sample_size:]
+        self.vertex_mapping = dict([(v, k) for k,v in enumerate(sampled_vertices)])
         self.out_neighbors = list()  # type: List[np.ndarray]
         self.in_neighbors = list()  # type: List[np.ndarray]
         self.num_edges = 0
-        for index in state.sample_idx:
+        for index in sampled_vertices:
             out_neighbors = old_out_neighbors[index]
-            out_mask = np.isin(out_neighbors[:,0], state.sample_idx, assume_unique=False)
+            out_mask = np.isin(out_neighbors[:,0], sampled_vertices, assume_unique=False)
             sampled_out_neighbors = out_neighbors[out_mask]
             for out_neighbor in sampled_out_neighbors:
                 out_neighbor[0] = self.vertex_mapping[out_neighbor[0]]
             self.out_neighbors.append(sampled_out_neighbors)
             in_neighbors = old_in_neighbors[index]
-            in_mask = np.isin(in_neighbors[:,0], state.sample_idx, assume_unique=False)
+            in_mask = np.isin(in_neighbors[:,0], sampled_vertices, assume_unique=False)
             sampled_in_neighbors = in_neighbors[in_mask]
             for in_neighbor in sampled_in_neighbors:
                 in_neighbor[0] = self.vertex_mapping[in_neighbor[0]]
             self.in_neighbors.append(sampled_in_neighbors)
             self.num_edges += np.sum(out_mask) + np.sum(in_mask)
-        true_block_assignment = old_true_block_assignment[state.sample_idx]
+        true_block_assignment = old_true_block_assignment[sampled_vertices]
         true_blocks = list(set(true_block_assignment))
         self.true_blocks_mapping = dict([(v, k) for k,v in enumerate(true_blocks)])
         self.true_block_assignment = np.asarray([self.true_blocks_mapping[b] for b in true_block_assignment])
-        self.sample_num = len(state.sample_idx)
+        self.sample_num = len(self.vertex_mapping)
     # End of __init__()
 
     @staticmethod
     def create_sample(num_vertices: int, old_out_neighbors: List[np.ndarray],
         old_in_neighbors: List[np.ndarray], old_true_block_assignment: np.ndarray,
-        args: 'argparse.Namespace', prev_state: SampleState = SampleState()) -> 'Sample':
+        args: 'argparse.Namespace', prev_state: SampleState = None) -> 'Sample':
         """Performs sampling according to the sample type in args.
         """
         if args.sample_type == "uniform_random":
