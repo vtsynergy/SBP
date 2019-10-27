@@ -88,29 +88,41 @@ class Graph():
         return graph
     # End of load()
 
-    def sample(self, args: argparse.Namespace, prev_state: SampleState = SampleState()) -> Tuple[SampleState, 'Graph', Dict[int,int], Dict[int,int]]:
+    def sample(self, args: argparse.Namespace, prev_state: SampleState = None) -> Tuple['Graph', Sample]:
         """Sample a set of vertices from the graph.
 
             Parameters
             ----------
             args : Namespace
                     the parsed command-line arguments
-            
+
             Returns
             ------
             subgraph : Graph
                     the subgraph created from the sampled Graph vertices
-            vertex_mapping : Dict[int,int]
-                    the mapping of vertex ids in full graph to vertex ids in subgraph
-            true_blocks_mapping : Dict[int,int]
-                    the mapping of block ids in full graph to block ids in subgraph
+            sample : Sample
+                    the sample object containing the vertex and block mappings
         """
-        sample = Sample.create_sample(self.num_nodes, self.out_neighbors, self.in_neighbors, self.true_block_assignment,
-                                      args, prev_state)
-        subgraph = Graph(sample.out_neighbors, sample.in_neighbors, sample.sample_num, sample.num_edges,
-                         sample.true_block_assignment)
-        return sample.state, subgraph, sample.vertex_mapping, sample.true_blocks_mapping
+        sample_size = int((self.num_nodes * (args.sample_size / 100)) / args.sample_iterations)
+        if prev_state is None:
+            prev_state = SampleState(sample_size)
+        sample_object = Sample.create_sample(self.num_nodes, self.out_neighbors, self.in_neighbors,
+                                             self.true_block_assignment, args, prev_state)
+        subgraph = Graph(sample_object.out_neighbors, sample_object.in_neighbors, sample_object.sample_num,
+                         sample_object.num_edges, sample_object.true_block_assignment)
+        return subgraph, sample_object
     # End of sample()
+
+    def sample_from_vertex_ids(self, vertices: np.ndarray, args: argparse.Namespace) -> Tuple['Graph', Sample]:
+        """Creates a sample using pre-determined vertex IDs.
+        """
+        state = SampleState(len(vertices))
+        state.sample_idx = vertices
+        sample_object = Sample(state, self.out_neighbors, self.in_neighbors, self.true_block_assignment)
+        subgraph = Graph(sample_object.out_neighbors, sample_object.in_neighbors, len(vertices),
+                         sample_object.num_edges, sample_object.true_block_assignment)
+        return subgraph, sample_object
+    # End of sample_from_vertex_ids()
 # End of Graph()
 
 
