@@ -9,10 +9,11 @@ import numpy as np
 class SampleState():
     """Stores the state of a sample.
     """
-    def __init__(self):
+    def __init__(self, sample_size: int) -> None:
         """Creates a default, empty sample state.
         """
         self.empty = True
+        self.sample_size = sample_size
         self.sample_idx = np.asarray([], dtype=np.int32)
     # End of __init__()
 
@@ -21,13 +22,13 @@ class SampleState():
         """Performs sampling according to the sample type in args.
         """
         if args.sample_type == "uniform_random":
-            return UniformRandomSampleState(prev_state)
+            return UniformRandomSampleState(num_vertices, prev_state)
         elif args.sample_type == "random_walk":
             return RandomWalkSampleState(num_vertices, prev_state)
         elif args.sample_type == "random_jump":
             return RandomJumpSampleState(num_vertices, prev_state)
         elif args.sample_type == "degree_weighted":
-            return DegreeWeightedSampleState(prev_state)
+            return DegreeWeightedSampleState(num_vertices, prev_state)
         elif args.sample_type == "random_node_neighbor":
             return RandomNodeNeighborSampleState(num_vertices, prev_state)
         elif args.sample_type == "forest_fire":
@@ -40,8 +41,8 @@ class SampleState():
 # End of SampleState
 
 class UniformRandomSampleState(SampleState):
-    def __init__(self, prev_state: 'UniformRandomSampleState') -> None:
-        SampleState.__init__(self)
+    def __init__(self, num_vertices: int, prev_state: 'UniformRandomSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         if not prev_state.empty:
             self.sample_idx = copy(prev_state.sample_idx)
@@ -50,7 +51,7 @@ class UniformRandomSampleState(SampleState):
 
 class RandomWalkSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomWalkSampleState') -> None:
-        SampleState.__init__(self)
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         self.sampled_marker = [False] * num_vertices
         self.index_set = list()  # type: List[int]
@@ -63,7 +64,7 @@ class RandomWalkSampleState(SampleState):
 
 class RandomJumpSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomJumpSampleState') -> None:
-        SampleState.__init__(self)
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         self.sampled_marker = [False] * num_vertices
         self.index_set = list()  # type: List[int]
@@ -75,8 +76,8 @@ class RandomJumpSampleState(SampleState):
 # End of RandomJumpSampleState
 
 class DegreeWeightedSampleState(SampleState):
-    def __init__(self, prev_state: 'DegreeWeightedSampleState') -> None:
-        SampleState.__init__(self)
+    def __init__(self, num_vertices, prev_state: 'DegreeWeightedSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         if not prev_state.empty:
             self.sample_idx = copy(prev_state.sample_idx)
@@ -85,7 +86,7 @@ class DegreeWeightedSampleState(SampleState):
 
 class RandomNodeNeighborSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomNodeNeighborSampleState') -> None:
-        SampleState.__init__(self)
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         self.sampled_marker = [False] * num_vertices
         self.index_set = list()  # type: List[int]
@@ -98,7 +99,7 @@ class RandomNodeNeighborSampleState(SampleState):
 
 class ForestFireSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ForestFireSampleState') -> None:
-        SampleState.__init__(self)
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         self.sampled_marker = [False] * num_vertices
         self.burnt_marker = [False] * num_vertices
@@ -117,7 +118,7 @@ class ForestFireSampleState(SampleState):
 
 class ExpansionSnowballSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ExpansionSnowballSampleState') -> None:
-        SampleState.__init__(self)
+        SampleState.__init__(self, prev_state.sample_size)
         self.empty = False
         self.start = np.random.randint(num_vertices)
         self.index_flag = [False] * num_vertices
