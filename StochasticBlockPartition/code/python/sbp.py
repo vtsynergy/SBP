@@ -24,8 +24,9 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
     partition = init_partition  # type: Partition
     evaluation = init_evaluation  # type: Evaluation
 
-    if init_partition is None and init_evaluation is None:
+    if init_partition is None:
         partition = Partition(graph.num_nodes, graph.out_neighbors, args)
+    if init_evaluation is None:
         evaluation = Evaluation(args, graph)
 
     # print(partition.interblock_edge_count._matrix)
@@ -47,11 +48,11 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
         # begin agglomerative partition updates (i.e. block merging)
         t_block_merge_start = timeit.default_timer()
 
-        if args.verbose:
-            print("\nMerging down blocks from {} to {}".format(partition.num_blocks,
-                                                               partition.num_blocks - partition.num_blocks_to_merge))
-        
-        partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
+        if partition.num_blocks_to_merge != 0:
+            if args.verbose:
+                print("\nMerging down blocks from {} to {}".format(partition.num_blocks,
+                                                                partition.num_blocks - partition.num_blocks_to_merge))
+            partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
 
         t_nodal_update_start = timeit.default_timer()
 
