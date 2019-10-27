@@ -817,12 +817,8 @@ def update_partition(partition: Partition, ni: int, r: int, s: int, edge_count_u
                     the updated partitioning results
     """
     partition.block_assignment[ni] = s
-    # partition.interblock_edge_count[r, :] = edge_count_updates.block_row
-    # partition.interblock_edge_count[s, :] = edge_count_updates.proposal_row
     if use_sparse:
         partition.interblock_edge_count.update_edge_counts(r, s, edge_count_updates)
-        # partition.interblock_edge_count[:, r] = edge_count_updates.block_col
-        # partition.interblock_edge_count[:, s] = edge_count_updates.proposal_col
     else:
         partition.interblock_edge_count[r, :] = edge_count_updates.block_row
         partition.interblock_edge_count[s, :] = edge_count_updates.proposal_row
@@ -922,24 +918,23 @@ def prepare_for_partition_on_next_num_blocks(partition: Partition, partition_tri
         partition.num_blocks_to_merge = int(partition.num_blocks * B_rate)
         if (partition.num_blocks_to_merge == 0):  # not enough number of blocks to merge, so done
             optimal_B_found = True
-        # partition.block_assignment = partition_triplet.partitions[1].block_assignment.copy()
-        # partition.interblock_edge_count = partition_triplet.partitions[1].interblock_edge_count.copy()
-        # partition.block_degrees = partition_triplet.partitions[1].block_degrees.copy()
-        # partition.block_degrees_out = partition_triplet.partitions[1].block_degrees_out.copy()
-        # partition.block_degrees_in = partition_triplet.partitions[1].block_degrees_in.copy()
     else:  # golden ratio search bracket established
         # If we have found the partition with the optimal number of blocks
-        # num_blocks_0 = 0 if partition_triplet.partitions[0] is None else partition_triplet.partitions[0].num_blocks
-        # num_blocks_1 = 0 if partition_triplet.partitions[0] is None else partition_triplet.partitions[0].num_blocks
-        # num_blocks_2 = 0 if partition_triplet.partitions[0] is None else partition_triplet.partitions[0].num_blocks
-        if partition_triplet.partitions[0].num_blocks - partition_triplet.partitions[2].num_blocks == 2:
+        if (partition_triplet.partitions[0] is not None and
+            partition_triplet.partitions[0].num_blocks - partition_triplet.partitions[2].num_blocks == 2):
             partition = partition_triplet.partitions[1].copy()
             optimal_B_found = True
-            # partition.num_blocks = partition_triplet.partitions[1].num_blocks
-            # partition.block_assignment = partition_triplet.partitions[1].block_assignment.copy()
+        elif (partition_triplet.partitions[0] is None and
+              partition_triplet.partitions[1].num_blocks - partition_triplet.partitions[2].num_blocks == 1):
+            partition = partition_triplet.partitions[1].copy()
+            optimal_B_found = True
         else:  # not done yet, find the next number of block to try according to the golden ratio search
-            # If the higher segment in bracket is bigger
-            if ((partition_triplet.partitions[0].num_blocks - partition_triplet.partitions[1].num_blocks) >= 
+            # If partition_triplet looks like [0, Partition with B blocks, Partition with B - X blocks]
+            if (partition_triplet.partitions[0] is None and
+                partition_triplet.partitions[1].num_blocks > partition_triplet.partitions[2].num_blocks):
+                index = 1
+            # Else iff the higher segment in bracket is bigger
+            elif ((partition_triplet.partitions[0].num_blocks - partition_triplet.partitions[1].num_blocks) >= 
                 (partition_triplet.partitions[1].num_blocks - partition_triplet.partitions[2].num_blocks)):
                 index = 0
             else:  # the lower segment in the bracket is bigger
@@ -950,12 +945,6 @@ def prepare_for_partition_on_next_num_blocks(partition: Partition, partition_tri
             ) * 0.618).astype(int)
             partition = partition_triplet.partitions[index].copy()
             partition.num_blocks_to_merge = partition_triplet.partitions[index].num_blocks - next_B_to_try
-            # partition.num_blocks = partition_triplet.partitions[index].num_blocks
-            # partition.block_assignment = partition_triplet.partitions[index].block_assignment.copy()
-            # partition.interblock_edge_count = partition_triplet.partitions[index].interblock_edge_count.copy()
-            # partition.block_degrees = partition_triplet.partitions[index].block_degrees.copy()
-            # partition.block_degrees_out = partition_triplet.partitions[index].block_degrees_out.copy()
-            # partition.block_degrees_in = partition_triplet.partitions[index].block_degrees_in.copy()
 
     partition_triplet.optimal_num_blocks_found = optimal_B_found
     return partition, partition_triplet
