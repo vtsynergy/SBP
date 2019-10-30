@@ -114,28 +114,19 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
                                                         in_blocks[:, 1],
                                                         partition.interblock_edge_count[current_block, current_block],
                                                         use_sparse_matrix)
-    # edge_count_updates = compute_new_rows_cols_interblock_edge_count_matrix(partition.interblock_edge_count, current_block, proposal,
-    #                                                     out_blocks[:, 0], out_blocks[:, 1], in_blocks[:, 0],
-    #                                                     in_blocks[:, 1],
-    #                                                     partition.interblock_edge_count[current_block, current_block],
-    #                                                     1, use_sparse_matrix)
     block_merge_timings.t_edge_count_updates()
 
     # compute new block degrees
     block_merge_timings.t_block_degree_updates()
-    # print("k_out: {} k_in: {} k: {}".format(num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges))
-    block_degrees_out_new, block_degrees_in_new, block_degrees_new = compute_new_block_degrees(current_block,
-                                                                                            proposal,
-                                                                                            partition,
-                                                                                            num_out_neighbor_edges,
-                                                                                            num_in_neighbor_edges,
-                                                                                            num_neighbor_edges)
+    block_degrees_out_new, block_degrees_in_new, block_degrees_new = compute_new_block_degrees(
+        current_block, proposal, partition, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges
+    )
     block_merge_timings.t_block_degree_updates()
 
     # compute change in entropy / posterior
     block_merge_timings.t_compute_delta_entropy()
-    delta_entropy = compute_delta_entropy(current_block, proposal, partition, edge_count_updates, 
-                                        block_degrees_out_new, block_degrees_in_new, use_sparse_matrix)
+    delta_entropy = compute_delta_entropy(current_block, proposal, partition, edge_count_updates,
+                                          block_degrees_out_new, block_degrees_in_new, use_sparse_matrix)
     block_merge_timings.t_compute_delta_entropy()
     return proposal, delta_entropy
 # End of propose_merge()
@@ -167,6 +158,7 @@ def outgoing_edges(adjacency_matrix: np.array, block: int, use_sparse_matrix: bo
         out_blocks = np.hstack((np.array(out_blocks).transpose(), adjacency_matrix[block, out_blocks].transpose()))
     return out_blocks
 # End of outgoing_edges()
+
 
 def incoming_edges(adjacency_matrix: np.array, block: int, use_sparse_matrix: bool) -> np.array:
     """Finds the incoming edges to a given block, with their weights.
