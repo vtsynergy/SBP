@@ -31,4 +31,16 @@ class EdgeCountUpdates(object):
         self.block_col = block_col
         self.proposal_col = proposal_col
     # End of __init__()
+
+    def __eq__(self, other: object):
+        """Returns True if this EdgeCountUpdates object contains the same values as the other, False otherwise.
+        """
+        return (
+            isinstance(other, EdgeCountUpdates) and
+            np.array_equal(self.block_row, other.block_row) and
+            np.array_equal(self.proposal_row, other.proposal_row) and
+            np.array_equal(self.block_col, other.block_col) and
+            np.array_equal(self.proposal_col, other.proposal_col)
+        )
+    # End of __eq__()
 # End of EdgeCountUpdates()
