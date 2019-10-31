@@ -10,6 +10,7 @@ from scipy import sparse as sparse
 
 from graph import Graph
 from utils.dict_transpose_matrix import DictTransposeMatrix
+from cppsbp import BoostMappedMatrix
 
 class Partition():
     """Stores the current partitioning results.
@@ -78,7 +79,8 @@ class Partition():
         """
         if use_sparse: # store interblock edge counts as a sparse matrix
             # self.interblock_edge_count = sparse.lil_matrix((self.num_blocks, self.num_blocks), dtype=int)
-            self.interblock_edge_count = DictTransposeMatrix(shape=(self.num_blocks, self.num_blocks))
+            # self.M = DictTransposeMatrix(shape=(self.num_blocks, self.num_blocks))
+            self.interblock_edge_count = BoostMappedMatrix(self.num_blocks, self.num_blocks)
         else:
             self.interblock_edge_count = np.zeros((self.num_blocks, self.num_blocks), dtype=int)
         # compute the initial interblock edge count
@@ -88,12 +90,12 @@ class Partition():
                 k2, inverse_idx = np.unique(self.block_assignment[out_neighbors[v][:, 0]], return_inverse=True)
                 count = np.bincount(inverse_idx, weights=out_neighbors[v][:, 1]).astype(int)
                 if use_sparse:
-                    self.interblock_edge_count.add((k1, k2), count)
+                    self.interblock_edge_count.add(k1, k2, count)
                 else:
                     self.interblock_edge_count[k1, k2] += count
         # compute initial block degrees
-        self.block_degrees_out = np.asarray(self.interblock_edge_count.sum(axis=1)).ravel()
-        self.block_degrees_in = np.asarray(self.interblock_edge_count.sum(axis=0)).ravel()
+        self.block_degrees_out = np.asarray(self.interblock_edge_count.sum(1)).ravel()
+        self.block_degrees_in = np.asarray(self.interblock_edge_count.sum(0)).ravel()
         self.block_degrees = self.block_degrees_out + self.block_degrees_in
     # End of initialize_edge_counts()
 
