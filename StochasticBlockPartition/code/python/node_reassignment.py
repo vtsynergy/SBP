@@ -140,15 +140,12 @@ def propose_new_assignment(current_node: int, partition: Partition, graph: Graph
     in_neighbors = graph.in_neighbors[current_node]
     mcmc_timings.t_indexing()
 
-    # import timeit
-    # t1 = timeit.default_timer()
     # propose a new block for this node
     mcmc_timings.t_proposal()
     proposal, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges = propose_new_partition(
         current_block, out_neighbors, in_neighbors, partition.block_assignment, partition, False, args.sparse)
     mcmc_timings.t_proposal()
     did_move = False  # Has the graph node been moved to another block or not?
-    # print("propose vertex move: ", timeit.default_timer() - t1)
 
     # determine whether to accept or reject the proposal
     if (proposal != current_block):
