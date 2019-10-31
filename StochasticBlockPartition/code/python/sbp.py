@@ -47,22 +47,26 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
         ##################
         # begin agglomerative partition updates (i.e. block merging)
         t_block_merge_start = timeit.default_timer()
-
         if partition.num_blocks_to_merge != 0:
             if args.verbose:
-                print("\nMerging down blocks from {} to {}".format(partition.num_blocks,
-                                                                partition.num_blocks - partition.num_blocks_to_merge))
+                print("Merging down blocks from {} to {}".format(
+                    partition.num_blocks, partition.num_blocks - partition.num_blocks_to_merge)
+                )
             partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
-
-        t_nodal_update_start = timeit.default_timer()
 
         ############################
         # NODAL BLOCK UPDATES
         ############################
+        t_nodal_update_start = timeit.default_timer()
         if args.verbose:
             print("Beginning nodal updates")
 
         partition = reassign_nodes(partition, graph, partition_triplet, evaluation, args)
+        # print("asserting crap")
+        # for i in range(partition.num_blocks):
+        #     for j in range(partition.num_blocks):
+        #         assert partition.interblock_edge_count[i, j] == partition.M[i, j]
+        # exit()
 
         if visualize_graph:
             graph_object = plot_graph_with_partition(graph.out_neighbors, partition.block_assignment, graph_object)

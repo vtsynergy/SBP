@@ -95,6 +95,7 @@ def propose_new_partition(r, neighbors_out, neighbors_in, b, partition: Partitio
         candidates = multinomial_prob.nonzero()[0]
         s = candidates[np.flatnonzero(np.random.multinomial(1, multinomial_prob[candidates].ravel()))[0]]
     return s, k_out, k_in, k
+# End of propose_new_partition()
 
 
 def propose_random_block(current_block: int, num_blocks: int, agg_move: bool) -> int:
@@ -245,10 +246,7 @@ def block_merge_edge_count_updates(M: Matrix, r: int, s: int, b_out: np.ndarray,
     """
     B = M.shape[0]
     if use_sparse:
-        cs = 0
-        if count_self.values:
-            # print("There is a self-link!")
-            cs = count_self.values[0]
+        cs = count_self
         # print("============Issa sparse matrix yo!==============")
         M_r_row = np.zeros(B)  # DictMatrix(shape=(1, B))
         M_r_col = np.zeros(B)  # DictMatrix(shape=(B, 1))
@@ -473,15 +471,10 @@ def compute_new_block_degrees(r, s, partition: Partition, k_out, k_in, k):
     for old, degree in zip([partition.block_degrees_out, partition.block_degrees_in, partition.block_degrees], [k_out, k_in, k]):
         new_d = old.copy()
         new_d[r] -= degree
-        # print("old {} - degree {} = new {}".format(old[r], degree, new_d[r]))
-        # if new_d[r] < 0:
-        # print("old: ", old[r])
-        # print("new: ", new_d[r])
-        # print("degree: ", degree)
-        # exit()
         new_d[s] += degree
         new.append(new_d)
     return new
+# End of compute_new_block_degrees()
 
 
 def compute_Hastings_correction(b_out, count_out, b_in, count_in, s, partition: Partition, M_r_row, M_r_col, d_new,
@@ -564,7 +557,8 @@ def compute_Hastings_correction(b_out, count_out, b_in, count_in, s, partition: 
 
 def compute_delta_entropy(r, s, partition: Partition, edge_count_updates: EdgeCountUpdates, d_out_new, d_in_new,
     use_sparse) -> float:
-    """Compute change in entropy under the proposal. Reduced entropy means the proposed block is better than the current block.
+    """Compute change in entropy under the proposal. Reduced entropy means the proposed block is better than the
+    current block.
 
         Parameters
         ----------
@@ -818,7 +812,10 @@ def update_partition(partition: Partition, ni: int, r: int, s: int, edge_count_u
     """
     partition.block_assignment[ni] = s
     if use_sparse:
-        partition.interblock_edge_count.update_edge_counts(r, s, edge_count_updates)
+        partition.interblock_edge_count.update_edge_counts(
+            r, s, edge_count_updates.block_row, edge_count_updates.proposal_row, edge_count_updates.block_col,
+            edge_count_updates.proposal_col
+        )
     else:
         partition.interblock_edge_count[r, :] = edge_count_updates.block_row
         partition.interblock_edge_count[s, :] = edge_count_updates.proposal_row
@@ -877,6 +874,7 @@ def compute_overall_entropy(partition: Partition, N, E, use_sparse) -> float:
     model_S = E * (1 + model_S_term) * np.log(1 + model_S_term) - model_S_term * np.log(model_S_term) + N*np.log(partition.num_blocks)
     S = model_S + data_S
     return S
+# End of compute_overall_entropy()
 
 
 def prepare_for_partition_on_next_num_blocks(partition: Partition, partition_triplet: PartitionTriplet,
