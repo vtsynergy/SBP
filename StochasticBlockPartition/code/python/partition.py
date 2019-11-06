@@ -10,7 +10,7 @@ from scipy import sparse as sparse
 
 from graph import Graph
 from utils.dict_transpose_matrix import DictTransposeMatrix
-from cppsbp import BoostMappedMatrix
+from cppsbp.sparse import BoostMappedMatrix
 
 class Partition():
     """Stores the current partitioning results.
@@ -37,7 +37,7 @@ class Partition():
         else:
             self.block_assignment = block_assignment
         self.overall_entropy = np.inf
-        self.interblock_edge_count = [[]]  # type: np.array
+        self.blockmodel = [[]]  # type: np.array
         self.block_degrees = np.zeros(num_blocks)
         self.block_degrees_out = np.zeros(num_blocks)
         self.block_degrees_in = np.zeros(num_blocks)
@@ -78,11 +78,11 @@ class Partition():
             Compute the edge count matrix and the block degrees from scratch
         """
         if use_sparse: # store interblock edge counts as a sparse matrix
-            # self.interblock_edge_count = sparse.lil_matrix((self.num_blocks, self.num_blocks), dtype=int)
+            # self.blockmodel = sparse.lil_matrix((self.num_blocks, self.num_blocks), dtype=int)
             # self.M = DictTransposeMatrix(shape=(self.num_blocks, self.num_blocks))
-            self.interblock_edge_count = BoostMappedMatrix(self.num_blocks, self.num_blocks)
+            self.blockmodel = BoostMappedMatrix(self.num_blocks, self.num_blocks)
         else:
-            self.interblock_edge_count = np.zeros((self.num_blocks, self.num_blocks), dtype=int)
+            self.blockmodel = np.zeros((self.num_blocks, self.num_blocks), dtype=int)
         # compute the initial interblock edge count
         for v in range(len(out_neighbors)):
             if len(out_neighbors[v]) > 0:
@@ -90,12 +90,12 @@ class Partition():
                 k2, inverse_idx = np.unique(self.block_assignment[out_neighbors[v][:, 0]], return_inverse=True)
                 count = np.bincount(inverse_idx, weights=out_neighbors[v][:, 1]).astype(int)
                 if use_sparse:
-                    self.interblock_edge_count.add(k1, k2, count)
+                    self.blockmodel.add(k1, k2, count)
                 else:
-                    self.interblock_edge_count[k1, k2] += count
+                    self.blockmodel[k1, k2] += count
         # compute initial block degrees
-        self.block_degrees_out = np.asarray(self.interblock_edge_count.sum(1)).ravel()
-        self.block_degrees_in = np.asarray(self.interblock_edge_count.sum(0)).ravel()
+        self.block_degrees_out = np.asarray(self.blockmodel.sum(1)).ravel()
+        self.block_degrees_in = np.asarray(self.blockmodel.sum(0)).ravel()
         self.block_degrees = self.block_degrees_out + self.block_degrees_in
     # End of initialize_edge_counts()
 
@@ -206,7 +206,7 @@ class Partition():
         partition_copy = Partition(self.num_blocks, [], self._args)
         partition_copy.block_assignment = self.block_assignment.copy()
         partition_copy.overall_entropy = self.overall_entropy
-        partition_copy.interblock_edge_count = self.interblock_edge_count.copy()
+        partition_copy.blockmodel = self.blockmodel.copy()
         partition_copy.block_degrees = self.block_degrees.copy()
         partition_copy.block_degrees_out = self.block_degrees_out.copy()
         partition_copy.block_degrees_in = self.block_degrees_in.copy()

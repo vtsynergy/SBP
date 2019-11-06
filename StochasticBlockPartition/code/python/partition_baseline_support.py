@@ -23,6 +23,8 @@ from partition import Partition, PartitionTriplet
 from utils.sparse_matrix import SparseMatrix  # , SparseVector
 from utils.edge_count_updates import EdgeCountUpdates
 
+# import cppsbp
+
 
 Matrix = Union[np.ndarray, SparseMatrix, sparse.lil_matrix]
 
@@ -66,23 +68,28 @@ def propose_new_partition(r, neighbors_out, neighbors_in, b, partition: Partitio
         a block. Otherwise, randomly selects a neighbor to block u and propose its block assignment. For block (agglomerative) moves,
         avoid proposing the current block.
     """
-    neighbors = np.concatenate((neighbors_out, neighbors_in))
-    k_out = sum(neighbors_out[:,1])
-    k_in = sum(neighbors_in[:,1])
+    # res = cppsbp.sbp.propose_new_partition(r, neighbors_out, neighbors_in, b, partition, agg_move, use_sparse)
+    # print(res)
+    # print(partition.block_degrees[0])
+    # exit()
+    neighbors = np.concatenate((neighbors_out, neighbors_in), axis=-1)
+    k_out = sum(neighbors_out[1])
+    k_in = sum(neighbors_in[1])
     k = k_out + k_in
     if k == 0: # this node has no neighbor, simply propose a block randomly
         s = propose_random_block(r, partition.num_blocks, agg_move)
         return s, k_out, k_in, k
-    rand_neighbor = np.random.choice(neighbors[:,0], p=neighbors[:,1]/float(k))
+    # rand_neighbor = np.random.choice(neighbors[:,0], p=neighbors[:,1]/float(k))
+    rand_neighbor = np.random.choice(neighbors[0], p=neighbors[1]/float(k))
     u = b[rand_neighbor]
     # propose a new block randomly
     if np.random.uniform() <= partition.num_blocks/float(partition.block_degrees[u]+partition.num_blocks):  # chance inversely prop. to block_degree
         s = propose_random_block(r, partition.num_blocks, agg_move)
     else:  # propose by random draw from neighbors of block partition[rand_neighbor]
         if use_sparse:
-            multinomial_prob = (partition.interblock_edge_count.getrow(u).astype(float) + partition.interblock_edge_count.getcol(u).astype(float)) / float(partition.block_degrees[u])
+            multinomial_prob = (partition.blockmodel.getrow(u).astype(float) + partition.blockmodel.getcol(u).astype(float)) / float(partition.block_degrees[u])
         else:
-            multinomial_prob = (partition.interblock_edge_count[u, :].transpose() + partition.interblock_edge_count[:, u]) / float(partition.block_degrees[u])
+            multinomial_prob = (partition.blockmodel[u, :].transpose() + partition.blockmodel[:, u]) / float(partition.block_degrees[u])
         if agg_move:  # force proposal to be different from current block
             multinomial_prob[r] = 0
             if multinomial_prob.sum() == 0:  # the current block has no neighbors. randomly propose a different block
@@ -126,7 +133,7 @@ def propose_random_block(current_block: int, num_blocks: int, agg_move: bool) ->
 # End of propose_random_block()
 
 
-def compute_new_rows_cols_interblock_edge_count_matrix(M, r, s, b_out, count_out, b_in, count_in, count_self,
+def compute_new_rows_cols_blockmodel_matrix(M, r, s, b_out, count_out, b_in, count_in, count_self,
                                                        agg_move, use_sparse):
     """Compute the two new rows and cols of the edge count matrix under the proposal for the current node or block
 
@@ -207,7 +214,7 @@ def compute_new_rows_cols_interblock_edge_count_matrix(M, r, s, b_out, count_out
     M_s_col[s, 0] += count_self
 
     return EdgeCountUpdates(M_r_row, M_s_row, M_r_col, M_s_col)
-# End of compute_new_rows_cols_interblock_edge_count_matrix()
+# End of compute_new_rows_cols_blockmodel_matrix()
 
 
 def block_merge_edge_count_updates(M: Matrix, r: int, s: int, b_out: np.ndarray, count_out: np.ndarray,
@@ -429,7 +436,7 @@ def vertex_reassign_edge_count_updates(M: Matrix, r: int, s: int, b_out: np.ndar
         M_s_col[s, 0] += count_self
 
     return EdgeCountUpdates(M_r_row, M_s_row, M_r_col, M_s_col)
-# End of compute_new_rows_cols_interblock_edge_count_matrix()
+# End of compute_new_rows_cols_blockmodel_matrix()
 
 
 def compute_new_block_degrees(r, s, partition: Partition, k_out, k_in, k):
@@ -467,6 +474,9 @@ def compute_new_block_degrees(r, s, partition: Partition, k_out, k_in, k):
         -----
         The updates only involve changing the degrees of the current and proposed block
     """
+    # print("pbdout: ", partition.block_degrees_out)
+    # print("pbdin: ", partition.block_degrees_in)
+    # print("pbd: ", partition.block_degrees)
     new = []
     for old, degree in zip([partition.block_degrees_out, partition.block_degrees_in, partition.block_degrees], [k_out, k_in, k]):
         new_d = old.copy()
@@ -539,13 +549,13 @@ def compute_Hastings_correction(b_out, count_out, b_in, count_in, s, partition: 
     t, idx = np.unique(np.append(b_out, b_in), return_inverse=True)  # find all the neighboring blocks
     count = np.bincount(idx, weights=np.append(count_out, count_in)).astype(int)  # count edges to neighboring blocks
     if use_sparse:
-        M_t_s = partition.interblock_edge_count.getcol(s)[t]
-        M_s_t = partition.interblock_edge_count.getrow(s)[t]
+        M_t_s = partition.blockmodel.getcol(s)[t]
+        M_s_t = partition.blockmodel.getrow(s)[t]
         M_r_row = M_r_row[t]
         M_r_col = M_r_col[t]
     else:
-        M_t_s = partition.interblock_edge_count[t, s].ravel()
-        M_s_t = partition.interblock_edge_count[s, t].ravel()
+        M_t_s = partition.blockmodel[t, s].ravel()
+        M_s_t = partition.blockmodel[s, t].ravel()
         M_r_row = M_r_row[0, t].ravel()
         M_r_col = M_r_col[t, 0].ravel()
         
@@ -604,10 +614,10 @@ def compute_delta_entropy(r, s, partition: Partition, edge_count_updates: EdgeCo
     M_s_row = edge_count_updates.proposal_row
     M_r_col = edge_count_updates.block_col
     M_s_col = edge_count_updates.proposal_col
-    M_r_t1 = partition.interblock_edge_count[r, :]
-    M_s_t1 = partition.interblock_edge_count[s, :]
-    M_t2_r = partition.interblock_edge_count[:, r]
-    M_t2_s = partition.interblock_edge_count[:, s]
+    M_r_t1 = partition.blockmodel[r, :]
+    M_s_t1 = partition.blockmodel[s, :]
+    M_t2_r = partition.blockmodel[:, r]
+    M_t2_s = partition.blockmodel[:, s]
 
     # remove r and s from the cols to avoid double counting
     idx = list(range(len(d_in_new)))
@@ -695,10 +705,10 @@ def compute_delta_entropy_sparse(r, s, partition: Partition, edge_count_updates:
     M_s_row = edge_count_updates.proposal_row  # .getrow(0)
     M_r_col = edge_count_updates.block_col  # .getcol(0)
     M_s_col = edge_count_updates.proposal_col  # .getcol(0)
-    M_r_t1 = partition.interblock_edge_count.getrow(r)
-    M_s_t1 = partition.interblock_edge_count.getrow(s)
-    M_t2_r = partition.interblock_edge_count.getcol(r)
-    M_t2_s = partition.interblock_edge_count.getcol(s)
+    M_r_t1 = partition.blockmodel.getrow(r)
+    M_s_t1 = partition.blockmodel.getrow(s)
+    M_t2_r = partition.blockmodel.getcol(r)
+    M_t2_s = partition.blockmodel.getcol(s)
 
     idx = list(range(len(d_in_new)))
     del idx[max(r, s)]
@@ -760,20 +770,25 @@ def carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_bloc
                     the modified partition, with the merges carried out
     """
     bestMerges = delta_entropy_for_each_block.argsort()
-    block_map = np.arange(partition.num_blocks)
+    print("dE: ", delta_entropy_for_each_block)
+    block_map = np.arange(partition.num_blocks)  # 1 2 3 4 5 ... num_blocks
     num_merge = 0
     counter = 0
     while num_merge < partition.num_blocks_to_merge:
         mergeFrom = bestMerges[counter]
-        mergeTo = block_map[best_merge_for_each_block[bestMerges[counter]]]
+        mergeTo = block_map[best_merge_for_each_block[mergeFrom]]  # bestMerges[counter]]]
         counter += 1
         if mergeTo != mergeFrom:
-            block_map[np.where(block_map == mergeFrom)] = mergeTo
-            partition.block_assignment[np.where(partition.block_assignment == mergeFrom)] = mergeTo
+            # block_map[np.where(block_map == mergeFrom)] = mergeTo
+            # partition.block_assignment[np.where(partition.block_assignment == mergeFrom)] = mergeTo
+            partition.merge_blocks(mergeFrom, mergeTo)
             num_merge += 1
     remaining_blocks = np.unique(partition.block_assignment)
     mapping = -np.ones(partition.num_blocks, dtype=int)
+    print("mapping: ", mapping)
     mapping[remaining_blocks] = np.arange(len(remaining_blocks))
+    print("mapping after change: ", mapping)
+    print("expected block assignment: ", mapping[partition.block_assignment])
     partition.block_assignment = mapping[partition.block_assignment]
     partition.num_blocks -= partition.num_blocks_to_merge
     return partition
@@ -812,15 +827,15 @@ def update_partition(partition: Partition, ni: int, r: int, s: int, edge_count_u
     """
     partition.block_assignment[ni] = s
     if use_sparse:
-        partition.interblock_edge_count.update_edge_counts(
+        partition.blockmodel.update_edge_counts(
             r, s, edge_count_updates.block_row, edge_count_updates.proposal_row, edge_count_updates.block_col,
             edge_count_updates.proposal_col
         )
     else:
-        partition.interblock_edge_count[r, :] = edge_count_updates.block_row
-        partition.interblock_edge_count[s, :] = edge_count_updates.proposal_row
-        partition.interblock_edge_count[:, r] = edge_count_updates.block_col.reshape(partition.interblock_edge_count[:, r].shape)
-        partition.interblock_edge_count[:, s] = edge_count_updates.proposal_col.reshape(partition.interblock_edge_count[:, s].shape)
+        partition.blockmodel[r, :] = edge_count_updates.block_row
+        partition.blockmodel[s, :] = edge_count_updates.proposal_row
+        partition.blockmodel[:, r] = edge_count_updates.block_col.reshape(partition.blockmodel[:, r].shape)
+        partition.blockmodel[:, s] = edge_count_updates.proposal_col.reshape(partition.blockmodel[:, s].shape)
     partition.block_degrees_out = d_out_new
     partition.block_degrees_in = d_in_new
     partition.block_degrees = d_new
@@ -862,11 +877,11 @@ def compute_overall_entropy(partition: Partition, N, E, use_sparse) -> float:
         
         where the function h(x)=(1+x)\ln(1+x) - x\ln(x) and the sum runs over all entries (t_1, t_2) in the edge count matrix
     """
-    nonzeros = partition.interblock_edge_count.nonzero()  # all non-zero entries
+    nonzeros = partition.blockmodel.nonzero()  # all non-zero entries
     if use_sparse:
-        edge_count_entries = partition.interblock_edge_count.values()
+        edge_count_entries = partition.blockmodel.values()
     else:
-        edge_count_entries = partition.interblock_edge_count[nonzeros[0], nonzeros[1]]
+        edge_count_entries = partition.blockmodel[nonzeros[0], nonzeros[1]]
 
     entries = edge_count_entries * np.log(edge_count_entries / (partition.block_degrees_out[nonzeros[0]] * partition.block_degrees_in[nonzeros[1]]).astype(float))
     data_S = -np.sum(entries)

@@ -214,11 +214,11 @@ class Evaluation(object):
         #####
         true_subgraph_partition = subgraph_partition.clone_with_true_block_membership(subgraph.out_neighbors,
                                                                                       subgraph.true_block_assignment)
-        subgraph_blockmatrix = true_subgraph_partition.interblock_edge_count
+        subgraph_blockmatrix = true_subgraph_partition.blockmodel
         self.subgraph_edge_ratio = subgraph_blockmatrix.trace() / subgraph_blockmatrix.sum()
         true_full_partition = full_partition.clone_with_true_block_membership(full_graph.out_neighbors,
                                                                               full_graph.true_block_assignment)
-        full_blockmatrix = true_full_partition.interblock_edge_count
+        full_blockmatrix = true_full_partition.blockmodel
         self.graph_edge_ratio = full_blockmatrix.trace() / full_blockmatrix.sum()
 
         #####

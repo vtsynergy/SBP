@@ -1,10 +1,21 @@
+/***
+ * Sparse Matrix based on the Boost mapped_matrix
+ */
+#ifndef CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP
+#define CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP
+
 #include "csparse_matrix.hpp"
+
+#include <Eigen/Core>
+
+typedef std::pair<std::vector<int>, std::vector<int>> EdgeWeights;
 
 /****
  * C++ interface of the dictionary (map of maps) sparse matrix
  */
 class BoostMappedMatrix : public CSparseMatrix {
 public:
+    BoostMappedMatrix() {}
     BoostMappedMatrix(int nrows, int ncols) : ncols(ncols), nrows(nrows) {
         this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
         int shape_array[2] = {this->nrows, this->ncols};
@@ -18,11 +29,16 @@ public:
     py::tuple nonzero();
     py::array_t<int> values();
     int sum();
-    py::array_t<int> sum(int axis = 0);
+    Eigen::VectorXi sum(int axis = 0);
+    // py::array_t<int> sum(int axis = 0);
     void sub(int row, int col, int val);
     void add(int row, int col, int val);
     void add(int row, py::array_t<int> cols, py::array_t<int> values);
     int operator[] (py::tuple index);
+    EdgeWeights outgoing_edges(int block);
+    EdgeWeights incoming_edges(int block);
+    // py::tuple outgoing_edges(int block);
+    // py::tuple incoming_edges(int block);
 private:
     void check_row_bounds(int row);
     void check_col_bounds(int col);
@@ -30,3 +46,5 @@ private:
     int nrows;
     boost::numeric::ublas::mapped_matrix<int> matrix;
 };
+
+#endif // CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP

@@ -208,14 +208,14 @@ def _load_graph(input_filename: str, load_true_partition: bool, part_num: Option
     # convert each neighbor list to neighbor numpy arrays for faster access
     for i in range(N):
         if len(out_neighbors[i]) > 0:
-            out_neighbors[i] = np.array(out_neighbors[i], dtype=int)
+            out_neighbors[i] = np.array(out_neighbors[i], dtype=np.int32)
         else:
-            out_neighbors[i] = np.array(out_neighbors[i], dtype=int).reshape((0,2))
+            out_neighbors[i] = np.array(out_neighbors[i], dtype=np.int32).reshape((0,2))
     for i in range(N):
         if len(in_neighbors[i]) > 0:
-            in_neighbors[i] = np.array(in_neighbors[i], dtype=int)
+            in_neighbors[i] = np.array(in_neighbors[i], dtype=np.int32)
         else:
-            in_neighbors[i] = np.array(in_neighbors[i], dtype=int).reshape((0,2))
+            in_neighbors[i] = np.array(in_neighbors[i], dtype=np.int32).reshape((0,2))
 
     E = sum(len(v) for v in out_neighbors)  # number of edges
 

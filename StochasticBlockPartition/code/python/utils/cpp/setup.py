@@ -2,8 +2,9 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 import sys
 import setuptools
+import os
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 class get_pybind_include(object):
@@ -23,11 +24,17 @@ class get_pybind_include(object):
 ext_modules = [
     Extension(
         'cppsbp',
-        ['boost_mapped_matrix_wrapper.cpp',
-         'boost_mapped_matrix.cpp'],
+        [
+         'partition/sparse/boost_mapped_matrix.cpp',
+         'partition/partition.cpp',
+         'wrapper.cpp'
+        ],
         include_dirs=[
             # Path to pybind11 headers
             './',
+            './partition/',
+            './partition/sparse/',
+            os.environ['CONDA_PREFIX'] + '/include/eigen3',
             get_pybind_include(),
             get_pybind_include(user=True)
         ],

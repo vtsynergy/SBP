@@ -9,7 +9,7 @@ import numpy as np
 
 from partition_baseline_support import compute_overall_entropy
 from partition_baseline_support import propose_new_partition
-from partition_baseline_support import compute_new_rows_cols_interblock_edge_count_matrix
+from partition_baseline_support import compute_new_rows_cols_blockmodel_matrix
 from partition_baseline_support import vertex_reassign_edge_count_updates
 from partition_baseline_support import compute_new_block_degrees
 from partition_baseline_support import compute_Hastings_correction
@@ -143,7 +143,7 @@ def propose_new_assignment(current_node: int, partition: Partition, graph: Graph
     # propose a new block for this node
     mcmc_timings.t_proposal()
     proposal, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges = propose_new_partition(
-        current_block, out_neighbors, in_neighbors, partition.block_assignment, partition, False, args.sparse)
+        current_block, out_neighbors.T, in_neighbors.T, partition.block_assignment, partition, False, args.sparse)
     mcmc_timings.t_proposal()
     did_move = False  # Has the graph node been moved to another block or not?
 
@@ -161,7 +161,7 @@ def propose_new_assignment(current_node: int, partition: Partition, graph: Graph
         mcmc_timings.t_edge_count_updates()
         self_edge_weight = np.sum(out_neighbors[np.where(
             out_neighbors[:, 0] == current_node), 1])  # check if this node has a self edge
-        edge_count_updates = vertex_reassign_edge_count_updates(partition.interblock_edge_count, current_block, proposal,
+        edge_count_updates = vertex_reassign_edge_count_updates(partition.blockmodel, current_block, proposal,
                                                                 blocks_out, count_out, blocks_in, count_in,
                                                                 self_edge_weight, args.sparse)
         mcmc_timings.t_edge_count_updates()
@@ -298,7 +298,7 @@ def propagate_membership(full_graph: Graph, full_graph_partition: Partition, sam
         if full_graph_partition.block_assignment[vertex] >= sample_partition.num_blocks:
             current_block_assignment = full_graph_partition.block_assignment[vertex]
             full_graph_partition.block_assignment[vertex] = np.argmax(
-                full_graph_partition.interblock_edge_count[current_block_assignment][:sample_partition.num_blocks])
+                full_graph_partition.blockmodel[current_block_assignment][:sample_partition.num_blocks])
     full_graph_partition.num_blocks = len(np.unique(full_graph_partition.block_assignment))
     full_graph_partition.initialize_edge_counts(full_graph.out_neighbors, args.sparse)
     return full_graph_partition

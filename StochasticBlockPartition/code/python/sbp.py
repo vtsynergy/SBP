@@ -9,7 +9,9 @@ from block_merge import merge_blocks
 from evaluation import Evaluation
 from graph import Graph
 from node_reassignment import reassign_nodes, propagate_membership, fine_tune_membership
-from partition import Partition, PartitionTriplet
+from partition import PartitionTriplet
+from cppsbp.partition import Partition
+# from partition import Partition, PartitionTriplet
 from partition_baseline_support import plot_graph_with_partition
 from partition_baseline_support import prepare_for_partition_on_next_num_blocks
 
@@ -25,11 +27,12 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
     evaluation = init_evaluation  # type: Evaluation
 
     if init_partition is None:
-        partition = Partition(graph.num_nodes, graph.out_neighbors, args)
+        # partition = Partition(graph.num_nodes, graph.out_neighbors, args)
+        partition = Partition(graph.num_nodes, graph.out_neighbors, args.blockReductionRate)
     if init_evaluation is None:
         evaluation = Evaluation(args, graph)
 
-    # print(partition.interblock_edge_count._matrix)
+    # print(partition.blockmodel._matrix)
     print("Performing stochastic block partitioning on graph with {} vertices and {} blocks".format(
         graph.num_nodes, partition.num_blocks)
     )
@@ -62,11 +65,6 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
             print("Beginning nodal updates")
 
         partition = reassign_nodes(partition, graph, partition_triplet, evaluation, args)
-        # print("asserting crap")
-        # for i in range(partition.num_blocks):
-        #     for j in range(partition.num_blocks):
-        #         assert partition.interblock_edge_count[i, j] == partition.M[i, j]
-        # exit()
 
         if visualize_graph:
             graph_object = plot_graph_with_partition(graph.out_neighbors, partition.block_assignment, graph_object)
