@@ -70,15 +70,17 @@ class Graph():
             graph : Graph
                     the loaded Graph object
         """
+        has_truth = not args.notruth
+        print("has truth = ", has_truth)
         input_filename = _build_filepath(args)
         if args.parts >= 1:
             print('\nLoading partition 1 of {} ({}) ...'.format(args.parts, input_filename + "_1.tsv"))
-            graph = _load_graph(input_filename, load_true_partition=True, part_num=1)
+            graph = _load_graph(input_filename, load_true_partition=has_truth, part_num=1)
             for part in range(2, args.parts + 1):
                 print('Loading partition {} of {} ({}) ...'.format(part, args.parts, input_filename + "_" + str(part) + ".tsv"))
                 graph.update(_load_graph(input_filename, load_true_partition=False, part_num=part, graph=graph))
         else:
-            graph = _load_graph(input_filename, load_true_partition=True)
+            graph = _load_graph(input_filename, load_true_partition=has_truth)
 
         if args.verbose:
             print('Number of nodes: {}'.format(graph.num_nodes))

@@ -30,6 +30,8 @@ def evaluate_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evalua
         evaluation : Evaluation
                 the evaluation results, filled in with goodness of partitioning measures
     """
+    if not true_b:
+        return
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
     joint_prob = evaluate_accuracy(contingency_table, evaluation)
     evaluate_pairwise_metrics(contingency_table, N, evaluation)
@@ -58,6 +60,8 @@ def evaluate_subgraph_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluatio
         evaluation : Evaluation
                 the evaluation results, filled in with goodness of partitioning measures
     """
+    if not true_b:
+        return
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
     joint_prob = evaluate_accuracy(contingency_table, evaluation, True)
     evaluate_pairwise_metrics(contingency_table, N, evaluation, True)

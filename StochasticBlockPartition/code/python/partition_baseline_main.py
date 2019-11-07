@@ -65,6 +65,7 @@ def parse_arguments():
     parser.add_argument("--sample_iterations", type=int, default=1,
                         help="The number of sampling iterations to perform. Default = 1")
     parser.add_argument("--degrees", action="store_true", help="Save vertex degrees and exit.")
+    parser.add_argument("--notruth", action="store_true", help="No truth partition is available.")
     args = parser.parse_args()
     return args
 # End of parse_arguments()
