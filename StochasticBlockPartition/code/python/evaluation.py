@@ -8,8 +8,10 @@ from typing import List, Dict
 from argparse import Namespace
 
 import numpy as np
+from scipy.spatial.distance import jensenshannon
 
 from graph import Graph
+from sample import Sample
 from mcmc_timings import MCMCTimings
 from block_merge_timings import BlockMergeTimings
 
@@ -45,6 +47,8 @@ class Evaluation(object):
         'subgraph mutual information',
         'subgraph fraction of missed information',
         'subgraph fraction of erroneous information',
+        'jensen_shannon_divergence',
+        'random_jensen_shannon_divergence',
         'num block proposals',
         'beta',
         'sample size (%)',
@@ -106,6 +110,7 @@ class Evaluation(object):
         # CSV file into which to write the results
         self.csv_file = args.csv + ".csv"
         self.csv_details_file = args.csv + "_details.csv"
+        self.args = args
         # Dataset parameters
         self.block_size_variation = args.blockSizeVar
         self.block_overlap = args.overlap
@@ -134,6 +139,8 @@ class Evaluation(object):
         self.subgraph_mutual_info = 0.0
         self.subgraph_missed_info = 0.0
         self.subgraph_erroneous_info = 0.0
+        self.jensen_shannon_divergence = 0.0
+        self.random_jensen_shannon_divergence = 0.0
         # Algorithm parameters
         self.num_block_proposals = args.blockProposals
         self.beta = args.beta
@@ -181,9 +188,8 @@ class Evaluation(object):
         self.finetuning_details = None
     # End of __init__()
 
-
     def evaluate_subgraph_sampling(self, full_graph: Graph, subgraph: Graph, full_partition: 'partition.Partition',
-        subgraph_partition: 'partition.Partition', block_mapping: Dict[int, int], vertex_mapping: Dict[int, int]):
+        subgraph_partition: 'partition.Partition', sample: Sample):
         """Evaluates the goodness of the samples returned by the subgraph.
 
         Parameters
@@ -222,6 +228,16 @@ class Evaluation(object):
         self.graph_edge_ratio = full_blockmatrix.trace() / full_blockmatrix.sum()
 
         #####
+        # Shannon divergence between partitions
+        #####
+        self.jensen_shannon_divergence = self.truth_divergence(
+            full_graph, sample, true_full_partition, subgraph_partition
+        )
+        self.random_jensen_shannon_divergence = self.random_divergence(
+            full_graph, sample, full_partition, subgraph_partition
+        )
+
+        #####
         # Normalized difference from ideal-block membership
         #####
         full_graph_membership_nums = np.zeros(full_graph_num_blocks)
@@ -229,7 +245,7 @@ class Evaluation(object):
             full_graph_membership_nums[block_membership] += 1
         subgraph_membership_nums = np.zeros(full_graph_num_blocks)
         # invert dict to map subgraph block id to full graph block id
-        true_block_mapping = dict([(v, k) for k, v in block_mapping.items()])
+        true_block_mapping = dict([(v, k) for k, v in sample.true_blocks_mapping.items()])
         for block_membership in subgraph.true_block_assignment:
             subgraph_membership_nums[true_block_mapping[block_membership]] += 1
         ideal_block_membership_nums = full_graph_membership_nums * (subgraph.num_nodes / full_graph.num_nodes)
@@ -243,7 +259,7 @@ class Evaluation(object):
         # Maximum expansion factor = (size of graph - size of sample) / size of sample
         # Expansion quality = Neighbors of sample / (size of graph - size of sample)
         # Expansion quality = 1 means sample is at most 1 edge away from entire graph
-        subgraph_vertices = set(vertex_mapping.keys())
+        subgraph_vertices = set(sample.vertex_mapping.keys())
         neighbors = set()
         for vertex in subgraph_vertices:
             for neighbor in full_graph.out_neighbors[vertex]:
@@ -364,6 +380,8 @@ class Evaluation(object):
                 self.subgraph_mutual_info,
                 self.subgraph_missed_info,
                 self.subgraph_erroneous_info,
+                self.jensen_shannon_divergence,
+                self.random_jensen_shannon_divergence,
                 self.num_block_proposals,
                 self.beta,
                 self.sample_size,
@@ -465,4 +483,61 @@ class Evaluation(object):
         self.block_merge_details.append(block_merge_timings)
         return block_merge_timings
     # End of add_block_merge_timings()
+
+    def truth_divergence(self, graph: Graph, sample: Sample, true_partition: 'partition.Partition',
+        sample_graph_partition: 'partition.Partition') -> float:
+        """Shannon distance between the true full graph and true sampled subgraph blockmodels.
+        """
+        true_b = graph.true_block_assignment
+        sample_b = true_b[sample.state.sample_idx]
+        sample_out_neighbors = list()  # type: List[np.ndarray]
+        # print("Sampled IDs: ", sample.state.sample_idx)
+        for i in range(len(graph.out_neighbors)):
+            if i not in sample.state.sample_idx:
+                sample_out_neighbors.append(np.asarray([[]]))
+            else:
+                neighbors = graph.out_neighbors[i]
+                sampled = list()
+                for i in range(len(neighbors)):
+                    neighbor = neighbors[i]
+                    if neighbor[0] in sample.state.sample_idx:
+                        sampled.append(i)
+                sample_out_neighbors.append(neighbors[sampled])
+        true_sample_partition = sample_graph_partition.clone_with_true_block_membership(sample_out_neighbors, true_b)
+        true_blockmodel = true_partition.interblock_edge_count.ravel()
+        true_sample_blockmodel = true_sample_partition.interblock_edge_count.ravel()
+        true_distribution = true_blockmodel / true_blockmodel.sum()
+        true_sample_distribution = true_sample_blockmodel / true_sample_blockmodel.sum()
+        distance = jensenshannon(true_distribution, true_sample_distribution)
+        return distance ** 2
+    # End of truth_divergence()
+
+    def random_divergence(self, graph: Graph, sample: Sample, full_graph_partition: 'partition.Partition',
+        sample_graph_partition: 'partition.Partition') -> float:
+        """Shannon distance between the randomly generated full graph and subgraph blockmodels.
+        """
+        true_b = np.random.randint(0, int(graph.num_nodes / (100 * np.log(graph.num_nodes))), graph.num_nodes) 
+        # sample_b = true_b[sample.state.sample_idx]
+        sample_out_neighbors = list()  # type: List[np.ndarray]
+        # print("Sampled IDs: ", sample.state.sample_idx)
+        for i in range(len(graph.out_neighbors)):
+            if i not in sample.state.sample_idx:
+                sample_out_neighbors.append(np.asarray([[]]))
+            else:
+                neighbors = graph.out_neighbors[i]
+                sampled = list()
+                for i in range(len(neighbors)):
+                    neighbor = neighbors[i]
+                    if neighbor[0] in sample.state.sample_idx:
+                        sampled.append(i)
+                sample_out_neighbors.append(neighbors[sampled])
+        true_partition = full_graph_partition.clone_with_true_block_membership(graph.out_neighbors, true_b)
+        true_sample_partition = sample_graph_partition.clone_with_true_block_membership(sample_out_neighbors, true_b)
+        true_blockmodel = true_partition.interblock_edge_count.ravel()
+        true_sample_blockmodel = true_sample_partition.interblock_edge_count.ravel()
+        true_distribution = true_blockmodel / true_blockmodel.sum()
+        true_sample_distribution = true_sample_blockmodel / true_sample_blockmodel.sum()
+        distance = jensenshannon(true_distribution, true_sample_distribution)
+        return distance ** 2
+    # End of truth_divergence()
 # End of Evaluation()

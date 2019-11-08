@@ -55,7 +55,7 @@ class SampleStack(object):
     # End of _pop()
 
     def unstack(self, args: 'argparse.Namespace', subgraph_partition: Partition = None,
-        evaluation: Evaluation = None) -> Tuple[Graph, Partition, Dict, Dict, Evaluation]:
+        evaluation: Evaluation = None) -> Tuple[Graph, Partition, 'Sample', Evaluation]:
         """Performs SBP on the first (innermost) sample. Merges said sample with the next in the stack, and performs
         SBP on the combined results. Repeats the process until all samples have been partitioned.
 
@@ -107,7 +107,7 @@ class SampleStack(object):
                                                                         evaluation, min_num_blocks)
         else:
             subgraph_partition = combined_partition
-        return combined_subgraph, subgraph_partition, sample.vertex_mapping, sample.true_blocks_mapping, evaluation
+        return combined_subgraph, subgraph_partition, sample, evaluation  # sample.vertex_mapping, sample.true_blocks_mapping, evaluation
     # End of unstack()
 
     def extrapolate_sample_partition(self, subgraph_partition: Partition, vertex_mapping: Dict[int,int], 

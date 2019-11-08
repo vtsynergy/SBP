@@ -8,6 +8,8 @@ import scipy.special as misc
 import numpy as np
 
 from evaluation import Evaluation
+from graph import Graph
+from partition import Partition
 
 
 def evaluate_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evaluation):
@@ -30,7 +32,7 @@ def evaluate_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evalua
         evaluation : Evaluation
                 the evaluation results, filled in with goodness of partitioning measures
     """
-    if not true_b:
+    if true_b.sum() == -1 * len(true_b):
         return
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
     joint_prob = evaluate_accuracy(contingency_table, evaluation)
@@ -60,7 +62,7 @@ def evaluate_subgraph_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluatio
         evaluation : Evaluation
                 the evaluation results, filled in with goodness of partitioning measures
     """
-    if not true_b:
+    if true_b.sum() == -1 * len(true_b):
         return
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
     joint_prob = evaluate_accuracy(contingency_table, evaluation, True)

@@ -83,7 +83,7 @@ class Partition():
             self.interblock_edge_count = np.zeros((self.num_blocks, self.num_blocks), dtype=int)
         # compute the initial interblock edge count
         for v in range(len(out_neighbors)):
-            if len(out_neighbors[v]) > 0:
+            if len(out_neighbors[v]) > 0 and out_neighbors[v].size > 0:
                 k1 = self.block_assignment[v]
                 k2, inverse_idx = np.unique(self.block_assignment[out_neighbors[v][:, 0]], return_inverse=True)
                 count = np.bincount(inverse_idx, weights=out_neighbors[v][:, 1]).astype(int)

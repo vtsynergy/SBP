@@ -87,10 +87,12 @@ if __name__ == "__main__":
         # ))
         # partition, evaluation = stochastic_block_partition(graph, args)
         # print('Combining sampled partition with full graph')
-        subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
+        # subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
+        subgraph, subgraph_partition, sample, evaluation = samplestack.unstack(args)
         full_graph, full_graph_partition, evaluation = samplestack.extrapolate_sample_partition(
-            subgraph_partition, vertex_mapping, args, evaluation
+            subgraph_partition, sample.vertex_mapping, args, evaluation
         )
+        print(len(samplestack.stack))
     else:
         graph = Graph.load(args)
         t_load = timeit.default_timer()
@@ -105,8 +107,7 @@ if __name__ == "__main__":
     evaluation.total_runtime(t_start, t_end)
 
     if args.sample_type != "none":
-        evaluation.evaluate_subgraph_sampling(full_graph, subgraph, full_graph_partition, subgraph_partition,
-                                              block_mapping, vertex_mapping)
+        evaluation.evaluate_subgraph_sampling(full_graph, subgraph, full_graph_partition, subgraph_partition, sample)
         evaluation.num_nodes = full_graph.num_nodes
         evaluation.num_edges = full_graph.num_edges
 
