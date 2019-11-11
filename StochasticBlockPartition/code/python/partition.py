@@ -1,22 +1,23 @@
 """Parameters for partitioning.
 """
 
-from collections import namedtuple
 from typing import List, Dict
 from argparse import Namespace
 
 import numpy as np
-from scipy import sparse as sparse
 
-from graph import Graph
 from utils.dict_transpose_matrix import DictTransposeMatrix
+
+# type hinting
+from argparse import Namespace
+
 
 class Partition():
     """Stores the current partitioning results.
     """
 
     def __init__(self, num_blocks: int, out_neighbors: List[np.ndarray], args: Namespace,
-        block_assignment: np.ndarray = None) -> None:
+                 block_assignment: np.ndarray = None) -> None:
         """Creates a new Partition object.
 
             Parameters
@@ -76,7 +77,7 @@ class Partition():
             -----
             Compute the edge count matrix and the block degrees from scratch
         """
-        if use_sparse: # store interblock edge counts as a sparse matrix
+        if use_sparse:  # store interblock edge counts as a sparse matrix
             # self.interblock_edge_count = sparse.lil_matrix((self.num_blocks, self.num_blocks), dtype=int)
             self.interblock_edge_count = DictTransposeMatrix(shape=(self.num_blocks, self.num_blocks))
         else:
@@ -97,8 +98,8 @@ class Partition():
         self.block_degrees = self.block_degrees_out + self.block_degrees_in
     # End of initialize_edge_counts()
 
-    def clone_with_true_block_membership(self, out_neighbors: List[np.ndarray], 
-        true_block_membership: np.ndarray) -> 'Partition':
+    def clone_with_true_block_membership(self, out_neighbors: List[np.ndarray],
+                                         true_block_membership: np.ndarray) -> 'Partition':
         """Creates a new Partition object for the correctly partitioned graph.
 
             Parameters
@@ -107,7 +108,7 @@ class Partition():
                     list of outgoing edges for each node
             true_block_membership : np.ndarray [int]
                     the correct block membership for every vertex
-            
+
             Returns
             ------
             partition : Partition
@@ -119,8 +120,8 @@ class Partition():
     # End of clone_with_true_block_membership()
 
     @staticmethod
-    def extend_sample(num_blocks: int, out_neighbors: List[np.ndarray],
-        sample_block_assignment: np.ndarray, args: 'argparse.Namespace') -> 'Partition':
+    def extend_sample(num_blocks: int, out_neighbors: List[np.ndarray], sample_block_assignment: np.ndarray,
+                      args: Namespace) -> 'Partition':
         """Creates a new Partition object from the block assignment array.
 
             Parameters
@@ -151,7 +152,7 @@ class Partition():
 
     @staticmethod
     def from_sample(num_blocks: int, out_neighbors: List[np.ndarray],
-        sample_block_assignment: np.ndarray, mapping: Dict[int,int], args: 'argparse.Namespace') -> 'Partition':
+                    sample_block_assignment: np.ndarray, mapping: Dict[int, int], args: Namespace) -> 'Partition':
         """Creates a new Partition object from the block assignment array.
 
             Parameters
@@ -223,7 +224,7 @@ class PartitionTriplet():
         self.partitions = [None, None, None]  # type: List[Partition]
         self.optimal_num_blocks_found = False
     # End of __init__()
-    
+
     def update(self, partition: Partition):
         """If the entropy of the current partition is the best so far, moves the middle triplet
         values to the left or right depending on the current partition's block number.
