@@ -18,7 +18,7 @@ from block_merge_timings import BlockMergeTimings
 
 
 def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_sparse_matrix: bool,
-    out_neighbors: np.array, evaluation: Evaluation) -> Partition:
+                 out_neighbors: np.array, evaluation: Evaluation) -> Partition:
     """The block merge portion of the algorithm.
 
         Parameters:
@@ -72,7 +72,7 @@ def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_spa
 
 
 def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: bool, block_partition: np.array,
-    block_merge_timings: BlockMergeTimings) -> Tuple[int, float]:
+                  block_merge_timings: BlockMergeTimings) -> Tuple[int, float]:
     """Propose a block merge, and calculate its delta entropy value.
 
         Parameters
@@ -180,20 +180,7 @@ def incoming_edges(adjacency_matrix: np.array, block: int, use_sparse_matrix: bo
     if use_sparse_matrix:
         in_blocks = adjacency_matrix.getcol(block)
         in_blocks_nonzero = in_blocks.nonzero()[0]
-        # print(in_blocks)
-        # print(in_blocks_nonzero)
-        # print(len(np.array(in_blocks_nonzero).transpose()))
-        # print(len(in_blocks[in_blocks_nonzero].transpose()))
         in_blocks = np.vstack((in_blocks_nonzero, in_blocks[in_blocks_nonzero])).T
-        # in_blocks = np.hstack((np.array(in_blocks_nonzero).transpose(), in_blocks[in_blocks_nonzero].transpose()))
-                # in_blocks = adjacency_matrix[:, block].strip()
-                # # print("in_blocks: ", in_blocks.rows, in_blocks.values)
-                # in_blocks = np.hstack((in_blocks.rows, in_blocks.values))
-        # print("in_blocks: ", in_blocks)
-        # exit()
-        # in_blocks = adjacency_matrix[:, block].nonzero()[0]
-        # in_blocks = np.hstack(
-            # (in_blocks.reshape([len(in_blocks), 1]), adjacency_matrix[in_blocks, block].toarray()))
     else:
         in_blocks = adjacency_matrix[:, block].nonzero()
         in_blocks = np.hstack((np.array(in_blocks).transpose(), adjacency_matrix[in_blocks, block].transpose()))
