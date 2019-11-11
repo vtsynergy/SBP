@@ -4,7 +4,7 @@
 import os
 import csv
 
-from typing import List, Dict
+from typing import List
 from argparse import Namespace
 
 import numpy as np
@@ -189,7 +189,7 @@ class Evaluation(object):
     # End of __init__()
 
     def evaluate_subgraph_sampling(self, full_graph: Graph, subgraph: Graph, full_partition: 'partition.Partition',
-        subgraph_partition: 'partition.Partition', sample: Sample):
+                                   subgraph_partition: 'partition.Partition', sample: Sample):
         """Evaluates the goodness of the samples returned by the subgraph.
 
         Parameters
@@ -275,7 +275,7 @@ class Evaluation(object):
     # End of evaluate_subgraph_sampling()
 
     def update_timings(self, block_merge_start_t: float, node_update_start_t: float, prepare_next_start_t: float,
-        prepare_next_end_t: float):
+                       prepare_next_end_t: float):
         """Updates the timings of a single iteration (block merge + nodal updates)
 
             Parameters
@@ -323,7 +323,7 @@ class Evaluation(object):
             ---------
             graph : Graph
                 the graph whose clustering coefficient is of interest
-            
+
             Returns
             -------
             clustering_coefficient : float
@@ -485,11 +485,10 @@ class Evaluation(object):
     # End of add_block_merge_timings()
 
     def truth_divergence(self, graph: Graph, sample: Sample, true_partition: 'partition.Partition',
-        sample_graph_partition: 'partition.Partition') -> float:
+                         sample_graph_partition: 'partition.Partition') -> float:
         """Shannon distance between the true full graph and true sampled subgraph blockmodels.
         """
         true_b = graph.true_block_assignment
-        sample_b = true_b[sample.state.sample_idx]
         sample_out_neighbors = list()  # type: List[np.ndarray]
         # print("Sampled IDs: ", sample.state.sample_idx)
         for i in range(len(graph.out_neighbors)):
@@ -513,10 +512,10 @@ class Evaluation(object):
     # End of truth_divergence()
 
     def random_divergence(self, graph: Graph, sample: Sample, full_graph_partition: 'partition.Partition',
-        sample_graph_partition: 'partition.Partition') -> float:
+                          sample_graph_partition: 'partition.Partition') -> float:
         """Shannon distance between the randomly generated full graph and subgraph blockmodels.
         """
-        true_b = np.random.randint(0, int(graph.num_nodes / (100 * np.log(graph.num_nodes))), graph.num_nodes) 
+        true_b = np.random.randint(0, int(graph.num_nodes / (100 * np.log(graph.num_nodes))), graph.num_nodes)
         # sample_b = true_b[sample.state.sample_idx]
         sample_out_neighbors = list()  # type: List[np.ndarray]
         # print("Sampled IDs: ", sample.state.sample_idx)
