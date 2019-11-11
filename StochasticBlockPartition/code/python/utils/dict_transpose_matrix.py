@@ -645,6 +645,18 @@ class DictTransposeMatrix(SparseMatrix):
                 result += row[i]
         return result
     # End of trace()
+
+    def ravel(self) -> np.ndarray:
+        """Converts the matrix to a 1D array.
+        """
+        raveled = np.zeros(self.nrows * self.ncols)
+        for row in range(self.nrows):
+            offset = row * self.ncols
+            rowdict = self._matrix[row]
+            for key in rowdict.keys():
+                raveled[offset+key] = rowdict[key]
+        return raveled
+    # End of ravel()
 # End of DictMatrix()
 
 if __name__ == "__main__":
