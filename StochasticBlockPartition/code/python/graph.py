@@ -39,7 +39,10 @@ class Graph():
         self.in_neighbors = in_neighbors
         self.num_nodes = num_nodes
         self.num_edges = num_edges
-        self.true_block_assignment = true_block_assignment
+        if true_block_assignment is None:
+            self.true_block_assignment = np.asarray([-1] * self.num_nodes)
+        else:
+            self.true_block_assignment = true_block_assignment
     # End of __init__()
     
     def update(self, graph: 'Graph'):
