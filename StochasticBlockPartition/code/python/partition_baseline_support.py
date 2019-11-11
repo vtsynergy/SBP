@@ -67,13 +67,13 @@ def propose_new_partition(r, neighbors_out, neighbors_in, b, partition: Partitio
         avoid proposing the current block.
     """
     neighbors = np.concatenate((neighbors_out, neighbors_in))
-    k_out = sum(neighbors_out[:,1])
-    k_in = sum(neighbors_in[:,1])
+    k_out = sum(neighbors_out[:, 1])
+    k_in = sum(neighbors_in[:, 1])
     k = k_out + k_in
     if k == 0: # this node has no neighbor, simply propose a block randomly
         s = propose_random_block(r, partition.num_blocks, agg_move)
         return s, k_out, k_in, k
-    rand_neighbor = np.random.choice(neighbors[:,0], p=neighbors[:,1]/float(k))
+    rand_neighbor = np.random.choice(neighbors[:, 0], p=neighbors[:, 1] / float(k))
     u = b[rand_neighbor]
     # propose a new block randomly
     if np.random.uniform() <= partition.num_blocks/float(partition.block_degrees[u]+partition.num_blocks):  # chance inversely prop. to block_degree
@@ -249,7 +249,6 @@ def block_merge_edge_count_updates(M: Matrix, r: int, s: int, b_out: np.ndarray,
         if count_self.values:
             # print("There is a self-link!")
             cs = count_self.values[0]
-        # print("============Issa sparse matrix yo!==============")
         M_r_row = np.zeros(B)  # DictMatrix(shape=(1, B))
         M_r_col = np.zeros(B)  # DictMatrix(shape=(B, 1))
         M_s_row = M.getrow(s)  # M[s, :].to_matrix()  # .values  # type: IndexResult
@@ -319,7 +318,6 @@ def block_merge_edge_count_updates2(M: Matrix, r: int, s: int, b_out: np.ndarray
         if count_self.values:
             # print("There is a self-link!")
             cs = count_self.values[0]
-        # print("============Issa sparse matrix yo!==============")
         M_r_row = SparseVector(np.asarray([]), np.asarray([]))  # np.zeros(B)  # DictMatrix(shape=(1, B))
         M_r_col = SparseVector(np.asarray([]), np.asarray([]))  # np.zeros(B)  # DictMatrix(shape=(B, 1))
         M_s_row = M.get_sparse_row(s)  # M[s, :].to_matrix()  # .values  # type: IndexResult
@@ -473,12 +471,6 @@ def compute_new_block_degrees(r, s, partition: Partition, k_out, k_in, k):
     for old, degree in zip([partition.block_degrees_out, partition.block_degrees_in, partition.block_degrees], [k_out, k_in, k]):
         new_d = old.copy()
         new_d[r] -= degree
-        # print("old {} - degree {} = new {}".format(old[r], degree, new_d[r]))
-        # if new_d[r] < 0:
-        # print("old: ", old[r])
-        # print("new: ", new_d[r])
-        # print("degree: ", degree)
-        # exit()
         new_d[s] += degree
         new.append(new_d)
     return new
@@ -564,7 +556,8 @@ def compute_Hastings_correction(b_out, count_out, b_in, count_in, s, partition: 
 
 def compute_delta_entropy(r, s, partition: Partition, edge_count_updates: EdgeCountUpdates, d_out_new, d_in_new,
     use_sparse) -> float:
-    """Compute change in entropy under the proposal. Reduced entropy means the proposed block is better than the current block.
+    """Compute change in entropy under the proposal. Reduced entropy means the proposed block is better than the 
+    current block.
 
         Parameters
         ----------
