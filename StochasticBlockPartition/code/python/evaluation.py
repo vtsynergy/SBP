@@ -8,7 +8,7 @@ from typing import List
 from argparse import Namespace
 
 import numpy as np
-from scipy.spatial.distance import jensenshannon
+from scipy.spatial import distance as scipydistance
 
 from graph import Graph
 from sample import Sample
@@ -507,7 +507,7 @@ class Evaluation(object):
         true_sample_blockmodel = true_sample_partition.interblock_edge_count.ravel()
         true_distribution = true_blockmodel / true_blockmodel.sum()
         true_sample_distribution = true_sample_blockmodel / true_sample_blockmodel.sum()
-        distance = jensenshannon(true_distribution, true_sample_distribution)
+        distance = scipydistance.jensenshannon(true_distribution, true_sample_distribution)
         return distance ** 2
     # End of truth_divergence()
 
@@ -536,7 +536,7 @@ class Evaluation(object):
         true_sample_blockmodel = true_sample_partition.interblock_edge_count.ravel()
         true_distribution = true_blockmodel / true_blockmodel.sum()
         true_sample_distribution = true_sample_blockmodel / true_sample_blockmodel.sum()
-        distance = jensenshannon(true_distribution, true_sample_distribution)
+        distance = scipydistance.jensenshannon(true_distribution, true_sample_distribution)
         return distance ** 2
     # End of truth_divergence()
 # End of Evaluation()
