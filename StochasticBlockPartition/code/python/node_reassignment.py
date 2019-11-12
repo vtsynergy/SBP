@@ -2,14 +2,13 @@
 """
 
 from argparse import Namespace
-from typing import List, Tuple
+from typing import Tuple
 import math
 
 import numpy as np
 
 from partition_baseline_support import compute_overall_entropy
 from partition_baseline_support import propose_new_partition
-from partition_baseline_support import compute_new_rows_cols_interblock_edge_count_matrix
 from partition_baseline_support import vertex_reassign_edge_count_updates
 from partition_baseline_support import compute_new_block_degrees
 from partition_baseline_support import compute_Hastings_correction
@@ -24,7 +23,7 @@ from mcmc_timings import MCMCTimings
 
 
 def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: PartitionTriplet, evaluation: Evaluation,
-    args: Namespace) -> Partition:
+                   args: Namespace) -> Partition:
     """Reassigns nodes to different blocks based on Bayesian statistics.
 
         Parameters
@@ -45,11 +44,17 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         partition : Partition
                 the updated partitioning results
     """
+
+
     # nodal partition updates parameters
-    # delta_entropy_threshold1 = 5e-4  # stop iterating when the change in entropy falls below this fraction of the overall entropy
-                                    # lowering this threshold results in more nodal update iterations and likely better performance, but longer runtime
-    # delta_entropy_threshold2 = 1e-4  # threshold after the golden ratio bracket is established (typically lower to fine-tune to partition)
-    delta_entropy_moving_avg_window = 3  # width of the moving average window for the delta entropy convergence criterion
+    # delta_entropy_threshold1 = 5e-4
+    # stop iterating when the change in entropy falls below this fraction of the overall entropy
+    # lowering this threshold results in more nodal update iterations and likely better performance, but longer runtime
+    # delta_entropy_threshold2 = 1e-4  # threshold after the golden ratio bracket is established
+    # (typically lower to fine-tune to partition)
+
+    # width of the moving average window for the delta entropy convergence criterion
+    delta_entropy_moving_avg_window = 3
 
     mcmc_timings = evaluation.add_mcmc_timings()
 
@@ -83,14 +88,13 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         # exit MCMC if the recent change in entropy falls below a small fraction of the overall entropy
         mcmc_timings.t_early_stopping()
         if itr >= (delta_entropy_moving_avg_window - 1):
+            mean_delta_entropy = -np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr])
             if partition_triplet.partitions[2] is None:  # golden ratio bracket not yet established
-                if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
-                    delta_entropy_threshold1 * partition.overall_entropy)):
+                if mean_delta_entropy < delta_entropy_threshold1 * partition.overall_entropy:
                     mcmc_timings.t_early_stopping()
                     break
             else:  # golden ratio bracket is established. Fine-tuning partition.
-                if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
-                    delta_entropy_threshold2 * partition.overall_entropy)):
+                if mean_delta_entropy < delta_entropy_threshold2 * partition.overall_entropy:
                     mcmc_timings.t_early_stopping()
                     break
         mcmc_timings.t_early_stopping()
@@ -108,8 +112,8 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
 # End of reassign_nodes()
 
 
-def propose_new_assignment(current_node: int, partition: Partition, graph: Graph, 
-    args: Namespace, mcmc_timings: MCMCTimings) -> Tuple[float, bool]:
+def propose_new_assignment(current_node: int, partition: Partition, graph: Graph, args: Namespace,
+                           mcmc_timings: MCMCTimings) -> Tuple[float, bool]:
     """Proposes a block reassignment to for the given node.
 
         Parameters
@@ -161,52 +165,49 @@ def propose_new_assignment(current_node: int, partition: Partition, graph: Graph
         mcmc_timings.t_edge_count_updates()
         self_edge_weight = np.sum(out_neighbors[np.where(
             out_neighbors[:, 0] == current_node), 1])  # check if this node has a self edge
-        edge_count_updates = vertex_reassign_edge_count_updates(partition.interblock_edge_count, current_block, proposal,
-                                                                blocks_out, count_out, blocks_in, count_in,
-                                                                self_edge_weight, args.sparse)
+        edge_count_updates = vertex_reassign_edge_count_updates(
+            partition.interblock_edge_count, current_block, proposal, blocks_out, count_out, blocks_in, count_in,
+            self_edge_weight, args.sparse
+        )
         mcmc_timings.t_edge_count_updates()
-        # print("edge count updates: ", timeit.default_timer() - t1)
 
         # compute new block degrees
         mcmc_timings.t_block_degree_updates()
         block_degrees_out_new, block_degrees_in_new, block_degrees_new = compute_new_block_degrees(
-            current_block, proposal, partition, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges)
+            current_block, proposal, partition, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges
+        )
         mcmc_timings.t_block_degree_updates()
-        # print("compute block degrees: ", timeit.default_timer() - t1)
 
         # compute the Hastings correction
         mcmc_timings.t_hastings_correction()
         if num_neighbor_edges > 0:
-            Hastings_correction = compute_Hastings_correction(blocks_out, count_out, blocks_in, count_in, proposal,
-                                                            partition, edge_count_updates.block_row,
-                                                            edge_count_updates.block_col, block_degrees_new,
-                                                            args.sparse)
-        else: # if the node is an island, proposal is random and symmetric
+            Hastings_correction = compute_Hastings_correction(
+                blocks_out, count_out, blocks_in, count_in, proposal, partition, edge_count_updates.block_row,
+                edge_count_updates.block_col, block_degrees_new, args.sparse
+            )
+        else:  # if the node is an island, proposal is random and symmetric
             Hastings_correction = 1
         mcmc_timings.t_hastings_correction()
-        # print("compute hastings correction: ", timeit.default_timer() - t1)
 
         # compute change in entropy / posterior
         mcmc_timings.t_compute_delta_entropy()
-        delta_entropy = compute_delta_entropy(current_block, proposal, partition, edge_count_updates, 
-                                            block_degrees_out_new, block_degrees_in_new, args.sparse)
+        delta_entropy = compute_delta_entropy(current_block, proposal, partition, edge_count_updates,
+                                              block_degrees_out_new, block_degrees_in_new, args.sparse)
         mcmc_timings.t_compute_delta_entropy()
-        # print("compute delta entropy: ", timeit.default_timer() - t1)
 
         # compute probability of acceptance
         mcmc_timings.t_acceptance()
         p_accept = np.min([np.exp(-args.beta * delta_entropy) * Hastings_correction, 1])
         if (np.random.uniform() <= p_accept):
-            partition = update_partition(partition, current_node, current_block, proposal, edge_count_updates,
-                                            block_degrees_out_new, block_degrees_in_new, block_degrees_new, 
-                                            args.sparse)
+            partition = update_partition(
+                partition, current_node, current_block, proposal, edge_count_updates, block_degrees_out_new,
+                block_degrees_in_new, block_degrees_new, args.sparse
+            )
             did_move = True
         mcmc_timings.t_acceptance()
-        # print("accept/reject: ", timeit.default_timer() - t1)
         return delta_entropy, did_move
     else:
         mcmc_timings.zeros()
-        # print("accept/reject: ", timeit.default_timer() - t1)
         return -1.0, did_move
 # End of reassign_node()
 
@@ -229,7 +230,7 @@ def get_thresholds(current_iteration: int, args: Namespace) -> Tuple[float, floa
     If exponential:
         the original threshold will increase or decrease by a factor of (factor ^ current_iteration)
     if log:
-        the original threshold will increase or decrease by a factor of ln(current_iteration + 3). This is because 
+        the original threshold will increase or decrease by a factor of ln(current_iteration + 3). This is because
         ln(3) is the first natural logarithm of a whole number that's a whole number
 
 
@@ -273,8 +274,8 @@ def get_thresholds(current_iteration: int, args: Namespace) -> Tuple[float, floa
 # End of get_thresholds()
 
 
-def propagate_membership(full_graph: Graph, full_graph_partition: Partition, sample_partition: Partition, 
-    args: Namespace) -> Partition:
+def propagate_membership(full_graph: Graph, full_graph_partition: Partition, sample_partition: Partition,
+                         args: Namespace) -> Partition:
     """Reassigns nodes to different blocks based on Bayesian statistics.
 
         Parameters
@@ -324,7 +325,8 @@ def fine_tune_membership(partition: Partition, graph: Graph, evaluation: Evaluat
         partition : Partition
                 the updated partitioning results
     """
-    delta_entropy_moving_avg_window = 2  # width of the moving average window for the delta entropy convergence criterion
+    # width of the moving average window for the delta entropy convergence criterion
+    delta_entropy_moving_avg_window = 2
 
     mcmc_timings = evaluation.add_finetuning_timings()
 
@@ -358,8 +360,8 @@ def fine_tune_membership(partition: Partition, graph: Graph, evaluation: Evaluat
         # exit MCMC if the recent change in entropy falls below a small fraction of the overall entropy
         mcmc_timings.t_early_stopping()
         if itr >= (delta_entropy_moving_avg_window - 1):
-            if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
-                delta_entropy_threshold2 * partition.overall_entropy)):
+            mean_delta_entropy = -np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr])
+            if mean_delta_entropy < delta_entropy_threshold2 * partition.overall_entropy:
                 mcmc_timings.t_early_stopping()
                 break
         mcmc_timings.t_early_stopping()
