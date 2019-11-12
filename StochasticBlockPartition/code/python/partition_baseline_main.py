@@ -18,35 +18,35 @@ def parse_arguments():
         args : argparse.Namespace
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--parts", type=int, default=0, 
+    parser.add_argument("-p", "--parts", type=int, default=0,
                         help="""The number of streaming partitions to the dataset. If the dataset is static, 0.
                              Default = 0""")
     parser.add_argument("-o", "--overlap", type=str, default="low", help="(low|high). Default = low")
     parser.add_argument("-s", "--blockSizeVar", type=str, default="low", help="(low|high). Default = low")
-    parser.add_argument("-t", "--type", type=str, default="static", 
+    parser.add_argument("-t", "--type", type=str, default="static",
                         help="(static|streamingEdge|streamingSnowball). Default = static")
     parser.add_argument("-n", "--numNodes", type=int, default=1000, help="The size of the dataset. Default = 1000")
-    parser.add_argument("-d", "--directory", type=str, default="../../data", 
+    parser.add_argument("-d", "--directory", type=str, default="../../data",
                         help="The location of the dataset directory. Default = ../../data")
     parser.add_argument("-v", "--verbose", action="store_true", help="If supplied, will print 'helpful' messages.")
-    parser.add_argument("-b", "--blockProposals", type=int, default=10, 
+    parser.add_argument("-b", "--blockProposals", type=int, default=10,
                         help="The number of block merge proposals per block. Default = 10")
-    parser.add_argument("-i", "--iterations", type=int, default=100, 
+    parser.add_argument("-i", "--iterations", type=int, default=100,
                         help="Maximum number of node reassignment iterations. Default = 100")
-    parser.add_argument("-r", "--blockReductionRate", type=float, default=0.5, 
+    parser.add_argument("-r", "--blockReductionRate", type=float, default=0.5,
                         help="The block reduction rate. Default = 0.5")
-    parser.add_argument("--beta", type=int, default=3, 
+    parser.add_argument("--beta", type=int, default=3,
                         help="exploitation vs exploration: higher threshold = higher exploration. Default = 3")
-    parser.add_argument("--sparse", action="store_true", 
-                        help="If supplied, will use Scipy's sparse matrix representation for the matrices.")
-    parser.add_argument("-c", "--csv", type=str, default="eval/benchmark", 
+    parser.add_argument("--sparse", action="store_true",
+                        help="If supplied, will use a sparse matrix representation for the matrices.")
+    parser.add_argument("-c", "--csv", type=str, default="eval/benchmark",
                         help="The filepath to the csv file in which to store the evaluation results.")
     # Nodal Update Strategy
-    parser.add_argument("-u", "--nodal_update_strategy", type=str, default="original", 
+    parser.add_argument("-u", "--nodal_update_strategy", type=str, default="original",
                         help="(original|step|exponential|log). Default = original")
     parser.add_argument("--direction", type=str, default="growth", help="(growth|decay) Default = growth")
-    parser.add_argument("-f", "--factor", type=float, default=0.0001, 
-                        help="""The factor by which to grow or decay the nodal update threshold. 
+    parser.add_argument("-f", "--factor", type=float, default=0.0001,
+                        help="""The factor by which to grow or decay the nodal update threshold.
                             If the nodal update strategy is step:
                                 this value is added to or subtracted from the threshold with every iteration
                             If the nodal update strategy is exponential:
@@ -54,11 +54,11 @@ def parse_arguments():
                             If the nodal update strategy is log:
                                 this value is ignored
                             Default = 0.0001""")
-    parser.add_argument("-e", "--threshold", type=float, default=5e-4, 
+    parser.add_argument("-e", "--threshold", type=float, default=5e-4,
                         help="The threshold at which to stop nodal block reassignment. Default = 5e-4")
-    parser.add_argument("-z", "--sample_size", type=int, default=100, 
+    parser.add_argument("-z", "--sample_size", type=int, default=100,
                         help="The percent of total nodes to use as sample. Default = 100 (no sampling)")
-    parser.add_argument("-m", "--sample_type", type=str, default="none", 
+    parser.add_argument("-m", "--sample_type", type=str, default="none",
                         choices=["uniform_random", "random_walk", "random_jump", "degree_weighted",
                                  "random_node_neighbor", "forest_fire", "expansion_snowball", "none"],
                         help="""Sampling algorithm to use. Default = none""")
@@ -81,18 +81,10 @@ if __name__ == "__main__":
 
     if args.sample_type != "none":
         samplestack = SampleStack(args)
-        # graph, vertex_mapping, block_mapping = samplestack.tail()
-        # print("Performing stochastic block partitioning on sampled subgraph after {} sampling iterations".format(
-        #     args.sample_iterations
-        # ))
-        # partition, evaluation = stochastic_block_partition(graph, args)
-        # print('Combining sampled partition with full graph')
-        # subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
         subgraph, subgraph_partition, sample, evaluation = samplestack.unstack(args)
         full_graph, full_graph_partition, evaluation = samplestack.extrapolate_sample_partition(
             subgraph_partition, sample.vertex_mapping, args, evaluation
         )
-        print(len(samplestack.stack))
     else:
         graph = Graph.load(args)
         t_load = timeit.default_timer()

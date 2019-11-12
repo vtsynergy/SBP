@@ -40,6 +40,7 @@ class SampleState():
     # End of create_sample()
 # End of SampleState
 
+
 class UniformRandomSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'UniformRandomSampleState') -> None:
         SampleState.__init__(self, prev_state.sample_size)
@@ -48,6 +49,7 @@ class UniformRandomSampleState(SampleState):
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of UniformRandomSampleState
+
 
 class RandomWalkSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomWalkSampleState') -> None:
@@ -62,6 +64,7 @@ class RandomWalkSampleState(SampleState):
     # End of __init__()
 # End of RandomWalkSampleState
 
+
 class RandomJumpSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomJumpSampleState') -> None:
         SampleState.__init__(self, prev_state.sample_size)
@@ -75,6 +78,7 @@ class RandomJumpSampleState(SampleState):
     # End of __init__()
 # End of RandomJumpSampleState
 
+
 class DegreeWeightedSampleState(SampleState):
     def __init__(self, num_vertices, prev_state: 'DegreeWeightedSampleState') -> None:
         SampleState.__init__(self, prev_state.sample_size)
@@ -83,6 +87,7 @@ class DegreeWeightedSampleState(SampleState):
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of DegreeWeightedSampleState
+
 
 class RandomNodeNeighborSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'RandomNodeNeighborSampleState') -> None:
@@ -96,6 +101,7 @@ class RandomNodeNeighborSampleState(SampleState):
             self.index_set = copy(prev_state.index_set)
     # End of __init__()
 # End of RandomNodeNeighborSampleState
+
 
 class ForestFireSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ForestFireSampleState') -> None:
@@ -116,6 +122,7 @@ class ForestFireSampleState(SampleState):
     # End of __init__()
 # End of ForestFireSampleState
 
+
 class ExpansionSnowballSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ExpansionSnowballSampleState') -> None:
         SampleState.__init__(self, prev_state.sample_size)
@@ -131,9 +138,9 @@ class ExpansionSnowballSampleState(SampleState):
             self.start = copy(prev_state.start)
             self.index_flag = copy(prev_state.index_flag)
             self.index_set = copy(prev_state.index_set)
-            self.neighbors = copy(prev_state.neighbors)
-            self.neighbors_flag = copy(prev_state.neighbors_flag)
-            self.contribution = copy(prev_state.contribution)
+            # self.neighbors = copy(prev_state.neighbors)
+            # self.neighbors_flag = copy(prev_state.neighbors_flag)
+            # self.contribution = copy(prev_state.contribution)
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of ExpansionSnowballSampleState
