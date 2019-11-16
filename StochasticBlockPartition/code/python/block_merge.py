@@ -12,7 +12,11 @@ from partition_baseline_support import compute_new_block_degrees
 from partition_baseline_support import compute_delta_entropy
 from partition_baseline_support import carry_out_best_merges
 
-from partition import Partition
+# from partition import Partition
+from partition import Partition as Part
+from collections import namedtuple
+
+from cppsbp.partition import Partition
 from evaluation import Evaluation
 from block_merge_timings import BlockMergeTimings
 
@@ -39,9 +43,6 @@ def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_spa
         partition : Partition
                 the updated partition
     """
-    # print("pbdout: ", partition.block_degrees_out)
-    # print("pbdin: ", partition.block_degrees_in)
-    # print("pbd: ", partition.block_degrees)
     block_merge_timings = evaluation.add_block_merge_timings()
 
     block_merge_timings.t_initialization()
@@ -59,23 +60,20 @@ def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_spa
                 best_merge_for_each_block[current_block] = proposal
                 delta_entropy_for_each_block[current_block] = delta_entropy
             block_merge_timings.t_acceptance()
-        print(current_block)
-
     # carry out the best merges
     block_merge_timings.t_merging()
     if use_sparse_matrix:
         partition.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block)
-        print("block assignment: ", partition.block_assignment)
-        exit()
     else:
         partition = carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block, partition)
     block_merge_timings.t_merging()
 
     # re-initialize edge counts and block degrees
     block_merge_timings.t_re_counting_edges()
-    print(partition.block_assignment)
-    partition.initialize_edge_counts(out_neighbors)
-    # partition.initialize_edge_counts(out_neighbors, use_sparse_matrix)
+    if use_sparse_matrix:
+        partition.initialize_edge_counts(out_neighbors)
+    else:
+        partition.initialize_edge_counts(out_neighbors, use_sparse_matrix)
     block_merge_timings.t_re_counting_edges()
 
     return partition
@@ -83,7 +81,7 @@ def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_spa
 
 
 def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: bool, block_partition: np.array,
-    block_merge_timings: BlockMergeTimings) -> Tuple[int, float]:
+                  block_merge_timings: BlockMergeTimings) -> Tuple[int, float]:
     """Propose a block merge, and calculate its delta entropy value.
 
         Parameters
@@ -132,10 +130,6 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
     block_degrees_out_new, block_degrees_in_new, block_degrees_new = compute_new_block_degrees(
         current_block, proposal, partition, num_out_neighbor_edges, num_in_neighbor_edges, num_neighbor_edges
     )
-    # print("bdoutn: ", block_degrees_out_new[:10])
-    # print("bdinn: ", block_degrees_in_new[:10])
-    # print("bdn: ", block_degrees_new[:10])
-    # exit()
     block_merge_timings.t_block_degree_updates()
 
     # compute change in entropy / posterior

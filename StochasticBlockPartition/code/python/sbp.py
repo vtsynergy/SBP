@@ -10,6 +10,7 @@ from evaluation import Evaluation
 from graph import Graph
 from node_reassignment import reassign_nodes, propagate_membership, fine_tune_membership
 from partition import PartitionTriplet
+from partition import Partition as DensePartition
 from cppsbp.partition import Partition
 # from partition import Partition, PartitionTriplet
 from partition_baseline_support import plot_graph_with_partition
@@ -28,7 +29,10 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
 
     if init_partition is None:
         # partition = Partition(graph.num_nodes, graph.out_neighbors, args)
-        partition = Partition(graph.num_nodes, graph.out_neighbors, args.blockReductionRate)
+        if args.sparse:
+            partition = Partition(graph.num_nodes, graph.out_neighbors, args.blockReductionRate)
+        else:
+            partition = DensePartition(graph.num_nodes, graph.out_neighbors, args)
     if init_evaluation is None:
         evaluation = Evaluation(args, graph)
 

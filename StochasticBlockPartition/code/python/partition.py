@@ -17,7 +17,7 @@ class Partition():
     """
 
     def __init__(self, num_blocks: int, out_neighbors: List[np.ndarray], args: Namespace,
-        block_assignment: np.ndarray = None) -> None:
+                 block_assignment: np.ndarray = None) -> None:
         """Creates a new Partition object.
 
             Parameters
@@ -99,8 +99,8 @@ class Partition():
         self.block_degrees = self.block_degrees_out + self.block_degrees_in
     # End of initialize_edge_counts()
 
-    def clone_with_true_block_membership(self, out_neighbors: List[np.ndarray], 
-        true_block_membership: np.ndarray) -> 'Partition':
+    def clone_with_true_block_membership(self, out_neighbors: List[np.ndarray],
+                                         true_block_membership: np.ndarray) -> 'Partition':
         """Creates a new Partition object for the correctly partitioned graph.
 
             Parameters

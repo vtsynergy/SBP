@@ -19,7 +19,9 @@ use_graph_tool_options = False # for visualiziing graph partitions (optional)
 if use_graph_tool_options:
     import graph_tool.all as gt
 
-from partition import Partition, PartitionTriplet
+# from partition import Partition, PartitionTriplet
+from partition import PartitionTriplet
+from cppsbp.partition import Partition
 from utils.sparse_matrix import SparseMatrix  # , SparseVector
 from utils.edge_count_updates import EdgeCountUpdates
 
@@ -80,10 +82,10 @@ def propose_new_partition(r, neighbors_out, neighbors_in, b, partition: Partitio
         s = propose_random_block(r, partition.num_blocks, agg_move)
         return s, k_out, k_in, k
     # rand_neighbor = np.random.choice(neighbors[:,0], p=neighbors[:,1]/float(k))
-    rand_neighbor = np.random.choice(neighbors[0], p=neighbors[1]/float(k))
+    rand_neighbor = np.random.choice(neighbors[0], p=neighbors[1] / float(k))
     u = b[rand_neighbor]
-    # propose a new block randomly
-    if np.random.uniform() <= partition.num_blocks/float(partition.block_degrees[u]+partition.num_blocks):  # chance inversely prop. to block_degree
+    # propose a new block randomly, with a chance inversely proportional to block degree
+    if np.random.uniform() <= partition.num_blocks / float(partition.block_degrees[u] + partition.num_blocks):
         s = propose_random_block(r, partition.num_blocks, agg_move)
     else:  # propose by random draw from neighbors of block partition[rand_neighbor]
         if use_sparse:
@@ -710,15 +712,20 @@ def compute_delta_entropy_sparse(r, s, partition: Partition, edge_count_updates:
     M_t2_r = partition.blockmodel.getcol(r)
     M_t2_s = partition.blockmodel.getcol(s)
 
-    idx = list(range(len(d_in_new)))
-    del idx[max(r, s)]
-    del idx[min(r, s)]
-    M_r_col = M_r_col[idx]
-    M_s_col = M_s_col[idx]
-    M_t2_r = M_t2_r[idx]
-    M_t2_s = M_t2_s[idx]
-    d_out_new_ = d_out_new[idx]
-    d_out_ = partition.block_degrees_out[idx]
+    try:
+        idx = list(range(len(d_in_new)))
+        del idx[max(r, s)]
+        del idx[min(r, s)]
+        M_r_col = M_r_col[idx]
+        M_s_col = M_s_col[idx]
+        M_t2_r = M_t2_r[idx]
+        M_t2_s = M_t2_s[idx]
+        d_out_new_ = d_out_new[idx]
+        d_out_ = partition.block_degrees_out[idx]
+    except Exception as e:
+        print("length of d_in_new: ", len(d_in_new))
+        print("idx: ", idx)
+        raise e
 
     # only keep non-zero entries to avoid unnecessary computation
     d_in_new_r_row = d_in_new[M_r_row.ravel().nonzero()]
@@ -770,7 +777,6 @@ def carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_bloc
                     the modified partition, with the merges carried out
     """
     bestMerges = delta_entropy_for_each_block.argsort()
-    print("dE: ", delta_entropy_for_each_block)
     block_map = np.arange(partition.num_blocks)  # 1 2 3 4 5 ... num_blocks
     num_merge = 0
     counter = 0
@@ -779,16 +785,13 @@ def carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_bloc
         mergeTo = block_map[best_merge_for_each_block[mergeFrom]]  # bestMerges[counter]]]
         counter += 1
         if mergeTo != mergeFrom:
-            # block_map[np.where(block_map == mergeFrom)] = mergeTo
-            # partition.block_assignment[np.where(partition.block_assignment == mergeFrom)] = mergeTo
-            partition.merge_blocks(mergeFrom, mergeTo)
+            block_map[np.where(block_map == mergeFrom)] = mergeTo
+            partition.block_assignment[np.where(partition.block_assignment == mergeFrom)] = mergeTo
+            # partition.merge_blocks(mergeFrom, mergeTo)
             num_merge += 1
     remaining_blocks = np.unique(partition.block_assignment)
     mapping = -np.ones(partition.num_blocks, dtype=int)
-    print("mapping: ", mapping)
     mapping[remaining_blocks] = np.arange(len(remaining_blocks))
-    print("mapping after change: ", mapping)
-    print("expected block assignment: ", mapping[partition.block_assignment])
     partition.block_assignment = mapping[partition.block_assignment]
     partition.num_blocks -= partition.num_blocks_to_merge
     return partition
