@@ -9,13 +9,14 @@
 void add_partition_wrapper(py::module module) {
     py::module partition_module = module.def_submodule("partition");
     py::class_<Partition>(partition_module, "Partition")
-        .def(py::init<int, std::vector<Matrix2Column>, float>())
-        .def(py::init<int, std::vector<Matrix2Column>, float, Vector>())
+        .def(py::init<int, std::vector<Matrix2Column>&, float>())
+        .def(py::init<int, std::vector<Matrix2Column>&, float, Vector&>())
         .def("initialize_edge_counts", &Partition::initialize_edge_counts)
         .def("clone_with_true_block_membership", &Partition::clone_with_true_block_membership)
         .def("copy", &Partition::copy)
         .def("from_sample", &Partition::from_sample)
         .def("merge_blocks", &Partition::merge_blocks)
+        .def("carry_out_best_merges", &Partition::carry_out_best_merges)
         .def_property("num_blocks", &Partition::getNum_blocks, &Partition::setNum_blocks)
         .def_property("blockmodel", &Partition::getBlockmodel, &Partition::setBlockmodel)
         .def_property("block_assignment", &Partition::getBlock_assignment, &Partition::setBlock_assignment)

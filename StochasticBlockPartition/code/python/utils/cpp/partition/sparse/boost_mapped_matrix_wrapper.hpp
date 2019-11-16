@@ -8,8 +8,8 @@ void add_boost_mapped_matrix_wrapper(py::module module) {
     py::register_exception<IndexOutOfBoundsException>(sparse, "IndexOutOfBoundsError");
     py::class_<BoostMappedMatrix>(sparse, "BoostMappedMatrix")
         .def(py::init<int, int>())
-        .def("getrow", &BoostMappedMatrix::getrow)
-        .def("getcol", &BoostMappedMatrix::getcol)
+        .def("getrow", &BoostMappedMatrix::_getrow)
+        .def("getcol", &BoostMappedMatrix::_getcol)
         .def("update_edge_counts", &BoostMappedMatrix::update_edge_counts)
         .def("nonzero", &BoostMappedMatrix::nonzero)
         .def("values", &BoostMappedMatrix::values)
@@ -21,8 +21,8 @@ void add_boost_mapped_matrix_wrapper(py::module module) {
         .def("add", (void (BoostMappedMatrix::*)(int, py::array_t<int>, py::array_t<int>)) &BoostMappedMatrix::add)
         .def("copy", &BoostMappedMatrix::copy)
         .def("__getitem__", [](BoostMappedMatrix &matrix, py::tuple index) { return matrix[index]; })
-        .def("outgoing_edges", &BoostMappedMatrix::outgoing_edges)
-        .def("incoming_edges", &BoostMappedMatrix::incoming_edges)
+        .def("outgoing_edges", &BoostMappedMatrix::_outgoing_edges)
+        .def("incoming_edges", &BoostMappedMatrix::_incoming_edges)
         .def_readonly("shape", &BoostMappedMatrix::shape)
         ;
 }

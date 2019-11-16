@@ -35,7 +35,33 @@ void BoostMappedMatrix::sub(int row, int col, int val) {
     matrix(row, col) -= val;
 }
 
-py::array_t<int> BoostMappedMatrix::getrow(int row) {
+int BoostMappedMatrix::get(int row, int col) {
+    check_row_bounds(row);
+    check_col_bounds(col);
+    return matrix(row, col);
+}
+
+Vector BoostMappedMatrix::getrow(int row) {
+    check_row_bounds(row);
+    Vector row_values = Vector::Zero(this->ncols);
+    // int row_values [this->ncols];
+    for (int col = 0; col < ncols; ++col) {
+        row_values[col] = matrix(row, col);
+    }
+    return row_values;  // py::array_t<int>(this->ncols, row_values);
+}
+
+Vector BoostMappedMatrix::getcol(int col) {
+    check_col_bounds(col);
+    Vector col_values = Vector::Zero(this->nrows);
+    // int col_values [this->nrows];
+    for (int row = 0; row < nrows; ++row) {
+        col_values[row] = matrix(row, col);
+    }
+    return col_values;  // py::array_t<int>(this->nrows, col_values);
+}
+
+py::array_t<int> BoostMappedMatrix::_getrow(int row) {
     check_row_bounds(row);
     int row_values [this->ncols];
     for (int col = 0; col < ncols; ++col) {
@@ -44,7 +70,7 @@ py::array_t<int> BoostMappedMatrix::getrow(int row) {
     return py::array_t<int>(this->ncols, row_values);
 }
 
-py::array_t<int> BoostMappedMatrix::getcol(int col) {
+py::array_t<int> BoostMappedMatrix::_getcol(int col) {
     check_col_bounds(col);
     int col_values [this->nrows];
     for (int row = 0; row < nrows; ++row) {
@@ -180,34 +206,34 @@ EdgeWeights BoostMappedMatrix::outgoing_edges(int block) {
             this->matrix.erase_element(block, col);
         }
     }
-    return std::make_pair(indices, values);
+    return EdgeWeights {indices, values};
 }
 
-// py::tuple BoostMappedMatrix::outgoing_edges(int block) {
-//     check_row_bounds(block);
-//     std::vector<int> indices;
-//     std::vector<int> values;
-//     for (int col = 0; col < this->ncols; ++col) {
-//         int value = this->matrix(block, col);
-//         if (value != 0) {
-//             indices.push_back(col);
-//             values.push_back(value);
-//         } else {
-//             this->matrix.erase_element(block, col);
-//         }
-//     }
-//     py::array_t<int> indices_array(indices.size(), indices.data());
-//     py::array_t<int> values_array(values.size(), values.data());
-//     return py::make_tuple(indices_array, values_array);
-//     // return py::array_t<int>(this->ncols, row_values);
-//     // std::vector<int> indices;
-//     // std::vector<int> values;
-//     // for (int col = 0; col < )
-//     // for (int i = 0; i < )
-//     // out_blocks = block_matrix.getrow(block)
-//     // out_blocks_nonzero = out_blocks.nonzero()[0]  # indices
-//     // out_blocks = np.vstack((out_blocks_nonzero, out_blocks[out_blocks_nonzero])).T
-// }
+py::tuple BoostMappedMatrix::_outgoing_edges(int block) {
+    check_row_bounds(block);
+    std::vector<int> indices;
+    std::vector<int> values;
+    for (int col = 0; col < this->ncols; ++col) {
+        int value = this->matrix(block, col);
+        if (value != 0) {
+            indices.push_back(col);
+            values.push_back(value);
+        } else {
+            this->matrix.erase_element(block, col);
+        }
+    }
+    py::array_t<int> indices_array(indices.size(), indices.data());
+    py::array_t<int> values_array(values.size(), values.data());
+    return py::make_tuple(indices_array, values_array);
+    // return py::array_t<int>(this->ncols, row_values);
+    // std::vector<int> indices;
+    // std::vector<int> values;
+    // for (int col = 0; col < )
+    // for (int i = 0; i < )
+    // out_blocks = block_matrix.getrow(block)
+    // out_blocks_nonzero = out_blocks.nonzero()[0]  # indices
+    // out_blocks = np.vstack((out_blocks_nonzero, out_blocks[out_blocks_nonzero])).T
+}
 
 EdgeWeights BoostMappedMatrix::incoming_edges(int block) {
     check_col_bounds(block);
@@ -222,23 +248,23 @@ EdgeWeights BoostMappedMatrix::incoming_edges(int block) {
             this->matrix.erase_element(row, block);
         }
     }
-    return std::make_pair(indices, values);
+    return EdgeWeights {indices, values};
 }
 
-// py::tuple BoostMappedMatrix::incoming_edges(int block) {
-//     check_col_bounds(block);
-//     std::vector<int> indices;
-//     std::vector<int> values;
-//     for (int row = 0; row < this->nrows; ++row) {
-//         int value = this->matrix(row, block);
-//         if (value != 0) {
-//             indices.push_back(row);
-//             values.push_back(value);
-//         } else {
-//             this->matrix.erase_element(row, block);
-//         }
-//     }
-//     py::array_t<int> indices_array(indices.size(), indices.data());
-//     py::array_t<int> values_array(values.size(), values.data());
-//     return py::make_tuple(indices_array, values_array);
-// }
+py::tuple BoostMappedMatrix::_incoming_edges(int block) {
+    check_col_bounds(block);
+    std::vector<int> indices;
+    std::vector<int> values;
+    for (int row = 0; row < this->nrows; ++row) {
+        int value = this->matrix(row, block);
+        if (value != 0) {
+            indices.push_back(row);
+            values.push_back(value);
+        } else {
+            this->matrix.erase_element(row, block);
+        }
+    }
+    py::array_t<int> indices_array(indices.size(), indices.data());
+    py::array_t<int> values_array(values.size(), values.data());
+    return py::make_tuple(indices_array, values_array);
+}
