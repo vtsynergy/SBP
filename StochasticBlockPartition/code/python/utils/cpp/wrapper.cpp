@@ -1,15 +1,17 @@
+#include "sbp_wrapper.hpp"
 #include "partition/partition_wrapper.hpp"
 #include "partition/sparse/boost_mapped_matrix_wrapper.hpp"
 
 PYBIND11_MODULE(cppsbp, m) {
     m.doc() = R"pbdoc(
-        C Plus Plus Stochastic Block Partitioning Plugin
+        C++ Stochastic Block Partitioning Plugin
         -----------------------
         .. currentmodule:: cppsbp
         .. autosummary::
            :toctree: _generate
     )pbdoc";
 
+    add_sbp_wrapper(m);
     add_partition_wrapper(m);
     add_boost_mapped_matrix_wrapper(m);
     // py::register_exception<IndexOutOfBoundsException>(m, "IndexOutOfBoundsError");

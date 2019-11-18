@@ -4,7 +4,7 @@ import sys
 import setuptools
 import os
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 
 class get_pybind_include(object):
@@ -25,13 +25,16 @@ ext_modules = [
     Extension(
         'cppsbp',
         [
-         'partition/sparse/boost_mapped_matrix.cpp',
          'partition/partition.cpp',
+         'partition/sparse/boost_mapped_matrix.cpp',
+         'util/util.cpp',
+         'sbp.cpp',
          'wrapper.cpp'
         ],
         include_dirs=[
             # Path to pybind11 headers
             './',
+            './util/',
             './partition/',
             './partition/sparse/',
             os.environ['CONDA_PREFIX'] + '/include/eigen3',

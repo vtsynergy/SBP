@@ -5,7 +5,7 @@ void Partition::initialize_edge_counts(std::vector<Matrix2Column> &neighbors) {
     this->block_degrees_in = Vector::Zero(this->num_blocks);
     this->block_degrees_out = Vector::Zero(this->num_blocks);
     // Initialize the blockmodel
-    for (Eigen::Index vertex = 0; vertex < neighbors.size(); ++vertex) {
+    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         Matrix2Column vertex_neighbors = neighbors[vertex];
         if (vertex_neighbors.rows() == 0) {
             continue;

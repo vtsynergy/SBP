@@ -225,14 +225,6 @@ py::tuple BoostMappedMatrix::_outgoing_edges(int block) {
     py::array_t<int> indices_array(indices.size(), indices.data());
     py::array_t<int> values_array(values.size(), values.data());
     return py::make_tuple(indices_array, values_array);
-    // return py::array_t<int>(this->ncols, row_values);
-    // std::vector<int> indices;
-    // std::vector<int> values;
-    // for (int col = 0; col < )
-    // for (int i = 0; i < )
-    // out_blocks = block_matrix.getrow(block)
-    // out_blocks_nonzero = out_blocks.nonzero()[0]  # indices
-    // out_blocks = np.vstack((out_blocks_nonzero, out_blocks[out_blocks_nonzero])).T
 }
 
 EdgeWeights BoostMappedMatrix::incoming_edges(int block) {
