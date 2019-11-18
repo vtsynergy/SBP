@@ -55,6 +55,7 @@ def merge_blocks(partition: Partition, num_agg_proposals_per_block: int, use_spa
         for _ in range(num_agg_proposals_per_block):
             proposal, delta_entropy = propose_merge(current_block, partition, use_sparse_matrix, block_partition,
                                                     block_merge_timings)
+            # print("de: ", delta_entropy)
             block_merge_timings.t_acceptance()
             if delta_entropy < delta_entropy_for_each_block[current_block]:  # a better block candidate was found
                 best_merge_for_each_block[current_block] = proposal
@@ -116,6 +117,8 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
         current_block, out_blocks, in_blocks, block_partition, partition, True, use_sparse_matrix)
     block_merge_timings.t_proposal()
 
+    # if partition.num_blocks == 500:
+    #     proposal = (current_block + 100) % 500
     # compute the two new rows and columns of the interblock edge count matrix
     block_merge_timings.t_edge_count_updates()
     edge_count_updates = block_merge_edge_count_updates(partition.blockmodel, current_block, proposal,
@@ -123,6 +126,7 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
                                                         in_blocks[1],
                                                         partition.blockmodel[current_block, current_block],
                                                         use_sparse_matrix)
+        # exit()
     block_merge_timings.t_edge_count_updates()
 
     # compute new block degrees
@@ -135,7 +139,15 @@ def propose_merge(current_block: int, partition: Partition, use_sparse_matrix: b
     # compute change in entropy / posterior
     block_merge_timings.t_compute_delta_entropy()
     delta_entropy = compute_delta_entropy(current_block, proposal, partition, edge_count_updates,
-                                          block_degrees_out_new, block_degrees_in_new, use_sparse_matrix)
+                                          block_degrees_out_new, block_degrees_in_new, use_sparse_matrix, True)
+
+    # if partition.num_blocks == 500:
+    #     print("python {} --> {}".format(current_block, proposal))
+    #     print("python delta entropy: ", delta_entropy)
+    #     print("python degrees: ", block_degrees_new)
+    #     print("python degrees in: ", block_degrees_in_new)
+    #     print("python degrees out: ", block_degrees_out_new)
+    #     exit()
     block_merge_timings.t_compute_delta_entropy()
     # print(delta_entropy)
     return proposal, delta_entropy

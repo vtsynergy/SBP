@@ -12,6 +12,7 @@ from node_reassignment import reassign_nodes, propagate_membership, fine_tune_me
 from partition import PartitionTriplet
 from partition import Partition as DensePartition
 from cppsbp.partition import Partition
+from cppsbp import sbp as csbp
 # from partition import Partition, PartitionTriplet
 from partition_baseline_support import plot_graph_with_partition
 from partition_baseline_support import prepare_for_partition_on_next_num_blocks
@@ -59,7 +60,11 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
                 print("Merging down blocks from {} to {}".format(
                     partition.num_blocks, partition.num_blocks - partition.num_blocks_to_merge)
                 )
-            partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
+            if args.sparse:
+                partition = csbp.merge_blocks(partition, args.blockProposals, graph.out_neighbors)
+                # partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
+            else:
+                partition = merge_blocks(partition, args.blockProposals, args.sparse, graph.out_neighbors, evaluation)
 
         ############################
         # NODAL BLOCK UPDATES
