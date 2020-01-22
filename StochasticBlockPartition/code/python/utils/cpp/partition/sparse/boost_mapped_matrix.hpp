@@ -38,6 +38,7 @@ class BoostMappedMatrix {
     void sub(int row, int col, int val);
     int sum();
     Eigen::VectorXi sum(int axis = 0);
+    int trace();
     void update_edge_counts(int current_block, int proposed_block, Vector current_row, Vector proposed_row,
                             Vector current_col, Vector proposed_col);
     void _update_edge_counts(int current_block, int proposed_block, py::array_t<int> current_row,

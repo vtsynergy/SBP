@@ -175,6 +175,15 @@ Eigen::VectorXi BoostMappedMatrix::sum(int axis) {
     }
 }
 
+int BoostMappedMatrix::trace() {
+    int total = 0;
+    // Assumes that the matrix is square (which it should be in this case)
+    for (int index = 0; index < this->nrows; ++index) {
+        total += this->matrix(index, index);
+    }
+    return total;
+}
+
 int BoostMappedMatrix::operator[] (py::tuple index) {
     py::array_t<int> tuple_array(index);
     auto tuple_vals = tuple_array.mutable_unchecked<1>();

@@ -15,6 +15,7 @@ void add_boost_mapped_matrix_wrapper(py::module module) {
         .def("values", &BoostMappedMatrix::values)
         .def("sum", (int (BoostMappedMatrix::*)()) &BoostMappedMatrix::sum)
         .def("sum", (Eigen::VectorXi (BoostMappedMatrix::*)(int)) &BoostMappedMatrix::sum)
+        .def("trace", &BoostMappedMatrix::trace)
         // .def("sum", (py::array_t<int> (BoostMappedMatrix::*)(int)) &BoostMappedMatrix::sum)
         .def("sub", &BoostMappedMatrix::sub)
         .def("add", (void (BoostMappedMatrix::*)(int, int, int)) &BoostMappedMatrix::add)
