@@ -16,6 +16,7 @@ from partition_baseline_support import compute_Hastings_correction
 from partition_baseline_support import compute_delta_entropy
 from partition_baseline_support import update_partition
 
+from cppsbp import sbp as csbp
 from partition import Partition
 from partition import PartitionTriplet
 from graph import Graph
@@ -45,7 +46,7 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         partition : Partition
                 the updated partitioning results
     """
-    print("total degrees: {} edges: {}".format(partition.block_degrees_in.sum(), graph.num_edges))
+    # print("total degrees: {} edges: {}".format(partition.block_degrees_in.sum(), graph.num_edges))
     # nodal partition updates parameters
     # delta_entropy_threshold1 = 5e-4
     # stop iterating when the change in entropy falls below this fraction of the overall entropy
@@ -87,16 +88,28 @@ def reassign_nodes(partition: Partition, graph: Graph, partition_triplet: Partit
         # exit MCMC if the recent change in entropy falls below a small fraction of the overall entropy
         mcmc_timings.t_early_stopping()
         if itr >= (delta_entropy_moving_avg_window - 1):
-            if partition_triplet.partitions[2] is None:  # golden ratio bracket not yet established
-                if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
-                    delta_entropy_threshold1 * partition.overall_entropy)):
-                    mcmc_timings.t_early_stopping()
-                    break
-            else:  # golden ratio bracket is established. Fine-tuning partition.
-                if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
-                    delta_entropy_threshold2 * partition.overall_entropy)):
-                    mcmc_timings.t_early_stopping()
-                    break
+            if args.sparse:
+                if partition_triplet.get(2) is None:  # golden ratio bracket not yet established
+                    if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
+                        delta_entropy_threshold1 * partition.overall_entropy)):
+                        mcmc_timings.t_early_stopping()
+                        break
+                else:  # golden ratio bracket is established. Fine-tuning partition.
+                    if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
+                        delta_entropy_threshold2 * partition.overall_entropy)):
+                        mcmc_timings.t_early_stopping()
+                        break
+            else:
+                if partition_triplet.partitions[2] is None:  # golden ratio bracket not yet established
+                    if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
+                        delta_entropy_threshold1 * partition.overall_entropy)):
+                        mcmc_timings.t_early_stopping()
+                        break
+                else:  # golden ratio bracket is established. Fine-tuning partition.
+                    if (-np.mean(itr_delta_entropy[(itr - delta_entropy_moving_avg_window + 1):itr]) < (
+                        delta_entropy_threshold2 * partition.overall_entropy)):
+                        mcmc_timings.t_early_stopping()
+                        break
         mcmc_timings.t_early_stopping()
 
     # compute the global entropy for determining the optimal number of blocks

@@ -5,9 +5,11 @@ import timeit
 import argparse
 
 from evaluate import evaluate_partition, evaluate_subgraph_partition
+from evaluation import Evaluation
 from graph import Graph
 from samplestack import SampleStack
 from sbp import stochastic_block_partition
+from cppsbp import sbp as csbp
 
 
 def parse_arguments():
@@ -69,7 +71,6 @@ def parse_arguments():
     return args
 # End of parse_arguments()
 
-
 if __name__ == "__main__":
     args = parse_arguments()
 
@@ -96,7 +97,8 @@ if __name__ == "__main__":
         t_sample = timeit.default_timer()
         print("Performing stochastic block partitioning")
         # begin partitioning by finding the best partition with the optimal number of blocks
-        partition, evaluation = stochastic_block_partition(graph, args)
+        evaluation = Evaluation(args, graph)
+        partition = csbp.stochastic_block_partition(graph.num_nodes, graph.num_edges, graph.out_neighbors, graph.in_neighbors)
 
     t_end = timeit.default_timer()
     print('\nGraph partition took {} seconds'.format(t_end - t_start))

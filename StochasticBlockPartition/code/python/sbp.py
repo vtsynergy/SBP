@@ -9,13 +9,14 @@ from block_merge import merge_blocks
 from evaluation import Evaluation
 from graph import Graph
 from node_reassignment import reassign_nodes, propagate_membership, fine_tune_membership
-from partition import PartitionTriplet
+from partition import PartitionTriplet as DensePartitionTriplet
 from partition import Partition as DensePartition
 from cppsbp.partition import Partition
+from cppsbp.partition import PartitionTriplet
 from cppsbp import sbp as csbp
 # from partition import Partition, PartitionTriplet
 from partition_baseline_support import plot_graph_with_partition
-from partition_baseline_support import prepare_for_partition_on_next_num_blocks
+from partition_baseline_support import prepare_for_partition_on_next_num_blocks, prepare_for_partition_on_next_num_blocks_new
 
 
 def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
@@ -46,6 +47,8 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
 
     # initialize items before iterations to find the partition with the optimal number of blocks
     partition_triplet = PartitionTriplet()
+    if not args.sparse:
+        partition_triplet = DensePartitionTriplet()
     graph_object = None
     
     # while not partition_triplet.optimal_num_blocks_found:
@@ -73,16 +76,23 @@ def stochastic_block_partition(graph: Graph, args: argparse.Namespace,
         if args.verbose:
             print("Beginning nodal updates")
 
-        partition = reassign_nodes(partition, graph, partition_triplet, evaluation, args)
+        if args.sparse:
+            partition = csbp.reassign_nodes(partition, graph.num_nodes, graph.num_edges, graph.out_neighbors, 
+                                            graph.in_neighbors, partition_triplet)
+        else:
+            partition = reassign_nodes(partition, graph, partition_triplet, evaluation, args)
 
         if visualize_graph:
             graph_object = plot_graph_with_partition(graph.out_neighbors, partition.block_assignment, graph_object)
 
         t_prepare_next_start = timeit.default_timer()
-
         # check whether the partition with optimal number of block has been found; if not, determine and prepare for the next number of blocks to try
-        partition, partition_triplet = prepare_for_partition_on_next_num_blocks(
-            partition, partition_triplet, args.blockReductionRate)
+        if args.sparse:
+            partition, partition_triplet = prepare_for_partition_on_next_num_blocks_new(
+                partition, partition_triplet, args.blockReductionRate)
+        else:
+            partition, partition_triplet = prepare_for_partition_on_next_num_blocks(
+                partition, partition_triplet, args.blockReductionRate)
 
         t_prepare_next_end = timeit.default_timer()
         evaluation.update_timings(t_block_merge_start, t_nodal_update_start, t_prepare_next_start, t_prepare_next_end)
@@ -117,6 +127,9 @@ def exit_condition(partition: Partition, partition_triplet: PartitionTriplet, mi
         if partition.num_blocks <= min_num_blocks or partition_triplet.partitions[2] is not None:
             return True
     if partition_triplet.optimal_num_blocks_found:
+        # print(partition_triplet.optimal_num_blocks_found)
+        partition_triplet.status()
+        print("optimal number of blocks was found")
         return True
     return False
 # End of exit_condition()

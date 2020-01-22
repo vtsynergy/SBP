@@ -20,7 +20,8 @@ if use_graph_tool_options:
     import graph_tool.all as gt
 
 # from partition import Partition, PartitionTriplet
-from partition import PartitionTriplet
+# from partition import PartitionTriplet
+from cppsbp.partition import PartitionTriplet
 from cppsbp.partition import Partition
 from utils.sparse_matrix import SparseMatrix  # , SparseVector
 from utils.edge_count_updates import EdgeCountUpdates
@@ -405,6 +406,11 @@ def vertex_reassign_edge_count_updates(M: Matrix, r: int, s: int, b_out: np.ndar
         count_out_r = np.sum(count_out[np.where(b_out == r)])
         M_r_col[r] -= count_out_r
         M_r_col[s] += count_out_r
+
+        if np.any(M_r_row < 0):
+            print("M_r_row: ", M_r_row)
+        if np.any(M_r_col < 0):
+            print("M_r_col: ", M_r_col)
 
         M_s_row[b_out] += count_out
         count_in_s = np.sum(count_in[np.where(b_in == s)])
@@ -853,9 +859,14 @@ def update_partition(partition: Partition, ni: int, r: int, s: int, edge_count_u
     """
     partition.block_assignment[ni] = s
     if use_sparse:
+        br = list(edge_count_updates.block_row)
+        pr = list(edge_count_updates.proposal_row)
+        bc = list(edge_count_updates.block_col)
+        pc = list(edge_count_updates.proposal_col)
         partition.blockmodel.update_edge_counts(
-            r, s, edge_count_updates.block_row, edge_count_updates.proposal_row, edge_count_updates.block_col,
-            edge_count_updates.proposal_col
+            r, s, br, pr, bc, pc
+            # np.ndarray(edge_count_updates.block_row), np.ndarray(edge_count_updates.proposal_row), np.ndarray(edge_count_updates.block_col),
+            # np.ndarray(edge_count_updates.proposal_col)
         )
     else:
         partition.blockmodel[r, :] = edge_count_updates.block_row
@@ -984,6 +995,80 @@ def prepare_for_partition_on_next_num_blocks(partition: Partition, partition_tri
             ) * 0.618).astype(int)
             partition = partition_triplet.partitions[index].copy()
             partition.num_blocks_to_merge = partition_triplet.partitions[index].num_blocks - next_B_to_try
+
+    partition_triplet.optimal_num_blocks_found = optimal_B_found
+    return partition, partition_triplet
+# End of prepare_for_partition_on_next_num_blocks()
+
+
+def prepare_for_partition_on_next_num_blocks_new(old_partition: Partition, partition_triplet: PartitionTriplet,
+    B_rate: float) -> Tuple[Partition, PartitionTriplet]:
+    """Checks to see whether the current partition has the optimal number of blocks. If not, the next number of blocks
+       to try is determined and the intermediate variables prepared.
+
+        Parameters
+        ----------
+        partition : Partition
+                the most recent partitioning results
+        partition_triplet : Partition
+                the triplet of the three best partitioning results for Fibonacci search
+        B_rate : float
+                    the ratio on the number of blocks to reduce before the golden ratio bracket is established
+
+        Returns:
+        ----------
+        partition : Partition
+                the partitioning results to use for the next iteration of the algorithm
+        partition_triplet : PartitionTriplet
+                the updated triplet of the three best partitioning results for Fibonacci search
+
+        Notes
+        -----
+        The holders for the best three partitions so far and their statistics will be stored in the order of the number
+        of blocks, starting from the highest to the lowest. The middle entry is always the best so far. The number of
+        blocks is reduced by a fixed rate until the golden ratio bracket (three best partitions with the middle one
+        being the best) is established. Once the golden ratio bracket is established, perform golden ratio search until
+        the bracket is narrowed to consecutive number of blocks where the middle one is identified as the optimal
+        number of blocks.
+    """
+    optimal_B_found = False
+    old_partition.num_blocks_to_merge = 0
+
+    partition_triplet.update(old_partition)
+    if partition_triplet.get(2).empty:  # Golden Ratio bracket not yet established
+        partition = partition_triplet.get(1).copy()
+        partition.num_blocks_to_merge = int(partition.num_blocks * B_rate)
+        # print("nblocks * B_rate({}) = {}".format(B_rate, int(partition.num_blocks * B_rate)))
+        # print("nblocks: {} nblocks to merge: {}".format(partition.num_blocks, partition.num_blocks_to_merge))
+        if (partition.num_blocks_to_merge == 0):  # not enough number of blocks to merge, so done
+            optimal_B_found = True
+    else:  # golden ratio search bracket established
+        # If we have found the partition with the optimal number of blocks
+        if ((not partition_triplet.get(0).empty) and
+            partition_triplet.get(0).num_blocks - partition_triplet.get(2).num_blocks == 2):
+            partition = partition_triplet.get(1).copy()
+            optimal_B_found = True
+        elif (partition_triplet.get(0).empty and
+              partition_triplet.get(1).num_blocks - partition_triplet.get(2).num_blocks == 1):
+            partition = partition_triplet.get(1).copy()
+            optimal_B_found = True
+        else:  # not done yet, find the next number of block to try according to the golden ratio search
+            # If partition_triplet looks like [0, Partition with B blocks, Partition with B - X blocks]
+            if (partition_triplet.get(0).empty and
+                partition_triplet.get(1).num_blocks > partition_triplet.get(2).num_blocks):
+                index = 1
+            # Else iff the higher segment in bracket is bigger
+            elif ((partition_triplet.get(0).num_blocks - partition_triplet.get(1).num_blocks) >= 
+                (partition_triplet.get(1).num_blocks - partition_triplet.get(2).num_blocks)):
+                index = 0
+            else:  # the lower segment in the bracket is bigger
+                index = 1
+            next_B_to_try = partition_triplet.get(index + 1).num_blocks
+            next_B_to_try += np.round((
+                partition_triplet.get(index).num_blocks - partition_triplet.get(index + 1).num_blocks
+            ) * 0.618).astype(int)
+            partition = partition_triplet.get(index).copy()
+            partition.num_blocks_to_merge = partition_triplet.get(index).num_blocks - next_B_to_try
 
     partition_triplet.optimal_num_blocks_found = optimal_B_found
     return partition, partition_triplet

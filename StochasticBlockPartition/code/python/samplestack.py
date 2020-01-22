@@ -11,6 +11,7 @@ from node_reassignment import fine_tune_membership
 from partition import Partition
 from samplestate import SampleState
 from sbp import stochastic_block_partition
+from cppsbp import sbp as csbp
 
 
 class SampleStack(object):
