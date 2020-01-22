@@ -6,6 +6,7 @@
 
 #include <exception>
 #include <sstream>
+#include <iostream>
 
 #include <Eigen/Core>
 
@@ -15,10 +16,22 @@
 
 namespace py = pybind11;
 typedef Eigen::VectorXi Vector;
+
 typedef struct edge_weights_t {
     std::vector<int> indices;
     std::vector<int> values;
+    void print() {
+        std::cout << "indices: " << Eigen::Map<Vector>(this->indices.data(), this->indices.size()).transpose();
+        std::cout << " with size: " << this->indices.size() << std::endl;
+        std::cout << "values: " << Eigen::Map<Vector>(this->values.data(), this->values.size()).transpose();
+        std::cout << " with size: " << this->values.size() << std::endl;
+    }
 } EdgeWeights;
+
+typedef struct indices_t {
+    std::vector<int> rows;
+    std::vector<int> cols;
+} Indices;
 
 class IndexOutOfBoundsException: public std::exception {
 public:
@@ -50,14 +63,16 @@ public:
     virtual Vector getrow(int row) = 0;
     virtual py::array_t<int> _getcol(int col) = 0;
     virtual py::array_t<int> _getrow(int row) = 0;
-    virtual py::tuple nonzero() = 0;
+    virtual Indices nonzero() = 0;
+    virtual py::tuple _nonzero() = 0;
     virtual int operator[] (py::tuple index) = 0; 
     virtual void sub(int row, int col, int val) = 0;
     virtual int sum() = 0;
     virtual Eigen::VectorXi sum(int axis = 0) = 0;
     virtual void update_edge_counts(int current_block, int proposed_block, py::array_t<int> current_row,
         py::array_t<int> proposed_row, py::array_t<int> current_col, py::array_t<int> proposed_col) = 0;
-    virtual py::array_t<int> values() = 0;
+    virtual Eigen::ArrayXi values() = 0;
+    virtual py::array_t<int> _values() = 0;
     py::array_t<int> shape;
 };
 

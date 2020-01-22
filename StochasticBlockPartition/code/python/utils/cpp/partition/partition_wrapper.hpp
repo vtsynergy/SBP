@@ -5,6 +5,7 @@
 #define CPPSBP_PARTITION_WRAPPER_HPP
 
 #include "partition.hpp"
+#include "partition_triplet.hpp"
 
 void add_partition_wrapper(py::module module) {
     py::module partition_module = module.def_submodule("partition");
@@ -17,6 +18,7 @@ void add_partition_wrapper(py::module module) {
         .def("from_sample", &Partition::from_sample)
         .def("merge_blocks", &Partition::merge_blocks)
         .def("carry_out_best_merges", &Partition::carry_out_best_merges)
+        .def_readonly("empty", &Partition::empty)
         .def_property("num_blocks", &Partition::getNum_blocks, &Partition::setNum_blocks)
         .def_property("blockmodel", &Partition::getBlockmodel, &Partition::setBlockmodel)
         .def_property("block_assignment", &Partition::getBlock_assignment, &Partition::setBlock_assignment)
@@ -26,6 +28,13 @@ void add_partition_wrapper(py::module module) {
         .def_property("block_reduction_rate", &Partition::getBlock_reduction_rate, &Partition::setBlock_reduction_rate)
         .def_property("overall_entropy", &Partition::getOverall_entropy, &Partition::setOverall_entropy)
         .def_property("num_blocks_to_merge", &Partition::getNum_blocks_to_merge, &Partition::setNum_blocks_to_merge)
+        ;
+    py::class_<PartitionTriplet>(partition_module, "PartitionTriplet")
+        .def(py::init([]() { return PartitionTriplet(); }))
+        .def("update", &PartitionTriplet::update)
+        .def("status", &PartitionTriplet::status)
+        .def("get", &PartitionTriplet::get)  // , py::return_value_policy::reference)
+        .def_readwrite("optimal_num_blocks_found", &PartitionTriplet::optimal_num_blocks_found)
         ;
 }
 

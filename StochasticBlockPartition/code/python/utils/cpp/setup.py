@@ -4,7 +4,7 @@ import sys
 import setuptools
 import os
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 
 class get_pybind_include(object):
@@ -20,15 +20,17 @@ class get_pybind_include(object):
         import pybind11
         return pybind11.get_include(self.user)
 
-
-ext_modules = [
-    Extension(
+extension = Extension(
         'cppsbp',
         [
          'partition/partition.cpp',
+         'partition/partition_triplet.cpp',
          'partition/sparse/boost_mapped_matrix.cpp',
          'util/util.cpp',
          'sbp.cpp',
+         'finetune.cpp',
+         'common.cpp',
+         'block_merge.cpp',
          'wrapper.cpp'
         ],
         include_dirs=[
@@ -41,8 +43,38 @@ ext_modules = [
             get_pybind_include(),
             get_pybind_include(user=True)
         ],
+        # extra_link_args=extra_link_args,
         language='c++'
-    ),
+    )
+
+ext_modules = [
+    extension,
+    # Extension(
+    #     'cppsbp',
+    #     [
+    #      'partition/partition.cpp',
+    #      'partition/partition_triplet.cpp',
+    #      'partition/sparse/boost_mapped_matrix.cpp',
+    #      'util/util.cpp',
+    #      'sbp.cpp',
+    #      'finetune.cpp',
+    #      'common.cpp',
+    #      'block_merge.cpp',
+    #      'wrapper.cpp'
+    #     ],
+    #     include_dirs=[
+    #         # Path to pybind11 headers
+    #         './',
+    #         './util/',
+    #         './partition/',
+    #         './partition/sparse/',
+    #         os.environ['CONDA_PREFIX'] + '/include/eigen3',
+    #         get_pybind_include(),
+    #         get_pybind_include(user=True)
+    #     ],
+    #     extra_link_args=extra_link_args,
+    #     language='c++'
+    # ),
 ]
 
 
@@ -102,9 +134,23 @@ class BuildExt(build_ext):
                 opts.append('-fvisibility=hidden')
         elif ct == 'msvc':
             opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        # For memory corruption detection purposes, using sanitizer
+        # opts.append('-ggdb')
+        # opts.append('-fsanitize=address')
+        # opts.append('-fno-omit-frame-pointer')
+        # opts.append('-lasan')
+        # link_opts.append('-lasan')
+        # opts.append('-static-libasan')
+        # link_opts.append('-static-libasan')
+        # opts.append('-shared-libasan')
+        # link_opts.append('-shared-libasan')
+        # For memory corruption detection purposes, using sanitizer
         for ext in self.extensions:
             ext.extra_compile_args = opts
             ext.extra_link_args = link_opts
+        # import sysconfig
+        # print(sysconfig.get_config_var('LDFLAGS'))
+        # exit()
         build_ext.build_extensions(self)
 
 setup(
