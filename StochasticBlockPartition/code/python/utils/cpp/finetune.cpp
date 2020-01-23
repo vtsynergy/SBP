@@ -97,6 +97,17 @@ bool finetune::early_stop(int iteration, PartitionTriplet &partitions, Partition
     return (average < threshold) ? true : false;
 }
 
+bool finetune::early_stop(int iteration, Partition &partition, std::vector<double> &delta_entropies) {
+    if (iteration < 3) {
+        return false;
+    }
+    int last_index = delta_entropies.size() - 1;
+    double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
+    average /= -3.0;
+    double threshold = 1e-4 * partition.getOverall_entropy();
+    return (average < threshold) ? true : false;
+}
+
 EdgeCountUpdates finetune::edge_count_updates(BoostMappedMatrix &blockmodel, int current_block, int proposed_block,
                                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
     Vector block_row = blockmodel.getrow(current_block);
@@ -279,6 +290,38 @@ Partition &finetune::reassign_vertices(Partition &partition, int num_vertices, i
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, partitions, partition, delta_entropies)) {
+            break;
+        }
+    }
+    partition.setOverall_entropy(overall_entropy(partition, num_vertices, num_edges));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << partition.getOverall_entropy() << std::endl;
+    return partition;
+}
+
+Partition &finetune::finetune_assignment(Partition &partition, int num_vertices, int num_edges,
+                                         std::vector<Matrix2Column> &out_neighbors,
+                                         std::vector<Matrix2Column> &in_neighbors) {
+    std::vector<double> delta_entropies;
+    // TODO: Add number of finetuning iterations to evaluation
+    int total_vertex_moves = 0;
+    partition.setOverall_entropy(overall_entropy(partition, num_vertices, num_edges));
+    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        int vertex_moves = 0;
+        double delta_entropy = 0.0;
+        for (int vertex = 0; vertex < num_vertices; ++vertex) {
+            ProposalEvaluation proposal = propose_move(partition, vertex, out_neighbors, in_neighbors);
+            if (proposal.did_move) {
+                vertex_moves++;
+                delta_entropy += proposal.delta_entropy;
+            }
+        }
+        delta_entropies.push_back(delta_entropy);
+        std::cout << "Itr: " << iteration << ", number of finetuning moves: " << vertex_moves << ", delta S: ";
+        std::cout << delta_entropy / partition.getOverall_entropy() << std::endl;
+        total_vertex_moves += vertex_moves;
+        // Early stopping
+        if (early_stop(iteration, partition, delta_entropies)) {
             break;
         }
     }

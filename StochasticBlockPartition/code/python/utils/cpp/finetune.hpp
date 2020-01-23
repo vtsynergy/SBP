@@ -32,6 +32,7 @@ double compute_delta_entropy(int current_block, int proposal, Partition &partiti
                              common::NewBlockDegrees &block_degrees);
 bool early_stop(int iteration, PartitionTriplet &partitions, Partition &partition,
                 std::vector<double> &delta_entropies);
+bool early_stop(int iteration, Partition &partition, std::vector<double> &delta_entropies);
 EdgeCountUpdates edge_count_updates(BoostMappedMatrix &blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
 EdgeWeights edge_weights(std::vector<Matrix2Column> &neighbors, int vertex);
@@ -44,6 +45,8 @@ ProposalEvaluation propose_move(Partition &partition, int vertex, std::vector<Ma
 Partition &reassign_vertices(Partition &partition, int num_vertices, int num_edges,
                              std::vector<Matrix2Column> &out_neighbors, std::vector<Matrix2Column> &in_neighbors,
                              PartitionTriplet &partitions);
+Partition &finetune_assignment(Partition &partition, int num_vertices, int num_edges,
+                               std::vector<Matrix2Column> &out_neighbors, std::vector<Matrix2Column> &in_neighbors);
 
 } // namespace finetune
 

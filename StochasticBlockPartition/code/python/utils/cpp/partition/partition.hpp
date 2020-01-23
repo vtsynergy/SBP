@@ -52,6 +52,7 @@ class Partition {
     void carry_out_best_merges(Eigen::VectorXd &delta_entropy_for_each_block, Vector &best_merge_for_each_block);
     Partition clone_with_true_block_membership(std::vector<Matrix2Column> &neighbors, Vector &true_block_membership);
     Partition copy();
+    // TODO: move block_reduction_rate to some constants file
     static Partition from_sample(int num_blocks, std::vector<Matrix2Column> &neighbors, Vector &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate);
     void initialize_edge_counts(std::vector<Matrix2Column> &neighbors);

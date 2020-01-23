@@ -86,7 +86,7 @@ Partition Partition::copy() {
 Partition Partition::from_sample(int num_blocks, std::vector<Matrix2Column> &neighbors, Vector &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate) {
     // Fill in initial block assignment
-    Vector block_assignment = Vector::Constant(num_blocks, -1);
+    Vector block_assignment = Vector::Constant(neighbors.size(), -1);
     for (const auto &item : mapping) {
         block_assignment[item.first] = sample_block_membership[item.second];
     }
