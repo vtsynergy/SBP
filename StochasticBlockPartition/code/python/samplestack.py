@@ -8,7 +8,8 @@ import numpy as np
 from evaluation import Evaluation
 from graph import Graph
 from node_reassignment import fine_tune_membership
-from partition import Partition
+# from partition import Partition
+from cppsbp.partition import Partition
 from samplestate import SampleState
 from sbp import stochastic_block_partition
 from cppsbp import sbp as csbp
@@ -31,14 +32,12 @@ class SampleStack(object):
         self.t_load_end = timeit.default_timer()
         self.stack = list()  # type: List[Tuple[Graph, Sample]]
         self._sample(args)
-        # self.stack.append((graph, None, None))
         self.t_sample_end = timeit.default_timer()
     # End of __init__()
 
     def _sample(self, args):
         # Iteratively perform sampling
         for iteration in range(args.sample_iterations):
-            # graph = self.stack[-1][0]
             if iteration == 0:
                 subgraph, sample = self.full_graph.sample(args)
             else:
@@ -87,14 +86,15 @@ class SampleStack(object):
         # if args.sample_iterations > 1:
         #     min_num_blocks = int(subgraph.num_nodes / denominator)
         #     min_num_blocks = 0
-        combined_partition, evaluation = stochastic_block_partition(subgraph, args, subgraph_partition, evaluation,
-                                                                    min_num_blocks)
+        if evaluation is None:
+            evaluation = Evaluation(args, subgraph)
+        combined_partition = csbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
+                                                             subgraph.out_neighbors, subgraph.in_neighbors)
         combined_subgraph = subgraph
-        # print(np.unique(combined_partition.block_assignment))
         while len(self.stack) > 0:
             subgraph, next_sample = self._pop()
-            sample_partition, evaluation = stochastic_block_partition(subgraph, args, None, evaluation,
-                                                                      min_num_blocks)
+            sample_partition = csbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
+                                                               subgraph.out_neighbors, subgraph.in_neighbors)
             t1 = timeit.default_timer()
             combined_partition, combined_subgraph, sample = self.combine_partition_with_sample(
                 combined_partition, sample_partition, sample, next_sample, args
@@ -104,8 +104,10 @@ class SampleStack(object):
         print("=====Performing final (combined) sample partitioning=====")
         if min_num_blocks > 0 or (args.sample_iterations > 1):
             combined_partition.num_blocks_to_merge = 0
-            subgraph_partition, evaluation = stochastic_block_partition(combined_subgraph, args, combined_partition,
-                                                                        evaluation, min_num_blocks)
+            subgraph_partition = csbp.stochastic_block_partition(
+                combined_subgraph.num_nodes, combined_subgraph.num_edges, combined_subgraph.out_neighbors, 
+                combined_subgraph.in_neighbors
+            )
         else:
             subgraph_partition = combined_partition
         return combined_subgraph, subgraph_partition, sample.vertex_mapping, sample.true_blocks_mapping, evaluation
@@ -139,9 +141,13 @@ class SampleStack(object):
         """
         t1 = timeit.default_timer()
         full_graph_partition = Partition.from_sample(subgraph_partition.num_blocks, self.full_graph.out_neighbors,
-                                                     subgraph_partition.block_assignment, vertex_mapping, args)
+                                                     subgraph_partition.block_assignment, vertex_mapping,
+                                                     args.blockReductionRate)
         t2 = timeit.default_timer()
-        full_graph_partition = fine_tune_membership(full_graph_partition, self.full_graph, evaluation, args)
+        full_graph_partition = csbp.finetune_assignment(
+            full_graph_partition, self.full_graph.num_nodes, self.full_graph.num_edges, self.full_graph.out_neighbors,
+            self.full_graph.in_neighbors
+        )
         t3 = timeit.default_timer()
         evaluation.loading = self.t_load_end - self.t_load_start
         evaluation.sampling = self.t_sample_end - self.t_load_end
@@ -166,10 +172,11 @@ class SampleStack(object):
         block_ids_start = len(np.unique(combined_partition.block_assignment))
         sample_block_assignment = np.asarray(sample_partition.block_assignment) + block_ids_start
         block_assignment = np.concatenate((combined_partition.block_assignment, sample_block_assignment))
-        # Create a combined sample
+        # Create a combined sample object and its subgraph
         subgraph, sample = self.full_graph.sample_from_vertex_ids(vertices, args)
         # Create a combined partition
-        combined_partition = Partition(len(np.unique(block_assignment)), subgraph.out_neighbors, args, block_assignment)
+        combined_partition = Partition(len(np.unique(block_assignment)), subgraph.out_neighbors,
+                                       args.blockReductionRate, block_assignment)
         return combined_partition, subgraph, sample
     # End of combine_partition_with_sample()
 # End of SampleStack()
