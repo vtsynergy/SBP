@@ -112,7 +112,8 @@ common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeW
 }
 
 int common::propose_random_block(int current_block, int num_blocks) {
-    std::uniform_int_distribution<int> distribution(0, num_blocks - 1);
+    // Generate numbers 0..num_blocks-2 in order to exclude the current block
+    std::uniform_int_distribution<int> distribution(0, num_blocks - 2);
     int proposed = distribution(generator);
     if (proposed >= current_block) {
         proposed++;

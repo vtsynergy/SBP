@@ -112,26 +112,3 @@ EdgeCountUpdates block_merge::edge_count_updates(BoostMappedMatrix &blockmodel, 
     proposal_col[proposed_block] += count_out;
     return EdgeCountUpdates{Vector::Zero(0), proposal_row, Vector::Zero(0), proposal_col};
 }
-
-// int block_merge::propose_random_block(int current_block, int num_blocks) {
-//     std::uniform_int_distribution<int> distribution(0, num_blocks - 1);
-//     int proposed = distribution(generator);
-//     if (proposed >= current_block) {
-//         proposed++;
-//     }
-//     return proposed;
-// }
-
-// int block_merge::choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights) {
-//     std::discrete_distribution<int> distribution(neighbor_weights.begin(), neighbor_weights.end());
-//     int index = distribution(generator);
-//     return neighbor_indices[index];
-// }
-
-// int block_merge::choose_neighbor(Eigen::SparseVector<double> &multinomial_distribution) {
-//     std::discrete_distribution<int> distribution(
-//         multinomial_distribution.valuePtr(), multinomial_distribution.valuePtr() +
-//         multinomial_distribution.nonZeros());
-//     int index = distribution(generator);
-//     return multinomial_distribution.innerIndexPtr()[index];
-// }

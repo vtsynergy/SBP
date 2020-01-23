@@ -271,6 +271,9 @@ finetune::ProposalEvaluation finetune::propose_move(Partition &partition, int ve
 Partition &finetune::reassign_vertices(Partition &partition, int num_vertices, int num_edges,
                                        std::vector<Matrix2Column> &out_neighbors,
                                        std::vector<Matrix2Column> &in_neighbors, PartitionTriplet &partitions) {
+    if (partition.getNum_blocks() == 1) {
+        return partition;
+    }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
     partition.setOverall_entropy(overall_entropy(partition, num_vertices, num_edges));
