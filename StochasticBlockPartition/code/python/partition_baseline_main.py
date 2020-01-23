@@ -8,8 +8,7 @@ from evaluate import evaluate_partition, evaluate_subgraph_partition
 from evaluation import Evaluation
 from graph import Graph
 from samplestack import SampleStack
-from sbp import stochastic_block_partition
-from cppsbp import sbp as csbp
+from cppsbp import sbp
 
 
 def parse_arguments():
@@ -81,12 +80,6 @@ if __name__ == "__main__":
 
     if args.sample_type != "none":
         samplestack = SampleStack(args)
-        # graph, vertex_mapping, block_mapping = samplestack.tail()
-        # print("Performing stochastic block partitioning on sampled subgraph after {} sampling iterations".format(
-        #     args.sample_iterations
-        # ))
-        # partition, evaluation = stochastic_block_partition(graph, args)
-        # print('Combining sampled partition with full graph')
         subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
         full_graph, full_graph_partition, evaluation = samplestack.extrapolate_sample_partition(
             subgraph_partition, vertex_mapping, args, evaluation
@@ -98,7 +91,8 @@ if __name__ == "__main__":
         print("Performing stochastic block partitioning")
         # begin partitioning by finding the best partition with the optimal number of blocks
         evaluation = Evaluation(args, graph)
-        partition = csbp.stochastic_block_partition(graph.num_nodes, graph.num_edges, graph.out_neighbors, graph.in_neighbors)
+        partition = sbp.stochastic_block_partition(graph.num_nodes, graph.num_edges, graph.out_neighbors,
+                                                   graph.in_neighbors)
 
     t_end = timeit.default_timer()
     print('\nGraph partition took {} seconds'.format(t_end - t_start))

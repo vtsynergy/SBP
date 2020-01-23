@@ -7,12 +7,12 @@ import numpy as np
 
 from evaluation import Evaluation
 from graph import Graph
-from node_reassignment import fine_tune_membership
+# from node_reassignment import fine_tune_membership
 # from partition import Partition
 from cppsbp.partition import Partition
 from samplestate import SampleState
-from sbp import stochastic_block_partition
-from cppsbp import sbp as csbp
+# from sbp import stochastic_block_partition
+from cppsbp import sbp
 
 
 class SampleStack(object):
@@ -88,12 +88,12 @@ class SampleStack(object):
         #     min_num_blocks = 0
         if evaluation is None:
             evaluation = Evaluation(args, subgraph)
-        combined_partition = csbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
+        combined_partition = sbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
                                                              subgraph.out_neighbors, subgraph.in_neighbors)
         combined_subgraph = subgraph
         while len(self.stack) > 0:
             subgraph, next_sample = self._pop()
-            sample_partition = csbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
+            sample_partition = sbp.stochastic_block_partition(subgraph.num_nodes, subgraph.num_edges,
                                                                subgraph.out_neighbors, subgraph.in_neighbors)
             t1 = timeit.default_timer()
             combined_partition, combined_subgraph, sample = self.combine_partition_with_sample(
@@ -104,7 +104,7 @@ class SampleStack(object):
         print("=====Performing final (combined) sample partitioning=====")
         if min_num_blocks > 0 or (args.sample_iterations > 1):
             combined_partition.num_blocks_to_merge = 0
-            subgraph_partition = csbp.stochastic_block_partition(
+            subgraph_partition = sbp.stochastic_block_partition(
                 combined_subgraph.num_nodes, combined_subgraph.num_edges, combined_subgraph.out_neighbors, 
                 combined_subgraph.in_neighbors
             )
@@ -144,7 +144,7 @@ class SampleStack(object):
                                                      subgraph_partition.block_assignment, vertex_mapping,
                                                      args.blockReductionRate)
         t2 = timeit.default_timer()
-        full_graph_partition = csbp.finetune_assignment(
+        full_graph_partition = sbp.finetune_assignment(
             full_graph_partition, self.full_graph.num_nodes, self.full_graph.num_edges, self.full_graph.out_neighbors,
             self.full_graph.in_neighbors
         )
