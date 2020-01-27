@@ -2,6 +2,9 @@
 
 Partition sbp::stochastic_block_partition(int num_vertices, int num_edges, std::vector<Matrix2Column> &out_neighbors,
                                           std::vector<Matrix2Column> &in_neighbors) {
+    int num_logical_cores = omp_get_num_procs();
+    omp_set_num_threads(num_logical_cores);
+    std::cout << "Setting #threads = #cores = " << num_logical_cores << std::endl;
     Partition partition(num_vertices, out_neighbors, BLOCK_REDUCTION_RATE);
     std::cout << "Performing stochastic block partitioning on graph with " << num_vertices << " vertices "
               << " and " << partition.getNum_blocks() << " blocks." << std::endl;

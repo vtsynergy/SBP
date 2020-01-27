@@ -4,6 +4,8 @@
 #ifndef CPPSBP_SBP_HPP
 #define CPPSBP_SBP_HPP
 
+#include <omp.h>
+
 #include "block_merge.hpp"
 #include "finetune.hpp"
 #include "partition/partition_triplet.hpp"
