@@ -16,7 +16,9 @@ class BoostMappedMatrix {
   public:
     BoostMappedMatrix() {}
     BoostMappedMatrix(int nrows, int ncols) : ncols(ncols), nrows(nrows) {
-        this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
+        // this->matrix = boost::numeric::ublas::coordinate_matrix<int>(this->nrows, this->ncols);
+        this->matrix = boost::numeric::ublas::compressed_matrix<int>(this->nrows, this->ncols);
+        // this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
         int shape_array[2] = {this->nrows, this->ncols};
         this->shape = py::array_t<int>(2, shape_array);
     }

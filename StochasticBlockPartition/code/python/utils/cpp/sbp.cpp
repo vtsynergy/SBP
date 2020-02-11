@@ -15,7 +15,7 @@ Partition sbp::stochastic_block_partition(int num_vertices, int num_edges, std::
                       << partition.getNum_blocks() - partition.getNum_blocks_to_merge() << std::endl;
         }
         partition = block_merge::merge_blocks(partition, out_neighbors);
-        partition = finetune::reassign_vertices(partition, num_vertices, num_edges, out_neighbors, in_neighbors,
+        partition = finetune::asynchronous_gibbs(partition, num_vertices, num_edges, out_neighbors, in_neighbors,
                                                 partition_triplet);
         partition = partition_triplet.get_next_partition(partition);
     }

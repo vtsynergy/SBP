@@ -4,7 +4,7 @@ import sys
 import setuptools
 import os
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 
 class get_pybind_include(object):
@@ -49,32 +49,6 @@ extension = Extension(
 
 ext_modules = [
     extension,
-    # Extension(
-    #     'cppsbp',
-    #     [
-    #      'partition/partition.cpp',
-    #      'partition/partition_triplet.cpp',
-    #      'partition/sparse/boost_mapped_matrix.cpp',
-    #      'util/util.cpp',
-    #      'sbp.cpp',
-    #      'finetune.cpp',
-    #      'common.cpp',
-    #      'block_merge.cpp',
-    #      'wrapper.cpp'
-    #     ],
-    #     include_dirs=[
-    #         # Path to pybind11 headers
-    #         './',
-    #         './util/',
-    #         './partition/',
-    #         './partition/sparse/',
-    #         os.environ['CONDA_PREFIX'] + '/include/eigen3',
-    #         get_pybind_include(),
-    #         get_pybind_include(user=True)
-    #     ],
-    #     extra_link_args=extra_link_args,
-    #     language='c++'
-    # ),
 ]
 
 
@@ -98,7 +72,7 @@ def cpp_flag(compiler):
     """Return the -std=c++[11/14/17] compiler flag.
     The newer version is preferred over c++11 (when it is available).
     """
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
+    flags = ['-std=c++17']  # I'm using C++ 17, '-std=c++14', '-std=c++11']
 
     for flag in flags:
         if has_flag(compiler, flag): return flag
@@ -127,7 +101,6 @@ class BuildExt(build_ext):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
         opts.append('-fopenmp')
-        print("=====opts = ", opts)
         link_opts = self.l_opts.get(ct, [])
         if ct == 'unix':
             opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
@@ -150,9 +123,6 @@ class BuildExt(build_ext):
         for ext in self.extensions:
             ext.extra_compile_args = opts
             ext.extra_link_args = link_opts
-        # import sysconfig
-        # print(sysconfig.get_config_var('LDFLAGS'))
-        # exit()
         build_ext.build_extensions(self)
 
 setup(

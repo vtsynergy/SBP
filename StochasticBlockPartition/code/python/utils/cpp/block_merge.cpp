@@ -10,9 +10,9 @@ Partition &block_merge::merge_blocks(Partition &partition, std::vector<Matrix2Co
 
     #pragma omp parallel for
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
-        if (current_block == 0) {
-            std::cout << "Total number of threads = "<< omp_get_num_threads() << std::endl;
-        }
+        // if (current_block == 0) {
+        //     std::cout << "Total number of threads = "<< omp_get_num_threads() << std::endl;
+        // }
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             ProposalEvaluation proposal = propose_merge(current_block, partition, block_partition);
             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {

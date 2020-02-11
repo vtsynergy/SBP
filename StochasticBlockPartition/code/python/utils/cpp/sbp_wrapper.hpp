@@ -15,9 +15,9 @@ void add_sbp_wrapper(py::module module) {
         .def("propose_move", &finetune::propose_move)
         // .def("early_stop", &finetune::early_stop)
         .def("early_stop", 
-            py::overload_cast<int, PartitionTriplet&, Partition&, std::vector<double>&>(&finetune::early_stop))
+            py::overload_cast<int, PartitionTriplet&, double, std::vector<double>&>(&finetune::early_stop))
             // (bool (int, PartitionTriplet&, Partition&, std::vector<double>&)) &finetune::early_stop)
-        .def("early_stop", py::overload_cast<int, Partition&, std::vector<double>&>(&finetune::early_stop))
+        .def("early_stop", py::overload_cast<int, double, std::vector<double>&>(&finetune::early_stop))
         // .def("early_stop", (bool (int, Partition&, std::vector<double>&)) &finetune::early_stop)
         .def("overall_entropy", &finetune::overall_entropy)
         .def("edge_weights", &finetune::edge_weights)
