@@ -463,6 +463,13 @@ class Evaluation(object):
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, False,
                                  '-', size, True, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
+            for row in range(np.shape(self.contingency_table)[0]):
+                for col in range(np.shape(self.contingency_table)[1]):
+                    writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
+                                     col, self.contingency_table[row, col], False, self.sample_size,
+                                     self.sampling_algorithm, self.sampling_iterations, self.args.tag])
+            if (self.sampling_algorithm == "none") or (self.args.sample_size == 0):
+                return
             for community, size in self.subgraph_real_communities.items():
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, True,
                                  '-', size, False, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
@@ -471,11 +478,6 @@ class Evaluation(object):
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, True,
                                  '-', size, True, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
-            for row in range(np.shape(self.contingency_table)[0]):
-                for col in range(np.shape(self.contingency_table)[1]):
-                    writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
-                                     col, self.contingency_table[row, col], False, self.sample_size,
-                                     self.sampling_algorithm, self.sampling_iterations, self.args.tag])
             for row in range(np.shape(self.subgraph_contingency_table)[0]):
                 for col in range(np.shape(self.subgraph_contingency_table)[1]):
                     writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
