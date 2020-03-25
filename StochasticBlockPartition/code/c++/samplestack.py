@@ -47,10 +47,10 @@ class SampleStack(object):
         # Iteratively perform sampling
         for iteration in range(args.sample_iterations):
             if iteration == 0:
-                subgraph, sample = self.sample(self.full_graph, args)
+                sampled_graph, sample = self.sample(self.full_graph, args)
             else:
-                subgraph, sample = self.sample(self.full_graph, args, sample.state)
-            self.stack.append((subgraph, sample))
+                sampled_graph, sample = self.sample(self.full_graph, args, sample.state)
+            self.stack.append((sampled_graph, sample))
     # End of create_sample_stack()
 
     def sample(self, graph: Graph, args: argparse.Namespace, prev_state: SampleState = None) -> Tuple[Graph, Sample]:
@@ -67,8 +67,8 @@ class SampleStack(object):
 
         Returns
         ------
-        subgraph : Graph
-            the subgraph created from the sampled Graph vertices
+        sampled_graph : Graph
+            the sampled graph created from the sampled Graph vertices
         sample : Sample
             the sample object containing the vertex and block mappings
         """
@@ -76,15 +76,15 @@ class SampleStack(object):
         if prev_state is None:
             prev_state = SampleState(sample_size)
         sample_object = Sample.create_sample(self.full_graph, self.true_block_assignment, args, prev_state)
-        subgraph = Graph()
+        sampled_graph = Graph()
         # Some vertices may be island vertices with no neighbors. To make sure they're included in the graph, first add
         # the vertices, then add the edges.
-        subgraph.add_vertex(sample_size)
-        subgraph.add_edge_list(
+        sampled_graph.add_vertex(sample_size)
+        sampled_graph.add_edge_list(
             [(i, j) for i in range(len(sample_object.out_neighbors)) if len(
                 sample_object.out_neighbors[i]) > 0 for j in sample_object.out_neighbors[i]]
         )
-        return subgraph, sample_object
+        return sampled_graph, sample_object
     # End of sample()
 
     def _push(self):
@@ -97,7 +97,7 @@ class SampleStack(object):
         return self.stack.pop(0)
     # End of _pop()
 
-    def unstack(self, args: argparse.Namespace, subgraph_partition: BlockState = None,
+    def unstack(self, args: argparse.Namespace, sampled_graph_partition: BlockState = None,
                 evaluation: Evaluation = None) -> Tuple[Graph, BlockState, Dict, Dict, Evaluation]:
         """Performs SBP on the first (innermost) sample. Merges said sample with the next in the stack, and performs
         SBP on the combined results. Repeats the process until all samples have been partitioned.
@@ -106,16 +106,16 @@ class SampleStack(object):
         ---------
         args : argparse.Namespace
             the command-line arguments supplied by the user
-        subgraph_partition : BlockState
-            the current partitioned state of the subgraph. Default = None
+        sampled_graph_partition : BlockState
+            the current partitioned state of the sampled graph. Default = None
         evaluation : Evaluation
             the current state of the evaluation of the algorithm. Default = None
 
         Returns
         -------
-        subgraph : Graph
+        sampled_graph : Graph
             the Graph object describing the combined samples
-        subgraph_partition : BlockState
+        sampled_graph_partition : BlockState
             the partition results of the combined samples
         vertex_mapping : Dict[int, int]
             the mapping of the vertices from the combined sample to the full graph
@@ -123,31 +123,31 @@ class SampleStack(object):
             the mapping of the communities/blocks from the combined sample to the full graph
         """
         # Propagate results back through the stack
-        subgraph, sample = self._pop()
+        sampled_graph, sample = self._pop()
         min_num_blocks = -1
         # denominator = 2
         # if args.sample_iterations > 1:
-        #     min_num_blocks = int(subgraph.num_nodes / denominator)
+        #     min_num_blocks = int(sampled_graph.num_nodes / denominator)
         #     min_num_blocks = 0
         if evaluation is None:
-            evaluation = Evaluation(args, subgraph)
-        print("Subgraph: V = {} E = {}".format(subgraph.num_vertices(), subgraph.num_edges()))
+            evaluation = Evaluation(args, sampled_graph)
+        print("Subgraph: V = {} E = {}".format(sampled_graph.num_vertices(), sampled_graph.num_edges()))
         t0 = timeit.default_timer()
-        combined_partition = minimize_blockmodel_dl(subgraph, mcmc_args={'parallel': False},
-                                                    mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
-                                                    verbose=False)
-        evaluation.subgraph_partition_time += (timeit.default_timer() - t0)
-        combined_subgraph = subgraph
+        combined_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
+                                                    mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
+                                                    verbose=args.verbose)
+        evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
+        combined_sampled_graph = sampled_graph
         while len(self.stack) > 0:
-            subgraph, next_sample = self._pop()
+            sampled_graph, next_sample = self._pop()
             t0 = timeit.default_timer()
-            sample_partition = minimize_blockmodel_dl(subgraph, mcmc_args={'parallel': False},
-                                                      mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
-                                                      verbose=True)
-            evaluation.subgraph_partition_time += (timeit.default_timer() - t0)
+            sample_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
+                                                      mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
+                                                      verbose=args.verbose)
+            evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
             t1 = timeit.default_timer()
             # TODO: fix this to allow multi-sample strategies
-            combined_partition, combined_subgraph, sample = self.combine_partition_with_sample(
+            combined_partition, combined_sampled_graph, sample = self.combine_partition_with_sample(
                 combined_partition, sample_partition, sample, next_sample, args
             )
             t2 = timeit.default_timer()
@@ -156,15 +156,18 @@ class SampleStack(object):
         print("=====Performing final (combined) sample partitioning=====")
         if min_num_blocks > 0 or (args.sample_iterations > 1):
             combined_partition.num_blocks_to_merge = 0
-            subgraph_partition = minimize_blockmodel_dl(combined_subgraph, mcmc_args={'parallel': False},
-                                                        mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
-                                                        verbose=True)
+            sampled_graph_partition = minimize_blockmodel_dl(combined_sampled_graph, mcmc_args={'parallel': False},
+                                                             mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
+                                                             verbose=True)
         else:
-            subgraph_partition = combined_partition
-        return combined_subgraph, subgraph_partition, sample.vertex_mapping, sample.true_blocks_mapping, evaluation
+            sampled_graph_partition = combined_partition
+        return (
+            combined_sampled_graph, sampled_graph_partition, sample.vertex_mapping, sample.true_blocks_mapping,
+            evaluation
+        )
     # End of unstack()
 
-    def extrapolate_sample_partition(self, subgraph_partition: BlockState, vertex_mapping: Dict[int, int],
+    def extrapolate_sample_partition(self, sampled_graph_partition: BlockState, vertex_mapping: Dict[int, int],
                                      args: argparse.Namespace,
                                      evaluation: Evaluation) -> Tuple[Graph, BlockState, Evaluation]:
         """Extrapolates the partitioning results from the sample to the full graph.
@@ -175,8 +178,8 @@ class SampleStack(object):
 
         Parameters
         ----------
-        subgraph_partition : BlockState
-            the current partitioned state of the subgraph
+        sampled_graph_partition : BlockState
+            the current partitioned state of the sampled graph
         vertex_mapping : Dict[int, int]
             the mapping of sample vertices to full vertices
         args : argparse.Namespace
@@ -194,7 +197,7 @@ class SampleStack(object):
             the evaluation results of the algorithm
         """
         t1 = timeit.default_timer()
-        full_graph_partition = partition_from_sample(subgraph_partition, self.full_graph, vertex_mapping)
+        full_graph_partition = partition_from_sample(sampled_graph_partition, self.full_graph, vertex_mapping)
         t2 = timeit.default_timer()
         full_graph_partition = finetune_assignment(full_graph_partition, args)
         t3 = timeit.default_timer()

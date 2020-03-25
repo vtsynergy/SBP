@@ -3,6 +3,9 @@
 
 from typing import Callable, Dict, List, Tuple
 
+from graph_tool import Graph
+from graph_tool.inference import BlockState
+from graph_tool.inference.modularity import modularity
 from munkres import Munkres  # for correctness evaluation
 import numpy as np
 import scipy.special as misc
@@ -10,18 +13,19 @@ import scipy.special as misc
 from evaluation import Evaluation
 
 
-def evaluate_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evaluation):
+def evaluate_partition(graph: Graph, true_b: np.ndarray, alg_partition: BlockState, evaluation: Evaluation):
     """Evaluate the output partition against the truth partition and report the correctness metrics.
        Compare the partitions using only the nodes that have known truth block assignment.
 
     Parameters
     ----------
+    graph : Graph
+        the graph which was partitioned.
     true_b : ndarray (int)
         array of truth block assignment for each node. If the truth block is not known for a node, -1 is used
         to indicate unknown blocks.
-    alg_b : ndarray (int)
-        array of output block assignment for each node. The length of this array corresponds to the number of
-        nodes observed and processed so far.
+    alg_partition : BlockState
+        the partition result returned by stochastic block partitioning.
     evaluation : Evaluation
         stores evaluation results
 
@@ -30,44 +34,51 @@ def evaluate_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evalua
     evaluation : Evaluation
         the evaluation results, filled in with goodness of partitioning measures
     """
+    alg_b = alg_partition.get_blocks().get_array()
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
     evaluation.contingency_table = contingency_table
     joint_prob = evaluate_accuracy(contingency_table, evaluation)
     evaluate_pairwise_metrics(contingency_table, N, evaluation)
     evaluate_entropy_metrics(joint_prob, evaluation)
+    evaluation.full_graph_description_length = alg_partition.entropy()
+    evaluation.full_graph_modularity = modularity(graph, alg_partition.get_blocks())
     evaluation.save()
 # End of evaluate_partition()
 
 
-def evaluate_subgraph_partition(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evaluation,
-                                block_mapping: Dict[int, int]):
+def evaluate_sampled_graph_partition(graph: Graph, true_b: np.ndarray, alg_partition: BlockState,
+                                     evaluation: Evaluation, block_mapping: Dict[int, int]):
     """Evaluate the output partition against the truth partition and report the correctness metrics.
        Compare the partitions using only the nodes that have known truth block assignment.
 
     Parameters
     ----------
+    graph : Graph
+        the sampled graph that was partitioned.
     true_b : ndarray (int)
         array of truth block assignment for each vertex in the subgrpah. If the truth block is not known for a 
         vertex, -1 is used to indicate unknown blocks.
-    alg_b : ndarray (int)
-        array of output block assignment for each vertex. The length of this array corresponds to the number of
-        vertices observed and processed so far.
+    alg_partition : BlockState
+        the partition result returned by stochastic block partitioning.
     evaluation : Evaluation
         stores evaluation results
     block_mapping : Dict[int, int]
         the mapping of actual block ids to sample block ids (to ensure they are in a [0,X] range, where X >= 0)
     """
+    alg_b = alg_partition.get_blocks().get_array()
     true_b = np.asarray([block_mapping[block] for block in true_b])
-    contingency_table, N = create_contingency_table(true_b, alg_b, evaluation, subgraph=True)
-    evaluation.subgraph_contingency_table = contingency_table
+    contingency_table, N = create_contingency_table(true_b, alg_b, evaluation, sampled_graph=True)
+    evaluation.sampled_graph_contingency_table = contingency_table
     joint_prob = evaluate_accuracy(contingency_table, evaluation, True)
     evaluate_pairwise_metrics(contingency_table, N, evaluation, True)
     evaluate_entropy_metrics(joint_prob, evaluation, True)
-# End of evaluate_subgraph_partition()
+    evaluation.sampled_graph_description_length = alg_partition.entropy()
+    evaluation.sampled_graph_modularity = modularity(graph, alg_partition.get_blocks())
+# End of evaluate_sampled_graph_partition()
 
 
 def create_contingency_table(true_b: np.ndarray, alg_b: np.ndarray, evaluation: Evaluation,
-                             subgraph: bool = False) -> Tuple[np.ndarray, int]:
+                             sampled_graph: bool = False) -> Tuple[np.ndarray, int]:
     """Creates the contingency table for the block assignment of the truth and algorithmically determined partitions..
 
     Parameters
@@ -80,8 +91,8 @@ def create_contingency_table(true_b: np.ndarray, alg_b: np.ndarray, evaluation: 
         nodes observed and processed so far.
     evaluation : Evaluation
         stores the evaluation results
-    subgraph : bool = False
-        True if the contingency table is being created for the subgraph, not the full graph
+    sampled_graph : bool = False
+        True if the contingency table is being created for the sampled graph, not the full graph
 
     Returns
     -------
@@ -98,9 +109,9 @@ def create_contingency_table(true_b: np.ndarray, alg_b: np.ndarray, evaluation: 
     blocks_b2 = alg_b
     num_blocks_alg = max(blocks_b2) + 1
 
-    if subgraph:
-        evaluation.subgraph_num_blocks_algorithm = num_blocks_alg
-        evaluation.subgraph_num_blocks_truth = num_blocks_truth
+    if sampled_graph:
+        evaluation.sampled_graph_num_blocks_algorithm = num_blocks_alg
+        evaluation.sampled_graph_num_blocks_truth = num_blocks_truth
     else:
         evaluation.num_blocks_algorithm = num_blocks_alg
         evaluation.num_blocks_truth = num_blocks_truth
@@ -140,19 +151,19 @@ def associate_labels(contingency_table: np.ndarray,
     """Uses linear assignment through Munkres to correctly pair up the block numbers in the truth and algorithmic
     partitions.
 
-        Parameters
-        ---------
-        contingency_table : np.ndarray (int)
-                the un-matched contingency table, will be modified in this function
-        contingency_table_before_assignment : np.ndarray (int)
-                the un-matched contingency table, will not be modified in this function
+    Parameters
+    ---------
+    contingency_table : np.ndarray (int)
+            the un-matched contingency table, will be modified in this function
+    contingency_table_before_assignment : np.ndarray (int)
+            the un-matched contingency table, will not be modified in this function
 
-        Returns
-        ------
-        contingency_table : np.ndarray (int)
-                the contingency table, after the rows and columns have been properly matched using Munkres
-        indexes : List[Tuple[int,int]]
-                the indexes for traversing the matrix, as determined by Munkres
+    Returns
+    ------
+    contingency_table : np.ndarray (int)
+            the contingency table, after the rows and columns have been properly matched using Munkres
+    indexes : List[Tuple[int,int]]
+            the indexes for traversing the matrix, as determined by Munkres
     """
     # associate the labels between two partitions using linear assignment
     assignment = Munkres()  # use the Hungarian algorithm / Kuhn-Munkres algorithm
@@ -194,7 +205,8 @@ def fill_unassociated_columns(contingency_table: np.ndarray, contingency_table_b
 # End of fill_unassociated_columns()
 
 
-def evaluate_accuracy(contingency_table: np.ndarray, evaluation: Evaluation, is_subgraph: bool = False) -> np.ndarray:
+def evaluate_accuracy(contingency_table: np.ndarray, evaluation: Evaluation,
+                      is_sampled_graph: bool = False) -> np.ndarray:
     """Evaluates the accuracy of partitioning.
 
     Parameters
@@ -204,8 +216,8 @@ def evaluate_accuracy(contingency_table: np.ndarray, evaluation: Evaluation, is_
         determined block assignment
     evaluation : Evaluation
         stores evaluation results
-    is_subgraph : bool
-        True if evaluation is for a subgraph. Default = False
+    is_sampled_graph : bool
+        True if evaluation is for a sampled graph. Default = False
 
     Returns
     -------
@@ -217,15 +229,16 @@ def evaluate_accuracy(contingency_table: np.ndarray, evaluation: Evaluation, is_
     accuracy = sum(joint_prob.diagonal())
     print('Accuracy (with optimal partition matching): {}'.format(accuracy))
     print()
-    if is_subgraph:
-        evaluation.subgraph_accuracy = accuracy
+    if is_sampled_graph:
+        evaluation.sampled_graph_accuracy = accuracy
     else:
         evaluation.accuracy = accuracy
     return joint_prob
 # End of evaluate_accuracy()
 
 
-def evaluate_pairwise_metrics(contingency_table: np.ndarray, N: int, evaluation: Evaluation, is_subgraph: bool = False):
+def evaluate_pairwise_metrics(contingency_table: np.ndarray, N: int, evaluation: Evaluation,
+                              is_sampled_graph: bool = False):
     """Evaluates the pairwise metrics for goodness of the partitioning. Metrics evaluated:
     rand index, adjusted rand index, pairwise recall, pairwise precision.
 
@@ -238,8 +251,8 @@ def evaluate_pairwise_metrics(contingency_table: np.ndarray, N: int, evaluation:
         the number of nodes in the confusion matrix
     evaluation : Evaluation
         stores evaluation results
-    is_subgraph : bool
-        True if evaluation is for a subgraph. Default = False
+    is_sampled_graph : bool
+        True if evaluation is for a sampled graph. Default = False
     """
     # Compute pair-counting-based metrics
     def nchoose2(a):
@@ -260,11 +273,11 @@ def evaluate_pairwise_metrics(contingency_table: np.ndarray, N: int, evaluation:
 
     adjusted_rand_index = calc_adjusted_rand_index(contingency_table, nchoose2, colsum, rowsum, num_pairs)
 
-    if is_subgraph:
-        evaluation.subgraph_rand_index = rand_index
-        evaluation.subgraph_adjusted_rand_index = adjusted_rand_index
-        evaluation.subgraph_pairwise_recall = num_agreement_same / num_same_in_b1
-        evaluation.subgraph_pairwise_precision = num_agreement_same / num_same_in_b2
+    if is_sampled_graph:
+        evaluation.sampled_graph_rand_index = rand_index
+        evaluation.sampled_graph_adjusted_rand_index = adjusted_rand_index
+        evaluation.sampled_graph_pairwise_recall = num_agreement_same / num_same_in_b1
+        evaluation.sampled_graph_pairwise_precision = num_agreement_same / num_same_in_b2
     else:
         evaluation.rand_index = rand_index
         evaluation.adjusted_rand_index = adjusted_rand_index
@@ -340,7 +353,7 @@ def calc_adjusted_rand_index(contingency_table: np.ndarray, nchoose2: Callable, 
 # End of calc_adjusted_rand_index()
 
 
-def evaluate_entropy_metrics(joint_prob: np.ndarray, evaluation: Evaluation, is_subgraph: bool = False):
+def evaluate_entropy_metrics(joint_prob: np.ndarray, evaluation: Evaluation, is_sampled_graph: bool = False):
     """Evaluates the entropy (information theoretics based) goodness of partition metrics.
 
     Parameters
@@ -349,31 +362,32 @@ def evaluate_entropy_metrics(joint_prob: np.ndarray, evaluation: Evaluation, is_
         the normalized contingency table
     evaluation : Evaluation
         stores the evaluation metrics
-    is_subgraph : bool = False
-        True if evaluation is for a subgraph. Default = False
+    is_sampled_graph : bool = False
+        True if evaluation is for a sampled_graph. Default = False
     """
     # compute the information theoretic metrics
     marginal_prob_b2 = np.sum(joint_prob, 0)
     marginal_prob_b1 = np.sum(joint_prob, 1)
     idx_truth = np.nonzero(marginal_prob_b1)
     idx_alg = np.nonzero(marginal_prob_b2)
-    evaluation = calc_entropy(marginal_prob_b1, marginal_prob_b2, idx_truth, idx_alg, evaluation, is_subgraph)
+    evaluation = calc_entropy(marginal_prob_b1, marginal_prob_b2, idx_truth, idx_alg, evaluation, is_sampled_graph)
     evaluation = calc_conditional_entropy(joint_prob, marginal_prob_b1, marginal_prob_b2, idx_truth, idx_alg,
-                                          evaluation, is_subgraph)
+                                          evaluation, is_sampled_graph)
 
-    if is_subgraph:
-        if evaluation.subgraph_entropy_truth > 0:
-            fraction_missed_info = evaluation.subgraph_entropy_truth_given_algorithm / evaluation.subgraph_entropy_truth
+    if is_sampled_graph:
+        if evaluation.sampled_graph_entropy_truth > 0:
+            fraction_missed_info = (
+                evaluation.sampled_graph_entropy_truth_given_algorithm / evaluation.sampled_graph_entropy_truth)
         else:
             fraction_missed_info = 0
-        if evaluation.subgraph_entropy_algorithm > 0:
-            fraction_err_info = (evaluation.subgraph_entropy_algorithm_given_truth /
-                                 evaluation.subgraph_entropy_algorithm)
+        if evaluation.sampled_graph_entropy_algorithm > 0:
+            fraction_err_info = (
+                evaluation.sampled_graph_entropy_algorithm_given_truth / evaluation.sampled_graph_entropy_algorithm)
         else:
             fraction_err_info = 0
 
-        evaluation.subgraph_missed_info = fraction_missed_info
-        evaluation.subgraph_erroneous_info = fraction_err_info
+        evaluation.sampled_graph_missed_info = fraction_missed_info
+        evaluation.sampled_graph_erroneous_info = fraction_err_info
     else:
         if evaluation.entropy_truth > 0:
             fraction_missed_info = evaluation.entropy_truth_given_algorithm / evaluation.entropy_truth
@@ -393,35 +407,35 @@ def evaluate_entropy_metrics(joint_prob: np.ndarray, evaluation: Evaluation, is_
 
 
 def calc_entropy(p_marginal_truth: np.ndarray, p_marginal_alg: np.ndarray, idx_truth: np.ndarray,
-                 idx_alg: np.ndarray, evaluation: Evaluation, is_subgraph: bool = False) -> Evaluation:
+                 idx_alg: np.ndarray, evaluation: Evaluation, is_sampled_graph: bool = False) -> Evaluation:
     """Calculates the entropy of the truth and algorithm partitions.
 
-        Parameters
-        ---------
-        p_marginal_truth : np.ndarray (float)
-                the marginal probabilities of the truth partition
-        p_marginal_alg : np.ndarray (float)
-                the marginal probabilities of the algorithm partition
-        idx_truth : np.ndarray (int)
-                the indexes of the non-zero marginal probabilities of the truth partition
-        idx_alg : np.ndarray (int)
-                the indexes of the non-zero marginal probabilities of the algorithm partition
-        is_subgraph : bool
-                True if evaluation is for a subgraph. Default = False
+    Parameters
+    ---------
+    p_marginal_truth : np.ndarray (float)
+        the marginal probabilities of the truth partition
+    p_marginal_alg : np.ndarray (float)
+        the marginal probabilities of the algorithm partition
+    idx_truth : np.ndarray (int)
+        the indexes of the non-zero marginal probabilities of the truth partition
+    idx_alg : np.ndarray (int)
+        the indexes of the non-zero marginal probabilities of the algorithm partition
+    is_sampled_graph : bool
+        True if evaluation is for a sampled graph. Default = False
 
-        Returns
-        ------
-        evaluation : Evaluation
-                the evaluation object, updated with the entropy metrics
+    Returns
+    ------
+    evaluation : Evaluation
+        the evaluation object, updated with the entropy metrics
     """
     # compute entropy of the non-partition2 and the partition2 version
     entropy_truth = -np.sum(p_marginal_truth[idx_truth] * np.log(p_marginal_truth[idx_truth]))
     print('Entropy of truth partition: {}'.format(abs(entropy_truth)))
     entropy_alg = -np.sum(p_marginal_alg[idx_alg] * np.log(p_marginal_alg[idx_alg]))
     print('Entropy of alg. partition: {}'.format(abs(entropy_alg)))
-    if is_subgraph:
-        evaluation.subgraph_entropy_truth = entropy_truth
-        evaluation.subgraph_entropy_algorithm = entropy_alg
+    if is_sampled_graph:
+        evaluation.sampled_graph_entropy_truth = entropy_truth
+        evaluation.sampled_graph_entropy_algorithm = entropy_alg
     else:
         evaluation.entropy_truth = entropy_truth
         evaluation.entropy_algorithm = entropy_alg
@@ -431,24 +445,24 @@ def calc_entropy(p_marginal_truth: np.ndarray, p_marginal_alg: np.ndarray, idx_t
 
 def calc_conditional_entropy(joint_prob: np.ndarray, p_marginal_truth: np.ndarray, p_marginal_alg: np.ndarray,
                              idx_truth: np.ndarray, idx_alg: np.ndarray, evaluation: Evaluation,
-                             is_subgraph: bool = False) -> Evaluation:
+                             is_sampled_graph: bool = False) -> Evaluation:
     """Calculates the conditional entropy metrics between the algorithmic and truth partitions. The following metrics
-    are calculated: 
+    are calculated:
 
-        entropy of the truth partition given the algorithm partition
-        entropy of the algorithm partition given the truth partition
-        the mutual information between the algorithm and truth partitions
+    entropy of the truth partition given the algorithm partition
+    entropy of the algorithm partition given the truth partition
+    the mutual information between the algorithm and truth partitions
 
-        Parameters
-        ---------
+    Parameters
+    ---------
 
-        Returns
-        ------
-        evaluation : Evaluation
-                the evaluation object, updated with the entropy-based goodness of partition metrics
-        is_subgraph : bool
-                True if evaluation is for a subgraph. Default = False
-        """
+    Returns
+    ------
+    evaluation : Evaluation
+            the evaluation object, updated with the entropy-based goodness of partition metrics
+    is_sampled_graph : bool
+            True if evaluation is for a sampled graph. Default = False
+    """
     conditional_prob_b2_b1 = np.zeros(joint_prob.shape)
     conditional_prob_b1_b2 = np.zeros(joint_prob.shape)
     conditional_prob_b2_b1[idx_truth, :] = joint_prob[idx_truth, :] / p_marginal_truth[idx_truth, None]
@@ -462,10 +476,10 @@ def calc_conditional_entropy(joint_prob: np.ndarray, p_marginal_truth: np.ndarra
     marginal_prod = np.dot(p_marginal_truth[:, None], np.transpose(p_marginal_alg[:, None]))
     MI_b1_b2 = np.sum(np.sum(joint_prob[idx] * np.log(joint_prob[idx] / marginal_prod[idx])))
 
-    if is_subgraph:
-        evaluation.subgraph_entropy_truth_given_algorithm = H_b1_b2
-        evaluation.subgraph_entropy_algorithm_given_truth = H_b2_b1
-        evaluation.subgraph_mutual_info = MI_b1_b2
+    if is_sampled_graph:
+        evaluation.sampled_graph_entropy_truth_given_algorithm = H_b1_b2
+        evaluation.sampled_graph_entropy_algorithm_given_truth = H_b2_b1
+        evaluation.sampled_graph_mutual_info = MI_b1_b2
     else:
         evaluation.entropy_truth_given_algorithm = H_b1_b2
         evaluation.entropy_algorithm_given_truth = H_b2_b1

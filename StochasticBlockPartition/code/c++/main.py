@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 from graph_tool.inference import minimize_blockmodel_dl
 
-from evaluate import evaluate_partition, evaluate_subgraph_partition
+from evaluate import evaluate_partition, evaluate_sampled_graph_partition
 from evaluation import Evaluation
 from samplestack import SampleStack
 from util import load_graph
@@ -78,9 +78,9 @@ if __name__ == "__main__":
 
     if args.sample_type != "none":
         samplestack = SampleStack(args)
-        subgraph, subgraph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
+        sampled_graph, sampled_graph_partition, vertex_mapping, block_mapping, evaluation = samplestack.unstack(args)
         full_graph, full_graph_partition, evaluation = samplestack.extrapolate_sample_partition(
-            subgraph_partition, vertex_mapping, args, evaluation
+            sampled_graph_partition, vertex_mapping, args, evaluation
         )
     else:
         graph, true_block_assignment = load_graph(args)
@@ -89,9 +89,9 @@ if __name__ == "__main__":
         print("Performing stochastic block partitioning")
         evaluation = Evaluation(args, graph)
         # Please refer to the graph-tool documentation under graph-tool.inference for details on the input parameters
-        partition = minimize_blockmodel_dl(graph, mcmc_args={'parallel': False},
-                                           mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
-                                           verbose=False)
+        partition = minimize_blockmodel_dl(graph, mcmc_args={'parallel': True},
+                                           mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
+                                           verbose=args.verbose)
         t_partition = timeit.default_timer()
 
     t_end = timeit.default_timer()
@@ -99,19 +99,19 @@ if __name__ == "__main__":
     evaluation.total_runtime(t_start, t_end)
 
     if args.sample_type != "none":
-        print("===== Evaluating subgraph sampling =====")
-        evaluation.evaluate_subgraph_sampling(full_graph, subgraph, full_graph_partition, subgraph_partition,
-                                              block_mapping, vertex_mapping, samplestack.true_block_assignment)
+        print("===== Evaluating graph sampling =====")
+        evaluation.evaluate_sampling(full_graph, sampled_graph, full_graph_partition, sampled_graph_partition,
+                                     block_mapping, vertex_mapping, samplestack.true_block_assignment)
         evaluation.num_nodes = full_graph.num_vertices()
         evaluation.num_edges = full_graph.num_edges()
         # evaluate output partition against the true partition
-        print("===== Evaluating subgraph partition =====")
-        evaluate_subgraph_partition(
-            samplestack.true_block_assignment[np.fromiter(vertex_mapping.keys(), dtype=np.int32)],
-            subgraph_partition.get_blocks().get_array(), evaluation, block_mapping)
+        print("===== Evaluating sampled graph partition =====")
+        evaluate_sampled_graph_partition(
+            sampled_graph, samplestack.true_block_assignment[np.fromiter(vertex_mapping.keys(), dtype=np.int32)],
+            sampled_graph_partition, evaluation, block_mapping)
         print("===== Evaluating full graph partition =====")
-        evaluate_partition(samplestack.true_block_assignment, full_graph_partition.get_blocks().get_array(), evaluation)
+        evaluate_partition(full_graph, samplestack.true_block_assignment, full_graph_partition, evaluation)
     else:
         evaluation.loading = t_load - t_start
-        evaluation.subgraph_partition_time = t_partition - t_sample
-        evaluate_partition(true_block_assignment, partition.get_blocks().get_array(), evaluation)
+        evaluation.sampled_graph_partition_time = t_partition - t_sample
+        evaluate_partition(graph, true_block_assignment, partition, evaluation)

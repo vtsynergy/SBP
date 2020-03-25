@@ -30,28 +30,28 @@ class Evaluation(object):
         'within to between edge ratio',
         'difference from ideal sample',
         'expansion quality',
-        'subgraph clustering coefficient',
+        'sampled graph clustering coefficient',
         'full graph clustering coefficient',
-        'subgraph diameter',
+        'sampled graph diameter',
         'full graph diameter',
-        'subgraph island vertices',
-        'subgraph num vertices',
-        'subgraph num edges',
-        'subgraph within to between edge ratio',
-        'subgraph num blocks in algorithm partition',
-        'subgraph num blocks in truth partition',
-        'subgraph accuracy',
-        'subgraph rand index',
-        'subgraph adjusted rand index',
-        'subgraph pairwise recall',
-        'subgraph pairwise precision',
-        'subgraph entropy of algorithm partition',
-        'subgraph entropy of truth partition',
-        'subgraph entropy of algorithm partition given truth partition',
-        'subgraph entropy of truth partition given algorithm partition',
-        'subgraph mutual information',
-        'subgraph fraction of missed information',
-        'subgraph fraction of erroneous information',
+        'sampled graph island vertices',
+        'sampled graph num vertices',
+        'sampled graph num edges',
+        'sampled graph within to between edge ratio',
+        'sampled graph num blocks in algorithm partition',
+        'sampled graph num blocks in truth partition',
+        'sampled graph accuracy',
+        'sampled graph rand index',
+        'sampled graph adjusted rand index',
+        'sampled graph pairwise recall',
+        'sampled graph pairwise precision',
+        'sampled graph entropy of algorithm partition',
+        'sampled graph entropy of truth partition',
+        'sampled graph entropy of algorithm partition given truth partition',
+        'sampled graph entropy of truth partition given algorithm partition',
+        'sampled graph mutual information',
+        'sampled graph fraction of missed information',
+        'sampled graph fraction of erroneous information',
         'num block proposals',
         'beta',
         'sample size (%)',
@@ -75,9 +75,13 @@ class Evaluation(object):
         'mutual information',
         'fraction of missed information',
         'fraction of erroneous information',
+        'sampled graph description length',
+        'full graph description length',
+        'sampled graph modularity',
+        'full graph modularity',
         'graph loading time',
         'sampling time',
-        'subgraph partition time',
+        'sampled graph partition time',
         'total partition time',
         'merging partitioned sample time',
         'cluster propagation time',
@@ -90,7 +94,7 @@ class Evaluation(object):
         'community overlap',
         'community size variation',
         'community 1 id',
-        'subgraph',
+        'sampled_graph',
         'community 2 id',
         'size',
         'algorithm',
@@ -125,28 +129,28 @@ class Evaluation(object):
         self.graph_edge_ratio = 0.0
         self.difference_from_ideal_sample = 0.0
         self.expansion_quality = 0.0
-        self.subgraph_clustering_coefficient = 0.0
+        self.sampled_graph_clustering_coefficient = 0.0
         self.full_graph_clustering_coefficient = 0.0
-        self.subgraph_diameter = 0
+        self.sampled_graph_diameter = 0
         self.full_graph_diameter = 0
-        self.subgraph_island_vertices = 0
-        self.subgraph_num_vertices = 0
-        self.subgraph_num_edges = 0
-        self.subgraph_edge_ratio = 0.0
-        self.subgraph_num_blocks_algorithm = 0
-        self.subgraph_num_blocks_truth = 0
-        self.subgraph_accuracy = 0.0
-        self.subgraph_rand_index = 0.0
-        self.subgraph_adjusted_rand_index = 0.0
-        self.subgraph_pairwise_recall = 0.0
-        self.subgraph_pairwise_precision = 0.0
-        self.subgraph_entropy_algorithm = 0.0
-        self.subgraph_entropy_truth = 0.0
-        self.subgraph_entropy_algorithm_given_truth = 0.0
-        self.subgraph_entropy_truth_given_algorithm = 0.0
-        self.subgraph_mutual_info = 0.0
-        self.subgraph_missed_info = 0.0
-        self.subgraph_erroneous_info = 0.0
+        self.sampled_graph_island_vertices = 0
+        self.sampled_graph_num_vertices = 0
+        self.sampled_graph_num_edges = 0
+        self.sampled_graph_edge_ratio = 0.0
+        self.sampled_graph_num_blocks_algorithm = 0
+        self.sampled_graph_num_blocks_truth = 0
+        self.sampled_graph_accuracy = 0.0
+        self.sampled_graph_rand_index = 0.0
+        self.sampled_graph_adjusted_rand_index = 0.0
+        self.sampled_graph_pairwise_recall = 0.0
+        self.sampled_graph_pairwise_precision = 0.0
+        self.sampled_graph_entropy_algorithm = 0.0
+        self.sampled_graph_entropy_truth = 0.0
+        self.sampled_graph_entropy_algorithm_given_truth = 0.0
+        self.sampled_graph_entropy_truth_given_algorithm = 0.0
+        self.sampled_graph_mutual_info = 0.0
+        self.sampled_graph_missed_info = 0.0
+        self.sampled_graph_erroneous_info = 0.0
         # Algorithm parameters
         self.num_block_proposals = args.blockProposals
         self.beta = args.beta
@@ -172,10 +176,14 @@ class Evaluation(object):
         self.mutual_info = 0.0
         self.missed_info = 0.0
         self.erroneous_info = 0.0
+        self.sampled_graph_description_length = 0.0
+        self.full_graph_description_length = 0.0
+        self.sampled_graph_modularity = 0.0
+        self.full_graph_modularity = 0.0
         # Algorithm runtime measures
         self.loading = 0.0
         self.sampling = 0.0
-        self.subgraph_partition_time = 0.0
+        self.sampled_graph_partition_time = 0.0
         self.total_partition_time = 0.0
         self.merge_sample = 0.0
         self.propagate_membership = 0.0
@@ -185,53 +193,53 @@ class Evaluation(object):
         # Community details
         self.real_communities = dict()  # type: Dict[int, int]
         self.algorithm_communities = dict()  # type: Dict[int, int]
-        self.subgraph_real_communities = dict()  # type: Dict[int, int]
-        self.subgraph_algorithm_communities = dict()  # type: Dict[int, int]
+        self.sampled_graph_real_communities = dict()  # type: Dict[int, int]
+        self.sampled_graph_algorithm_communities = dict()  # type: Dict[int, int]
         self.contingency_table = None  # type: np.ndarray
-        self.subgraph_contingency_table = None  # type: np.ndarray
+        self.sampled_graph_contingency_table = None  # type: np.ndarray
     # End of __init__()
 
-    def evaluate_subgraph_sampling(self, full_graph: Graph, subgraph: Graph, full_partition: BlockState,
-                                   subgraph_partition: BlockState, block_mapping: Dict[int, int],
-                                   vertex_mapping: Dict[int, int], assignment: np.ndarray):
-        """Evaluates the goodness of the samples returned by the subgraph.
+    def evaluate_sampling(self, full_graph: Graph, sampled_graph: Graph, full_partition: BlockState,
+                          sampled_graph_partition: BlockState, block_mapping: Dict[int, int],
+                          vertex_mapping: Dict[int, int], assignment: np.ndarray):
+        """Evaluates the goodness of the samples.
 
         Parameters
         ----------
         full_graph : Graph
             the full, unsampled Graph object
-        subgraph : Graph
-            the sampled subgraph
+        sampled_graph : Graph
+            the sampled graph
         full_partition : Partition
             the partitioning results on the full graph
-        subgraph_partition : Partition
-            the partitioning results on the sampled subgraph
+        sampled_graph_partition : Partition
+            the partitioning results on the sampled graph
         block_mapping : Dict[int, int]
-            the mapping of blocks from the full graph to the subgraph
+            the mapping of blocks from the full graph to the sampled graph
         vertex_mapping : Dict[int, int]
-            the mapping of vertices from the full graph to the subgraph
+            the mapping of vertices from the full graph to the sampled graph
         assignment : np.ndarray[int]
             the true vertex-to-community mapping
         """
         #####
         # General
         #####
-        self.subgraph_num_vertices = subgraph.num_vertices()
-        self.subgraph_num_edges = subgraph.num_edges()
-        self.blocks_retained = subgraph_partition.get_B() / full_partition.get_B()
-        self.subgraph_diameter = pseudo_diameter(subgraph)
+        self.sampled_graph_num_vertices = sampled_graph.num_vertices()
+        self.sampled_graph_num_edges = sampled_graph.num_edges()
+        self.blocks_retained = sampled_graph_partition.get_B() / full_partition.get_B()
+        self.sampled_graph_diameter = pseudo_diameter(sampled_graph)
         self.full_graph_diameter = pseudo_diameter(full_graph)
-        for vertex in subgraph.vertices():
+        for vertex in sampled_graph.vertices():
             if (vertex.in_degree() + vertex.out_degree()) == 0:
-                self.subgraph_island_vertices += 1
+                self.sampled_graph_island_vertices += 1
 
         #####
         # % difference in ratio of within-block to between-block edges
         #####
         sample_assignment = assignment[np.fromiter(vertex_mapping.keys(), dtype=np.int32)]
-        true_subgraph_partition = partition_from_truth(subgraph, sample_assignment)
-        subgraph_blockmatrix = true_subgraph_partition.get_matrix()
-        self.subgraph_edge_ratio = subgraph_blockmatrix.diagonal().sum() / subgraph_blockmatrix.sum()
+        true_sampled_graph_partition = partition_from_truth(sampled_graph, sample_assignment)
+        sampled_graph_blockmatrix = true_sampled_graph_partition.get_matrix()
+        self.sampled_graph_edge_ratio = sampled_graph_blockmatrix.diagonal().sum() / sampled_graph_blockmatrix.sum()
         true_full_partition = partition_from_truth(full_graph, assignment)
         full_blockmatrix = true_full_partition.get_matrix()
         self.graph_edge_ratio = full_blockmatrix.diagonal().sum() / full_blockmatrix.sum()
@@ -243,13 +251,13 @@ class Evaluation(object):
         full_graph_membership_nums = np.zeros(membership_size)
         for block_membership in assignment:
             full_graph_membership_nums[block_membership] += 1
-        subgraph_membership_nums = np.zeros(membership_size)
+        sampled_graph_membership_nums = np.zeros(membership_size)
         for block_membership in sample_assignment:
-            subgraph_membership_nums[block_membership] += 1
-        ideal_block_membership_nums = full_graph_membership_nums * (subgraph.num_vertices() / full_graph.num_vertices())
-        difference_from_ideal_block_membership_nums = np.abs(ideal_block_membership_nums - subgraph_membership_nums)
+            sampled_graph_membership_nums[block_membership] += 1
+        ideal_block_membership_nums = full_graph_membership_nums * (sampled_graph.num_vertices() / full_graph.num_vertices())
+        difference_from_ideal_block_membership_nums = np.abs(ideal_block_membership_nums - sampled_graph_membership_nums)
         self.difference_from_ideal_sample = np.sum(
-            difference_from_ideal_block_membership_nums / subgraph.num_vertices())
+            difference_from_ideal_block_membership_nums / sampled_graph.num_vertices())
 
         ######
         # Expansion quality (http://portal.acm.org/citation.cfm?doid=1772690.1772762)
@@ -258,29 +266,29 @@ class Evaluation(object):
         # Maximum expansion factor = (size of graph - size of sample) / size of sample
         # Expansion quality = Neighbors of sample / (size of graph - size of sample)
         # Expansion quality = 1 means sample is at most 1 edge away from entire graph
-        subgraph_vertices = set(vertex_mapping.keys())
+        sampled_graph_vertices = set(vertex_mapping.keys())
         neighbors = set()
-        for vertex in subgraph_vertices:
+        for vertex in sampled_graph_vertices:
             for neighbor in full_graph.get_out_neighbors(vertex):
                 neighbors.add(neighbor)
-        neighbors = neighbors - subgraph_vertices
-        self.expansion_quality = len(neighbors) / (full_graph.num_vertices() - subgraph.num_vertices())
+        neighbors = neighbors - sampled_graph_vertices
+        self.expansion_quality = len(neighbors) / (full_graph.num_vertices() - sampled_graph.num_vertices())
 
         ######
         # Clustering coefficient
         ######
-        self.subgraph_clustering_coefficient = global_clustering(subgraph)[0]
+        self.sampled_graph_clustering_coefficient = global_clustering(sampled_graph)[0]
         self.full_graph_clustering_coefficient = global_clustering(full_graph)[0]
 
         ######
         # Info on communities
         ######
         self.get_community_details(assignment, full_partition.get_blocks().get_array(),
-                                   subgraph_partition.get_blocks().get_array(), vertex_mapping)
-    # End of evaluate_subgraph_sampling()
+                                   sampled_graph_partition.get_blocks().get_array(), vertex_mapping)
+    # End of evaluate_sampling()
 
     def get_community_details(self, assignment: np.ndarray, algorithm_assignment: np.ndarray,
-                              subgraph_assignment: np.ndarray, vertex_mapping: Dict[int, int]):
+                              sampled_graph_assignment: np.ndarray, vertex_mapping: Dict[int, int]):
         """Saves information on community details.
 
         Parameters
@@ -289,8 +297,8 @@ class Evaluation(object):
             the true vertex-to-community assignment for the entire graph
         algorithm_assignment : np.ndarray[int]
             the vertex-to-community assignment generated by the algorithm for the entire graph
-        subgraph_assignment : np.ndarray[int]
-            the vertex-to-community assignment generated by the algorithm for the subgraph
+        sampled_graph_assignment : np.ndarray[int]
+            the vertex-to-community assignment generated by the algorithm for the sampled graph
         vertex_mapping : Dict[int, int]
             the mapping of full graph to sampled vertices
         """
@@ -306,18 +314,18 @@ class Evaluation(object):
             else:
                 self.algorithm_communities[community] = 1
 
-        subgraph_real_assignment = assignment[np.fromiter(vertex_mapping.keys(), dtype=np.int32)]
-        for community in subgraph_real_assignment:
-            if community in self.subgraph_real_communities:
-                self.subgraph_real_communities[community] += 1
+        sampled_graph_real_assignment = assignment[np.fromiter(vertex_mapping.keys(), dtype=np.int32)]
+        for community in sampled_graph_real_assignment:
+            if community in self.sampled_graph_real_communities:
+                self.sampled_graph_real_communities[community] += 1
             else:
-                self.subgraph_real_communities[community] = 1
+                self.sampled_graph_real_communities[community] = 1
 
-        for community in subgraph_assignment:
-            if community in self.subgraph_algorithm_communities:
-                self.subgraph_algorithm_communities[community] += 1
+        for community in sampled_graph_assignment:
+            if community in self.sampled_graph_algorithm_communities:
+                self.sampled_graph_algorithm_communities[community] += 1
             else:
-                self.subgraph_algorithm_communities[community] = 1
+                self.sampled_graph_algorithm_communities[community] = 1
     # End of get_community_details()
 
     def total_runtime(self, start_t: float, end_t: float):
@@ -385,28 +393,28 @@ class Evaluation(object):
                 self.graph_edge_ratio,
                 self.difference_from_ideal_sample,
                 self.expansion_quality,
-                self.subgraph_clustering_coefficient,
+                self.sampled_graph_clustering_coefficient,
                 self.full_graph_clustering_coefficient,
-                self.subgraph_diameter,
+                self.sampled_graph_diameter,
                 self.full_graph_diameter,
-                self.subgraph_island_vertices,
-                self.subgraph_num_vertices,
-                self.subgraph_num_edges,
-                self.subgraph_edge_ratio,
-                self.subgraph_num_blocks_algorithm,
-                self.subgraph_num_blocks_truth,
-                self.subgraph_accuracy,
-                self.subgraph_rand_index,
-                self.subgraph_adjusted_rand_index,
-                self.subgraph_pairwise_recall,
-                self.subgraph_pairwise_precision,
-                self.subgraph_entropy_algorithm,
-                self.subgraph_entropy_truth,
-                self.subgraph_entropy_algorithm_given_truth,
-                self.subgraph_entropy_truth_given_algorithm,
-                self.subgraph_mutual_info,
-                self.subgraph_missed_info,
-                self.subgraph_erroneous_info,
+                self.sampled_graph_island_vertices,
+                self.sampled_graph_num_vertices,
+                self.sampled_graph_num_edges,
+                self.sampled_graph_edge_ratio,
+                self.sampled_graph_num_blocks_algorithm,
+                self.sampled_graph_num_blocks_truth,
+                self.sampled_graph_accuracy,
+                self.sampled_graph_rand_index,
+                self.sampled_graph_adjusted_rand_index,
+                self.sampled_graph_pairwise_recall,
+                self.sampled_graph_pairwise_precision,
+                self.sampled_graph_entropy_algorithm,
+                self.sampled_graph_entropy_truth,
+                self.sampled_graph_entropy_algorithm_given_truth,
+                self.sampled_graph_entropy_truth_given_algorithm,
+                self.sampled_graph_mutual_info,
+                self.sampled_graph_missed_info,
+                self.sampled_graph_erroneous_info,
                 self.num_block_proposals,
                 self.beta,
                 self.sample_size,
@@ -430,9 +438,13 @@ class Evaluation(object):
                 self.mutual_info,
                 self.missed_info,
                 self.erroneous_info,
+                self.sampled_graph_description_length,
+                self.full_graph_description_length,
+                self.sampled_graph_modularity,
+                self.full_graph_modularity,
                 self.loading,
                 self.sampling,
-                self.subgraph_partition_time,
+                self.sampled_graph_partition_time,
                 self.total_partition_time,
                 self.merge_sample,
                 self.propagate_membership,
@@ -470,18 +482,18 @@ class Evaluation(object):
                                      self.sampling_algorithm, self.sampling_iterations, self.args.tag])
             if (self.sampling_algorithm == "none") or (self.args.sample_size == 0):
                 return
-            for community, size in self.subgraph_real_communities.items():
+            for community, size in self.sampled_graph_real_communities.items():
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, True,
                                  '-', size, False, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
-            for community, size in self.subgraph_algorithm_communities.items():
+            for community, size in self.sampled_graph_algorithm_communities.items():
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, True,
                                  '-', size, True, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
-            for row in range(np.shape(self.subgraph_contingency_table)[0]):
-                for col in range(np.shape(self.subgraph_contingency_table)[1]):
+            for row in range(np.shape(self.sampled_graph_contingency_table)[0]):
+                for col in range(np.shape(self.sampled_graph_contingency_table)[1]):
                     writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
-                                     col, self.subgraph_contingency_table[row, col], False, self.sample_size,
+                                     col, self.sampled_graph_contingency_table[row, col], False, self.sample_size,
                                      self.sampling_algorithm, self.sampling_iterations, self.args.tag])
     # End of _save_details()
 # End of Evaluation()
