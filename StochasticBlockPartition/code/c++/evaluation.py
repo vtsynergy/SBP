@@ -10,7 +10,7 @@ from argparse import Namespace
 from graph_tool import Graph
 from graph_tool.clustering import global_clustering
 from graph_tool.inference import BlockState
-from graph_tool.topology import pseudo_diameter
+from graph_tool.topology import pseudo_diameter, extract_largest_component
 import numpy as np
 
 from util import partition_from_truth
@@ -34,6 +34,8 @@ class Evaluation(object):
         'full graph clustering coefficient',
         'sampled graph diameter',
         'full graph diameter',
+        'sampled graph largest component',
+        'full graph largest component',
         'sampled graph island vertices',
         'sampled graph num vertices',
         'sampled graph num edges',
@@ -133,6 +135,8 @@ class Evaluation(object):
         self.full_graph_clustering_coefficient = 0.0
         self.sampled_graph_diameter = 0
         self.full_graph_diameter = 0
+        self.sampled_graph_largest_component = 0
+        self.full_graph_largest_component = 0
         self.sampled_graph_island_vertices = 0
         self.sampled_graph_num_vertices = 0
         self.sampled_graph_num_edges = 0
@@ -227,11 +231,14 @@ class Evaluation(object):
         self.sampled_graph_num_vertices = sampled_graph.num_vertices()
         self.sampled_graph_num_edges = sampled_graph.num_edges()
         self.blocks_retained = sampled_graph_partition.get_B() / full_partition.get_B()
-        self.sampled_graph_diameter = pseudo_diameter(sampled_graph)
-        self.full_graph_diameter = pseudo_diameter(full_graph)
+        # pseudo_diameter returns a tuple: (diameter, (start_vertex, end_vertex))
+        self.sampled_graph_diameter = pseudo_diameter(sampled_graph)[0]
+        self.full_graph_diameter = pseudo_diameter(full_graph)[0]
         for vertex in sampled_graph.vertices():
             if (vertex.in_degree() + vertex.out_degree()) == 0:
                 self.sampled_graph_island_vertices += 1
+        self.sampled_graph_largest_component = extract_largest_component(sampled_graph)
+        self.full_graph_largest_component = extract_largest_component(full_graph)
 
         #####
         # % difference in ratio of within-block to between-block edges
@@ -254,8 +261,10 @@ class Evaluation(object):
         sampled_graph_membership_nums = np.zeros(membership_size)
         for block_membership in sample_assignment:
             sampled_graph_membership_nums[block_membership] += 1
-        ideal_block_membership_nums = full_graph_membership_nums * (sampled_graph.num_vertices() / full_graph.num_vertices())
-        difference_from_ideal_block_membership_nums = np.abs(ideal_block_membership_nums - sampled_graph_membership_nums)
+        ideal_block_membership_nums = full_graph_membership_nums * \
+            (sampled_graph.num_vertices() / full_graph.num_vertices())
+        difference_from_ideal_block_membership_nums = np.abs(
+            ideal_block_membership_nums - sampled_graph_membership_nums)
         self.difference_from_ideal_sample = np.sum(
             difference_from_ideal_block_membership_nums / sampled_graph.num_vertices())
 
@@ -397,6 +406,8 @@ class Evaluation(object):
                 self.full_graph_clustering_coefficient,
                 self.sampled_graph_diameter,
                 self.full_graph_diameter,
+                self.sampled_graph_largest_component,
+                self.full_graph_largest_component,
                 self.sampled_graph_island_vertices,
                 self.sampled_graph_num_vertices,
                 self.sampled_graph_num_edges,
