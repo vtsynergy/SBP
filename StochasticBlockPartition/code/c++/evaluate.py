@@ -35,13 +35,14 @@ def evaluate_partition(graph: Graph, true_b: np.ndarray, alg_partition: BlockSta
         the evaluation results, filled in with goodness of partitioning measures
     """
     alg_b = alg_partition.get_blocks().get_array()
-    contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
-    evaluation.contingency_table = contingency_table
-    joint_prob = evaluate_accuracy(contingency_table, evaluation)
-    evaluate_pairwise_metrics(contingency_table, N, evaluation)
-    evaluate_entropy_metrics(joint_prob, evaluation)
     evaluation.full_graph_description_length = alg_partition.entropy()
     evaluation.full_graph_modularity = modularity(graph, alg_partition.get_blocks())
+    if np.unique(true_b).size != 1:
+        contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
+        evaluation.contingency_table = contingency_table
+        joint_prob = evaluate_accuracy(contingency_table, evaluation)
+        evaluate_pairwise_metrics(contingency_table, N, evaluation)
+        evaluate_entropy_metrics(joint_prob, evaluation)
     evaluation.save()
 # End of evaluate_partition()
 
@@ -66,14 +67,16 @@ def evaluate_sampled_graph_partition(graph: Graph, true_b: np.ndarray, alg_parti
         the mapping of actual block ids to sample block ids (to ensure they are in a [0,X] range, where X >= 0)
     """
     alg_b = alg_partition.get_blocks().get_array()
+    evaluation.sampled_graph_description_length = alg_partition.entropy()
+    evaluation.sampled_graph_modularity = modularity(graph, alg_partition.get_blocks())
+    if np.unique(true_b).size == 1:  # Cannot evaluate the below metrics if true partition isn't provided
+        return
     true_b = np.asarray([block_mapping[block] for block in true_b])
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation, sampled_graph=True)
     evaluation.sampled_graph_contingency_table = contingency_table
     joint_prob = evaluate_accuracy(contingency_table, evaluation, True)
     evaluate_pairwise_metrics(contingency_table, N, evaluation, True)
     evaluate_entropy_metrics(joint_prob, evaluation, True)
-    evaluation.sampled_graph_description_length = alg_partition.entropy()
-    evaluation.sampled_graph_modularity = modularity(graph, alg_partition.get_blocks())
 # End of evaluate_sampled_graph_partition()
 
 

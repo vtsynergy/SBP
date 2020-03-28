@@ -237,8 +237,38 @@ class Evaluation(object):
         for vertex in sampled_graph.vertices():
             if (vertex.in_degree() + vertex.out_degree()) == 0:
                 self.sampled_graph_island_vertices += 1
-        self.sampled_graph_largest_component = extract_largest_component(sampled_graph)
-        self.full_graph_largest_component = extract_largest_component(full_graph)
+        self.sampled_graph_largest_component = extract_largest_component(sampled_graph).num_vertices()
+        self.full_graph_largest_component = extract_largest_component(full_graph).num_vertices()
+
+        ######
+        # Expansion quality (http://portal.acm.org/citation.cfm?doid=1772690.1772762)
+        ######
+        # Expansion factor = Neighbors of sample / size of sample
+        # Maximum expansion factor = (size of graph - size of sample) / size of sample
+        # Expansion quality = Neighbors of sample / (size of graph - size of sample)
+        # Expansion quality = 1 means sample is at most 1 edge away from entire graph
+        sampled_graph_vertices = set(vertex_mapping.keys())
+        neighbors = set()
+        for vertex in sampled_graph_vertices:
+            for neighbor in full_graph.get_out_neighbors(vertex):
+                neighbors.add(neighbor)
+        neighbors = neighbors - sampled_graph_vertices
+        self.expansion_quality = len(neighbors) / (full_graph.num_vertices() - sampled_graph.num_vertices())
+
+        ######
+        # Clustering coefficient
+        ######
+        self.sampled_graph_clustering_coefficient = global_clustering(sampled_graph)[0]
+        self.full_graph_clustering_coefficient = global_clustering(full_graph)[0]
+
+        ######
+        # Info on communities
+        ######
+        self.get_community_details(assignment, full_partition.get_blocks().get_array(),
+                                   sampled_graph_partition.get_blocks().get_array(), vertex_mapping)
+
+        if np.unique(assignment).size == 1:  # Cannot compute below metrics if no true partition is provided
+            return
 
         #####
         # % difference in ratio of within-block to between-block edges
@@ -267,33 +297,6 @@ class Evaluation(object):
             ideal_block_membership_nums - sampled_graph_membership_nums)
         self.difference_from_ideal_sample = np.sum(
             difference_from_ideal_block_membership_nums / sampled_graph.num_vertices())
-
-        ######
-        # Expansion quality (http://portal.acm.org/citation.cfm?doid=1772690.1772762)
-        ######
-        # Expansion factor = Neighbors of sample / size of sample
-        # Maximum expansion factor = (size of graph - size of sample) / size of sample
-        # Expansion quality = Neighbors of sample / (size of graph - size of sample)
-        # Expansion quality = 1 means sample is at most 1 edge away from entire graph
-        sampled_graph_vertices = set(vertex_mapping.keys())
-        neighbors = set()
-        for vertex in sampled_graph_vertices:
-            for neighbor in full_graph.get_out_neighbors(vertex):
-                neighbors.add(neighbor)
-        neighbors = neighbors - sampled_graph_vertices
-        self.expansion_quality = len(neighbors) / (full_graph.num_vertices() - sampled_graph.num_vertices())
-
-        ######
-        # Clustering coefficient
-        ######
-        self.sampled_graph_clustering_coefficient = global_clustering(sampled_graph)[0]
-        self.full_graph_clustering_coefficient = global_clustering(full_graph)[0]
-
-        ######
-        # Info on communities
-        ######
-        self.get_community_details(assignment, full_partition.get_blocks().get_array(),
-                                   sampled_graph_partition.get_blocks().get_array(), vertex_mapping)
     # End of evaluate_sampling()
 
     def get_community_details(self, assignment: np.ndarray, algorithm_assignment: np.ndarray,
@@ -486,11 +489,12 @@ class Evaluation(object):
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, False,
                                  '-', size, True, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
-            for row in range(np.shape(self.contingency_table)[0]):
-                for col in range(np.shape(self.contingency_table)[1]):
-                    writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
-                                     col, self.contingency_table[row, col], False, self.sample_size,
-                                     self.sampling_algorithm, self.sampling_iterations, self.args.tag])
+            if self.contingency_table is not None:
+                for row in range(np.shape(self.contingency_table)[0]):
+                    for col in range(np.shape(self.contingency_table)[1]):
+                        writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
+                                        col, self.contingency_table[row, col], False, self.sample_size,
+                                        self.sampling_algorithm, self.sampling_iterations, self.args.tag])
             if (self.sampling_algorithm == "none") or (self.args.sample_size == 0):
                 return
             for community, size in self.sampled_graph_real_communities.items():
@@ -501,10 +505,11 @@ class Evaluation(object):
                 writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, community, True,
                                  '-', size, True, self.sample_size, self.sampling_algorithm, self.sampling_iterations,
                                  self.args.tag])
-            for row in range(np.shape(self.sampled_graph_contingency_table)[0]):
-                for col in range(np.shape(self.sampled_graph_contingency_table)[1]):
-                    writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
-                                     col, self.sampled_graph_contingency_table[row, col], False, self.sample_size,
-                                     self.sampling_algorithm, self.sampling_iterations, self.args.tag])
+            if self.sampled_graph_contingency_table is not None:
+                for row in range(np.shape(self.sampled_graph_contingency_table)[0]):
+                    for col in range(np.shape(self.sampled_graph_contingency_table)[1]):
+                        writer.writerow([self.args.numNodes, self.args.overlap, self.args.blockSizeVar, row, False,
+                                        col, self.sampled_graph_contingency_table[row, col], False, self.sample_size,
+                                        self.sampling_algorithm, self.sampling_iterations, self.args.tag])
     # End of _save_details()
 # End of Evaluation()
