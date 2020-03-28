@@ -67,6 +67,10 @@ def parse_arguments():
                         help="The number of sampling iterations to perform. Default = 1")
     parser.add_argument("--degrees", action="store_true", help="Save vertex degrees and exit.")
     parser.add_argument("--tag", type=str, default="none", help="A custom tag for identifying particular runs")
+    parser.add_argument("--delimiter", type=str, default="\t", help="Delimiter for reading in graph")
+    parser.add_argument("--gtload", action="store_true",
+                        help="""If true, will load the graph using graph tool's load graph function""")
+    parser.add_argument("--undirected", action="store_true", help="If true, graph is symmetrical")
     args = parser.parse_args()
     return args
 # End of parse_arguments()

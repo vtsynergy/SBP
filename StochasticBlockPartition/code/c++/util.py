@@ -5,6 +5,7 @@ import sys
 from typing import Dict, Optional, List, Tuple
 
 from graph_tool import Graph
+from graph_tool import load_graph_from_csv
 from graph_tool.inference import BlockState
 import numpy as np
 import pandas as pd
@@ -26,8 +27,13 @@ def load_graph(args: argparse.Namespace) -> Tuple[Graph, np.ndarray]:
         the true vertex-to-community membership array
     """
     input_filename = build_filepath(args)
-    graph = _load_graph(input_filename)
-    true_membership = load_true_membership(input_filename)
+    if args.gtload:
+        graph = load_graph_from_csv(input_filename + ".tsv", not args.undirected,
+                                    csv_options={'delimiter': args.delimiter})
+    else:
+        graph = _load_graph(input_filename)
+    print(graph)
+    true_membership = load_true_membership(input_filename, graph.num_vertices())
 
     if args.verbose:
         print('Number of vertices: {}'.format(graph.num_vertices()))
@@ -143,13 +149,15 @@ def _load_graph(input_filename: str, part_num: Optional[int] = None, graph: Opti
 # End of _load_graph()
 
 
-def load_true_membership(input_filename: str) -> np.ndarray:
+def load_true_membership(input_filename: str, num_vertices: int) -> np.ndarray:
     """Loads the true community membership from the true membership file.
 
     Parameters
     ----------
     input_filename : str
         the path to the dataset
+    num_vertices : int
+        the number of vertices in the graph
 
     Returns
     -------
@@ -160,8 +168,12 @@ def load_true_membership(input_filename: str) -> np.ndarray:
     -----
     The true partition is stored in the file `filename_truePartition.tsv`.
     """
+    filename = "{}_truePartition.csv".format(input_filename)
+    if not os.path.exists(filename):
+        true_b = np.asarray([-1] * num_vertices)
+        return true_b
     # read the entire true partition CSV into rows of partitions
-    true_b_rows = pd.read_csv('{}_truePartition.tsv'.format(input_filename), delimiter='\t', header=None).values
+    true_b_rows = pd.read_csv(filename, delimiter='\t', header=None).values
     # initialize truth assignment to -1 for 'unknown'
     true_b = np.ones(true_b_rows.shape[0], dtype=int) * -1
     for i in range(true_b_rows.shape[0]):
