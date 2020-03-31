@@ -94,8 +94,8 @@ if __name__ == "__main__":
         evaluation = Evaluation(args, graph)
         # Please refer to the graph-tool documentation under graph-tool.inference for details on the input parameters
         partition = minimize_blockmodel_dl(graph, mcmc_args={'parallel': True},
-                                           mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
-                                           verbose=args.verbose)
+                                           shrink_args={'parallel': True}, verbose=args.verbose,
+                                           mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
         t_partition = timeit.default_timer()
 
     t_end = timeit.default_timer()

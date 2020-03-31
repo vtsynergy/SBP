@@ -134,8 +134,8 @@ class SampleStack(object):
             sampled_graph, next_sample = self._pop()
             t0 = timeit.default_timer()
             sample_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
-                                                      mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
-                                                      verbose=args.verbose)
+                                                      shrink_args={'parallel': True}, verbose=args.verbose,
+                                                      mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
             evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
             t1 = timeit.default_timer()
             # TODO: fix this to allow multi-sample strategies
@@ -149,8 +149,8 @@ class SampleStack(object):
         if min_num_blocks > 0 or (args.sample_iterations > 1):
             combined_partition.num_blocks_to_merge = 0
             sampled_graph_partition = minimize_blockmodel_dl(combined_sampled_graph, mcmc_args={'parallel': False},
-                                                             mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4},
-                                                             verbose=True)
+                                                             shrink_args={'parallel': True}, verbose=args.verbose,
+                                                             mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4})
         else:
             sampled_graph_partition = combined_partition
         return (
