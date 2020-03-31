@@ -2,7 +2,7 @@
 """
 
 import argparse
-from typing import List
+from typing import List, Set
 from copy import copy
 
 from graph_tool import Graph
@@ -36,27 +36,56 @@ class Sample():
             the vertex-to-community assignment array. Currently assumes that community assignment is non-overlapping.
         """
         self.state = state
-        sampled_vertices = state.sample_idx[-state.sample_size:]
+        sampled_vertices = sorted(state.sample_idx[-state.sample_size:])
         self.vertex_mapping = dict([(v, k) for k, v in enumerate(sampled_vertices)])
-        self.out_neighbors = list()  # type: List[np.ndarray]
-        self.in_neighbors = list()  # type: List[np.ndarray]
-        self.num_edges = 0
-        for index in sampled_vertices:
-            # get_out_neighbors actually returns just a list of neighbors. If we need the edge weights later, we will
-            # need to use get_out_edges, which returns an array with structure [[from, to, weight], ...]
-            out_neighbors = graph.get_out_neighbors(index)
-            out_mask = np.isin(out_neighbors, sampled_vertices, assume_unique=False)
-            sampled_out_neighbors = out_neighbors[out_mask]
-            for i in range(len(sampled_out_neighbors)):
-                sampled_out_neighbors[i] = self.vertex_mapping[sampled_out_neighbors[i]]
-            self.out_neighbors.append(sampled_out_neighbors)
-            in_neighbors = graph.get_in_neighbors(index)
-            in_mask = np.isin(in_neighbors, sampled_vertices, assume_unique=False)
-            sampled_in_neighbors = in_neighbors[in_mask]
-            for i in range(len(sampled_in_neighbors)):
-                sampled_in_neighbors[i] = self.vertex_mapping[sampled_in_neighbors[i]]
-            self.in_neighbors.append(sampled_in_neighbors)
-            self.num_edges += np.sum(out_mask) + np.sum(in_mask)
+        binary_filter = np.zeros(graph.num_vertices())
+        binary_filter[sampled_vertices] = 1
+        graph.set_vertex_filter(graph.new_vertex_property("bool", binary_filter))
+        self.graph = Graph(graph, prune=True)  # If ordering is wacky, may need to play around with vorder
+        graph.clear_filters()
+        # self.out_neighbors = list()  # type: List[np.ndarray]
+        # self.in_neighbors = list()  # type: List[np.ndarray]
+        # self.num_edges = 0
+        # t_get_neighbor = 0.0
+        # t_isin = 0.0
+        # t_index = 0.0
+        # t_mapping = 0.0
+        # t_sum = 0.0
+        # for index in sampled_vertices:
+        #     # get_out_neighbors actually returns just a list of neighbors. If we need the edge weights later, we will
+        #     # need to use get_out_edges, which returns an array with structure [[from, to, weight], ...]
+        #     t1 = timeit.default_timer()
+        #     out_neighbors = graph.get_out_neighbors(index)
+        #     t_get_neighbor += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     out_mask = np.isin(out_neighbors, sampled_vertices, assume_unique=False)
+        #     t_isin += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     sampled_out_neighbors = out_neighbors[out_mask]
+        #     t_index += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     for i in range(len(sampled_out_neighbors)):
+        #         sampled_out_neighbors[i] = self.vertex_mapping[sampled_out_neighbors[i]]
+        #     t_mapping += timeit.default_timer() - t1
+        #     self.out_neighbors.append(sampled_out_neighbors)
+        #     t1 = timeit.default_timer()
+        #     in_neighbors = graph.get_in_neighbors(index)
+        #     t_get_neighbor += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     in_mask = np.isin(in_neighbors, sampled_vertices, assume_unique=False)
+        #     t_isin += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     sampled_in_neighbors = in_neighbors[in_mask]
+        #     t_index += timeit.default_timer() - t1
+        #     t1 = timeit.default_timer()
+        #     for i in range(len(sampled_in_neighbors)):
+        #         sampled_in_neighbors[i] = self.vertex_mapping[sampled_in_neighbors[i]]
+        #     t_mapping += timeit.default_timer() - t1
+        #     self.in_neighbors.append(sampled_in_neighbors)
+        #     t1 = timeit.default_timer()
+        #     self.num_edges += np.sum(out_mask) + np.sum(in_mask)
+        #     t_sum += timeit.default_timer() - t1
+        # print("get_neighbor: {} isin: {} index: {} mapping: {} sum: {}".format(t_get_neighbor, t_isin, t_index, t_mapping, t_sum))
         true_block_assignment = old_true_block_assignment[sampled_vertices]
         # Assuming the sample doesn't capture all the blocks, the block numbers in the sample may not be consecutive
         # The true_blocks_mapping ensures that they are consecutive
@@ -399,8 +428,7 @@ class Sample():
         sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
         sample_num += len(state.sample_idx)
         if not state.neighbors:
-            state.neighbors = list(graph.get_out_neighbors(state.start))
-            # Set up the initial contributions counts and flag currently neighboring vertices
+            state.neighbors = set(graph.get_out_neighbors(state.start))
             for neighbor in graph.get_out_neighbors(state.start):
                 state.neighbors_flag[neighbor] = True
                 new_neighbors = 0
@@ -409,14 +437,26 @@ class Sample():
                         new_neighbors += 1
                 state.contribution[neighbor] += new_neighbors
         while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
-            if len(state.neighbors) == 0 or max(state.contribution) == 0:
-                vertex = np.random.choice(list(set(range(graph.num_vertices())) - set(state.index_set)))
+            if len(state.neighbors) == 0:  # choose random vertex not in index set
+                vertex = np.random.choice(np.setxor1d(np.arange(graph.num_vertices()), state.index_set))
                 state.index_set.append(vertex)
                 for neighbor in graph.get_out_neighbors(vertex):
                     if not state.neighbors_flag[neighbor]:
                         Sample._add_neighbor(neighbor, state.contribution, state.index_flag, state.neighbors_flag,
                                              graph.get_out_neighbors(neighbor), graph.get_in_neighbors(neighbor),
                                              state.neighbors)
+                continue
+            elif np.max(state.contribution) == 0:  # choose random neighbors from neighbor set
+                num_choices = min(len(state.neighbors), sample_num - len(state.index_set))
+                vertices = np.random.choice(np.fromiter(state.neighbors, int, len(state.neighbors)),
+                                            num_choices, replace=False)
+                for vertex in vertices:
+                    state.index_set.append(vertex)
+                    for neighbor in graph.get_out_neighbors(vertex):
+                        if not state.neighbors_flag[neighbor]:
+                            Sample._add_neighbor(neighbor, state.contribution, state.index_flag, state.neighbors_flag,
+                                                 graph.get_out_neighbors(neighbor), graph.get_in_neighbors(neighbor),
+                                                 state.neighbors)
                 continue
             vertex = np.argmax(state.contribution)
             state.index_set.append(vertex)
@@ -434,11 +474,11 @@ class Sample():
 
     @staticmethod
     def _add_neighbor(vertex: int, contribution: List[int], index_flag: List[bool], neighbor_flag: List[bool],
-                      out_neighbors: np.ndarray, in_neighbors: np.ndarray, neighbors: List[int]):
+                      out_neighbors: np.ndarray, in_neighbors: np.ndarray, neighbors: Set[int]):
         #    -> Tuple[List[int], List[bool]]:
         """Updates the expansion contribution for neighbors of a single vertex.
         """
-        neighbors.append(vertex)
+        neighbors.add(vertex)
         neighbor_flag[vertex] = True
         if contribution[vertex] == 0:
             Sample._calculate_contribution(vertex, contribution, index_flag, neighbor_flag, out_neighbors, in_neighbors)
@@ -448,6 +488,11 @@ class Sample():
     @staticmethod
     def _calculate_contribution(vertex: int, contribution: List[int], index_flag: List[bool], neighbor_flag: List[bool],
                                 out_neighbors: np.ndarray, in_neighbors: np.ndarray):
+        """Updates the contributions of the sample neighbors. This function is currently the bottleneck for the
+        expansion snowball sampling technique.
+        TODO: change calculation so it only has to subtract contributions. i.e. start with contributions = out_degrees,
+        and whenever a vertex is added to the sample, subtract 1 from the relevant contributions.
+        """
         # Compute contribution of this vertex
         for out_neighbor in out_neighbors:
             if not (index_flag[out_neighbor] or neighbor_flag[out_neighbor]):
@@ -456,4 +501,5 @@ class Sample():
         for in_neighbor in in_neighbors:
             if contribution[in_neighbor] > 0:
                 contribution[in_neighbor] -= 1
+    # End of _calculate_contribution()
 # End of Sample()

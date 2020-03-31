@@ -2,7 +2,7 @@
 """
 
 import argparse
-from typing import List, Dict, Tuple
+from typing import List, Set
 from copy import copy
 
 import numpy as np
@@ -134,9 +134,9 @@ class ExpansionSnowballSampleState(SampleState):
         self.index_flag = [False] * num_vertices
         self.index_flag[self.start] = True
         self.index_set = [self.start]
-        self.neighbors = list()  # type: List[int]
+        self.neighbors = set()  # type: Set[int]
         self.neighbors_flag = [False] * num_vertices
-        self.contribution = [0] * num_vertices
+        self.contribution = np.zeros(num_vertices)
         if not prev_state.empty:
             self.start = copy(prev_state.start)
             self.index_flag = copy(prev_state.index_flag)

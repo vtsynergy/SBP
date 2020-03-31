@@ -76,15 +76,7 @@ class SampleStack(object):
         if prev_state is None:
             prev_state = SampleState(sample_size)
         sample_object = Sample.create_sample(self.full_graph, self.true_block_assignment, args, prev_state)
-        sampled_graph = Graph()
-        # Some vertices may be island vertices with no neighbors. To make sure they're included in the graph, first add
-        # the vertices, then add the edges.
-        sampled_graph.add_vertex(sample_size)
-        sampled_graph.add_edge_list(
-            [(i, j) for i in range(len(sample_object.out_neighbors)) if len(
-                sample_object.out_neighbors[i]) > 0 for j in sample_object.out_neighbors[i]]
-        )
-        return sampled_graph, sample_object
+        return sample_object.graph, sample_object
     # End of sample()
 
     def _push(self):
@@ -134,8 +126,8 @@ class SampleStack(object):
         print("Subgraph: V = {} E = {}".format(sampled_graph.num_vertices(), sampled_graph.num_edges()))
         t0 = timeit.default_timer()
         combined_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
-                                                    mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4},
-                                                    verbose=args.verbose)
+                                                    shrink_args={'parallel': True}, verbose=args.verbose,
+                                                    mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
         evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
         combined_sampled_graph = sampled_graph
         while len(self.stack) > 0:
