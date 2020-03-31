@@ -168,8 +168,9 @@ def load_true_membership(input_filename: str, num_vertices: int) -> np.ndarray:
     -----
     The true partition is stored in the file `filename_truePartition.tsv`.
     """
-    filename = "{}_truePartition.csv".format(input_filename)
+    filename = "{}_truePartition.tsv".format(input_filename)
     if not os.path.exists(filename):
+        print("true partition at {} does not exist".format(filename))
         true_b = np.asarray([-1] * num_vertices)
         return true_b
     # read the entire true partition CSV into rows of partitions
