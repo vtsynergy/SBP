@@ -142,6 +142,7 @@ def _load_graph(input_filename: str, part_num: Optional[int] = None, graph: Opti
     E = sum(len(v) for v in out_neighbors)  # number of edges
 
     input_graph = Graph()
+    input_graph.add_vertex(N)
     input_graph.add_edge_list(
         [(i, j) for i in range(len(out_neighbors)) if len(out_neighbors[i]) > 0 for j in out_neighbors[i][:, 0]]
     )
