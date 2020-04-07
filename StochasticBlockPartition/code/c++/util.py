@@ -100,8 +100,8 @@ def _load_graph(input_filename: str, part_num: Optional[int] = None, graph: Opti
 
     if graph is None:  # no previously loaded streaming pieces
         N = edge_rows[:, 0:2].max()  # number of nodes
-        out_neighbors = [[] for i in range(N)]  # type: List[List[int]]
-        in_neighbors = [[] for i in range(N)]  # type: List[List[int]]
+        out_neighbors = [[] for i in range(N)]  # type: List[np.ndarray[int]]
+        in_neighbors = [[] for i in range(N)]  # type: List[np.ndarray[int]]
     else:  # add to previously loaded streaming pieces
         N = max(edge_rows[:, 0:2].max(), len(
             graph.out_neighbors))  # number of nodes
@@ -120,10 +120,8 @@ def _load_graph(input_filename: str, part_num: Optional[int] = None, graph: Opti
         else:
             edge_weight = 1
         # -1 on the node index since Python is 0-indexed and the standard graph TSV is 1-indexed
-        out_neighbors[edge_rows[i, 0] -
-                      1].append([edge_rows[i, 1] - 1, edge_weight])
-        in_neighbors[edge_rows[i, 1] -
-                     1].append([edge_rows[i, 0] - 1, edge_weight])
+        out_neighbors[edge_rows[i, 0] - 1].append([edge_rows[i, 1] - 1, edge_weight])
+        in_neighbors[edge_rows[i, 1] - 1].append([edge_rows[i, 0] - 1, edge_weight])
 
     # convert each neighbor list to neighbor numpy arrays for faster access
     for i in range(N):
@@ -139,7 +137,7 @@ def _load_graph(input_filename: str, part_num: Optional[int] = None, graph: Opti
             in_neighbors[i] = np.array(
                 in_neighbors[i], dtype=np.int32).reshape((0, 2))
 
-    E = sum(len(v) for v in out_neighbors)  # number of edges
+    # E = sum(len(v) for v in out_neighbors)  # number of edges
 
     input_graph = Graph()
     input_graph.add_vertex(N)

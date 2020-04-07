@@ -47,7 +47,7 @@ def parse_arguments():
                         help="(original|step|exponential|log). Default = original")
     parser.add_argument("--direction", type=str, default="growth", help="(growth|decay) Default = growth")
     parser.add_argument("-f", "--factor", type=float, default=0.0001,
-                        help="""The factor by which to grow or decay the nodal update threshold. 
+                        help="""The factor by which to grow or decay the nodal update threshold.
                             If the nodal update strategy is step:
                                 this value is added to or subtracted from the threshold with every iteration
                             If the nodal update strategy is exponential:
