@@ -237,8 +237,8 @@ class Evaluation(object):
         for vertex in sampled_graph.vertices():
             if (vertex.in_degree() + vertex.out_degree()) == 0:
                 self.sampled_graph_island_vertices += 1
-        self.sampled_graph_largest_component = extract_largest_component(sampled_graph).num_vertices()
-        self.full_graph_largest_component = extract_largest_component(full_graph).num_vertices()
+        self.sampled_graph_largest_component = extract_largest_component(sampled_graph, directed=False).num_vertices()
+        self.full_graph_largest_component = extract_largest_component(full_graph, directed=False).num_vertices()
 
         ######
         # Expansion quality (http://portal.acm.org/citation.cfm?doid=1772690.1772762)

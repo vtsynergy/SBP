@@ -43,6 +43,8 @@ def evaluate_partition(graph: Graph, true_b: np.ndarray, alg_partition: BlockSta
         joint_prob = evaluate_accuracy(contingency_table, evaluation)
         evaluate_pairwise_metrics(contingency_table, N, evaluation)
         evaluate_entropy_metrics(joint_prob, evaluation)
+    else:
+        evaluation.num_blocks_algorithm = max(alg_b) + 1
     evaluation.save()
 # End of evaluate_partition()
 
@@ -57,7 +59,7 @@ def evaluate_sampled_graph_partition(graph: Graph, true_b: np.ndarray, alg_parti
     graph : Graph
         the sampled graph that was partitioned.
     true_b : ndarray (int)
-        array of truth block assignment for each vertex in the subgrpah. If the truth block is not known for a 
+        array of truth block assignment for each vertex in the sampled graph. If the truth block is not known for a
         vertex, -1 is used to indicate unknown blocks.
     alg_partition : BlockState
         the partition result returned by stochastic block partitioning.
@@ -70,6 +72,7 @@ def evaluate_sampled_graph_partition(graph: Graph, true_b: np.ndarray, alg_parti
     evaluation.sampled_graph_description_length = alg_partition.entropy()
     evaluation.sampled_graph_modularity = modularity(graph, alg_partition.get_blocks())
     if np.unique(true_b).size == 1:  # Cannot evaluate the below metrics if true partition isn't provided
+        evaluation.sampled_graph_num_blocks_algorithm = max(alg_b) + 1
         return
     true_b = np.asarray([block_mapping[block] for block in true_b])
     contingency_table, N = create_contingency_table(true_b, alg_b, evaluation, sampled_graph=True)
@@ -100,7 +103,8 @@ def create_contingency_table(true_b: np.ndarray, alg_b: np.ndarray, evaluation: 
     Returns
     -------
     contingency_table : np.ndarray (int)
-        the contingency table (confusion matrix) comparing the true block assignment to the algorithmically determined block assignment
+        the contingency table (confusion matrix) comparing the true block assignment to the algorithmically determined
+        community assignment
     N : int
         the number of vertices in the graph
     """
