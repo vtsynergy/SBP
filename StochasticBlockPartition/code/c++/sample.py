@@ -327,6 +327,7 @@ class Sample():
                 if not state.sampled_marker[vertex]:
                     state.sampled_marker[vertex] = True
                     state.burnt_marker[vertex] = True
+                    state.num_burnt += 1
                     state.index_set.append(vertex)
                 # select edges to burn
                 num_to_choose = np.random.geometric(0.7)
@@ -344,7 +345,8 @@ class Sample():
                         if not state.burnt_marker[neighbor]:
                             state.next_fire_front.append(neighbor)
                     state.burnt_marker[neighbor] = True  # mark all neighbors as visited
-            if np.sum(state.burnt_marker) == graph.num_vertices():  # all samples are burnt, restart
+            if state.num_burnt == graph.num_vertices():  # all samples are burnt, restart
+                state.num_burnt = 0
                 state.burnt_marker = [False] * graph.num_vertices()
                 state.current_fire_front = [np.random.randint(graph.num_vertices())]
                 state.next_fire_front = list()
@@ -352,7 +354,7 @@ class Sample():
             if len(state.next_fire_front) == 0:  # if fire is burnt-out
                 state.current_fire_front = [np.random.randint(graph.num_vertices())]
             else:
-                state.current_fire_front = copy(state.next_fire_front)
+                state.current_fire_front = list(state.next_fire_front)
                 state.next_fire_front = list()
         state.sample_idx = np.asarray(state.index_set[:sample_num])
         return Sample(state, graph, assignment)
