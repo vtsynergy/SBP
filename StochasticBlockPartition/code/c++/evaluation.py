@@ -78,7 +78,9 @@ class Evaluation(object):
         'fraction of missed information',
         'fraction of erroneous information',
         'sampled graph description length',
+        'max sampled graph description length',
         'full graph description length',
+        'max full graph description length',
         'sampled graph modularity',
         'full graph modularity',
         'graph loading time',
@@ -181,7 +183,9 @@ class Evaluation(object):
         self.missed_info = 0.0
         self.erroneous_info = 0.0
         self.sampled_graph_description_length = 0.0
+        self.max_sampled_graph_description_length = 0.0
         self.full_graph_description_length = 0.0
+        self.max_full_graph_description_length = 0.0
         self.sampled_graph_modularity = 0.0
         self.full_graph_modularity = 0.0
         # Algorithm runtime measures
@@ -453,7 +457,9 @@ class Evaluation(object):
                 self.missed_info,
                 self.erroneous_info,
                 self.sampled_graph_description_length,
+                self.max_sampled_graph_description_length,
                 self.full_graph_description_length,
+                self.max_full_graph_description_length,
                 self.sampled_graph_modularity,
                 self.full_graph_modularity,
                 self.loading,
