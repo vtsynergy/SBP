@@ -17,7 +17,7 @@ Params = namedtuple("Params", ["communities", "density", "maxdeg", "exp", "overl
 Fieldnames = [
     "experiment", "name", "real", "vertices", "edges", "min_degree", "max_degree", "avg_degree",
     "largest_connected_component", "islands", "clustering_coefficient",
-    "directed", "exponent", "95th percentile"
+    "directed", "exponent", "percentile_95"
 ]
 Properties = namedtuple("Properties", Fieldnames)
 
@@ -143,7 +143,7 @@ def examine_graph(graph: Graph, experiment: str, graphname: str, real: bool, dir
     result = powerlaw.Fit(total_degrees, xmin=1, discrete=True,
                           xmax=max_degree)
     exponent = -result.alpha
-    percentile = np.percentile(_degrees, 95)
+    percentile = np.percentile(total_degrees, 95)
     # print("Exponent for this graph is: ", exponent)
     # print("Using powerlaw package: e = {} xmin = {} xmax = {}".format(
     #     exponent2, result.xmin, result.xmax))
@@ -170,7 +170,7 @@ if __name__ == "__main__":
             props.append(examine_graph(graph, experiment,
                                        "{}_{}".format(graphtype, difficulty),
                                        False, True))
-    with open('synthetic_graphs_examined2.csv', mode='w') as csv_file:
+    with open('synthetic_graphs_examined.csv', mode='w') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=Fieldnames)
         writer.writeheader()
         for prop in props:
@@ -195,4 +195,5 @@ if __name__ == "__main__":
         with open('real_graphs_examined.csv', mode='a') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=Fieldnames)
             writer.writerow(prop._asdict())
+
 
