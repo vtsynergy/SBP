@@ -36,6 +36,8 @@ def evaluate_partition(graph: Graph, true_b: np.ndarray, alg_partition: BlockSta
     """
     alg_b = alg_partition.get_blocks().get_array()
     evaluation.full_graph_description_length = alg_partition.entropy()
+    evaluation.max_full_graph_description_length = BlockState(
+        graph, graph.new_vertex_property("int", np.arange(graph.num_vertices()))).entropy()
     evaluation.full_graph_modularity = modularity(graph, alg_partition.get_blocks())
     if np.unique(true_b).size != 1:
         contingency_table, N = create_contingency_table(true_b, alg_b, evaluation)
@@ -70,6 +72,8 @@ def evaluate_sampled_graph_partition(graph: Graph, true_b: np.ndarray, alg_parti
     """
     alg_b = alg_partition.get_blocks().get_array()
     evaluation.sampled_graph_description_length = alg_partition.entropy()
+    evaluation.max_sampled_graph_description_length = BlockState(
+        graph, graph.new_vertex_property("int", np.arange(graph.num_vertices()))).entropy()
     evaluation.sampled_graph_modularity = modularity(graph, alg_partition.get_blocks())
     if np.unique(true_b).size == 1:  # Cannot evaluate the below metrics if true partition isn't provided
         evaluation.sampled_graph_num_blocks_algorithm = max(alg_b) + 1

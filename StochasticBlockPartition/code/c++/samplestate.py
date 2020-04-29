@@ -115,6 +115,7 @@ class ForestFireSampleState(SampleState):
         self.current_fire_front = [np.random.randint(num_vertices)]
         self.next_fire_front = list()  # type: List[int]
         self.index_set = list()  # type: List[int]
+        self.num_burnt = 0
         if not prev_state.empty:
             self.sampled_marker = copy(prev_state.sampled_marker)
             self.burnt_marker = copy(prev_state.burnt_marker)
@@ -122,6 +123,7 @@ class ForestFireSampleState(SampleState):
             self.next_fire_front = copy(prev_state.next_fire_front)
             self.index_set = copy(prev_state.index_set)
             self.sample_idx = copy(prev_state.sample_idx)
+            self.num_burnt = copy(prev_state.num_burnt)
     # End of __init__()
 # End of ForestFireSampleState
 
