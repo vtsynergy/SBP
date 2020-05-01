@@ -390,12 +390,15 @@ class Sample():
             state.index_flag[state.start] = True
             state.neighbors = set(graph.get_out_neighbors(state.start))
             for neighbor in graph.get_out_neighbors(state.start):
-                state.neighbors_flag[neighbor] = True
-                new_neighbors = 0
-                for _neighbor in graph.get_out_neighbors(neighbor):
-                    if not (state.index_flag[_neighbor] or state.neighbors_flag[_neighbor]):
-                        new_neighbors += 1
-                state.contribution[neighbor] += new_neighbors
+                if neighbor == state.start:
+                    state.neighbors.remove(neighbor)
+                else:
+                    state.neighbors_flag[neighbor] = True
+                    new_neighbors = 0
+                    for _neighbor in graph.get_out_neighbors(neighbor):
+                        if not (state.index_flag[_neighbor] or state.neighbors_flag[_neighbor]):
+                            new_neighbors += 1
+                    state.contribution[neighbor] += new_neighbors
         while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
             if len(state.neighbors) == 0:  # choose random vertex not in index set
                 vertex = np.random.choice(np.setxor1d(np.arange(graph.num_vertices()), state.index_set))
@@ -445,7 +448,6 @@ class Sample():
         neighbor_flag[vertex] = True
         if contribution[vertex] == 0:
             Sample._calculate_contribution(vertex, contribution, index_flag, neighbor_flag, out_neighbors, in_neighbors)
-        # return contribution, neighbor_flag
     # End of _add_neighbor()
 
     @staticmethod
