@@ -125,7 +125,7 @@ class SampleStack(object):
             evaluation = Evaluation(args, sampled_graph)
         print("Subgraph: V = {} E = {}".format(sampled_graph.num_vertices(), sampled_graph.num_edges()))
         t0 = timeit.default_timer()
-        combined_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
+        combined_partition = minimize_blockmodel_dl(sampled_graph,
                                                     shrink_args={'parallel': True}, verbose=args.verbose,
                                                     mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
         evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
@@ -133,7 +133,7 @@ class SampleStack(object):
         while len(self.stack) > 0:
             sampled_graph, next_sample = self._pop()
             t0 = timeit.default_timer()
-            sample_partition = minimize_blockmodel_dl(sampled_graph, mcmc_args={'parallel': True},
+            sample_partition = minimize_blockmodel_dl(sampled_graph,
                                                       shrink_args={'parallel': True}, verbose=args.verbose,
                                                       mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
             evaluation.sampled_graph_partition_time += (timeit.default_timer() - t0)
@@ -148,7 +148,7 @@ class SampleStack(object):
         print("=====Performing final (combined) sample partitioning=====")
         if min_num_blocks > 0 or (args.sample_iterations > 1):
             combined_partition.num_blocks_to_merge = 0
-            sampled_graph_partition = minimize_blockmodel_dl(combined_sampled_graph, mcmc_args={'parallel': False},
+            sampled_graph_partition = minimize_blockmodel_dl(combined_sampled_graph,
                                                              shrink_args={'parallel': True}, verbose=args.verbose,
                                                              mcmc_equilibrate_args={'verbose': False, 'epsilon': 1e-4})
         else:

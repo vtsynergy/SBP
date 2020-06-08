@@ -8,14 +8,15 @@ from copy import copy
 from graph_tool import Graph
 import numpy as np
 
-from samplestate import SampleState
-from samplestate import UniformRandomSampleState
+from samplestate import DegreeWeightedSampleState
+from samplestate import ExpansionSnowballSampleState
+from samplestate import ForestFireSampleState
+from samplestate import MaxDegreeSampleState
 from samplestate import RandomWalkSampleState
 from samplestate import RandomJumpSampleState
-from samplestate import DegreeWeightedSampleState
 from samplestate import RandomNodeNeighborSampleState
-from samplestate import ForestFireSampleState
-from samplestate import ExpansionSnowballSampleState
+from samplestate import SampleState
+from samplestate import UniformRandomSampleState
 
 
 class Sample():
@@ -59,36 +60,50 @@ class Sample():
 
         TODO: either re-write how this method is used, or get rid of it - it seems to be a code smell.
         """
-        # prev_state = SampleState.create_sample_state(graph.num_vertices(), prev_state, args)
-        if args.sample_type == "uniform_random":
-            return Sample.uniform_random_sample(graph, old_true_block_assignment, prev_state, args)
-        elif args.sample_type == "random_walk":
-            return Sample.random_walk_sample(graph, old_true_block_assignment, prev_state, args)
-        elif args.sample_type == "random_jump":
-            return Sample.random_jump_sample(graph, old_true_block_assignment, prev_state, args)
-        elif args.sample_type == "degree_weighted":
-            return Sample.degree_weighted_sample(graph, old_true_block_assignment, prev_state, args)
-        elif args.sample_type == "random_node_neighbor":
-            return Sample.random_node_neighbor_sample(graph, old_true_block_assignment, prev_state, args)
-        elif args.sample_type == "forest_fire":
-            return Sample.forest_fire_sample(graph, old_true_block_assignment, prev_state, args)
+        # get rid of 1-degree vertices
+        degrees = graph.get_total_degrees(np.arange(graph.num_vertices()))
+        degree_filter = degrees > 2
+        mapping = np.where(degrees > 2)[0]
+        graph.set_vertex_filter(graph.new_vertex_property("bool", degree_filter))
+        filtered_graph = Graph(graph, prune=True)
+        print(filtered_graph.num_vertices())
+        graph.clear_filters()
+        # TODO: keep track of the mapping to original graph
+        # TODO: below methods can return a SampleState, which we map back to original vertices here, then create the 
+        # sample before return. This is brilliant! I am genius!
+        if args.sample_type == "degree_weighted":
+            state = Sample.degree_weighted_sample(filtered_graph, graph.num_vertices(), prev_state, args)
         elif args.sample_type == "expansion_snowball":
-            return Sample.expansion_snowball_sample(graph, old_true_block_assignment, prev_state, args)
+            state = Sample.expansion_snowball_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "forest_fire":
+            state = Sample.forest_fire_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "max_degree":
+            state = Sample.max_degree_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "random_jump":
+            state = Sample.random_jump_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "random_node_neighbor":
+            state = Sample.random_node_neighbor_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "random_walk":
+            state = Sample.random_walk_sample(filtered_graph, graph.num_vertices(), prev_state, args)
+        elif args.sample_type == "uniform_random":
+            state = Sample.uniform_random_sample(filtered_graph, graph.num_vertices(), prev_state, args)
         else:
             raise NotImplementedError("Sample type: {} is not implemented!".format(args.sample_type))
+        state.sample_idx = mapping[state.sample_idx]
+        return Sample(state, graph, old_true_block_assignment)
     # End of create_sample()
 
     @staticmethod
-    def uniform_random_sample(graph: Graph, assignment: np.ndarray, prev_state: UniformRandomSampleState,
-                              args: argparse.Namespace) -> 'Sample':
+    def uniform_random_sample(graph: Graph, num_vertices: int, prev_state: UniformRandomSampleState,
+                              args: argparse.Namespace) -> SampleState:
         """Uniform random sampling. All vertices are selected with the same probability.
 
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : UniformRandomSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -97,22 +112,23 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = UniformRandomSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         choices = np.setdiff1d(np.asarray(range(graph.num_vertices())), state.sample_idx)
         state.sample_idx = np.concatenate(
             (state.sample_idx, np.random.choice(choices, sample_num, replace=False)),
             axis=None
         )
-        return Sample(state, graph, assignment)
+        return state
     # End of uniform_random_sampling()
 
     @staticmethod
-    def random_walk_sample(graph: Graph, old_true_block_assignment: np.ndarray, prev_state: RandomWalkSampleState,
-                           args: argparse.Namespace) -> 'Sample':
+    def random_walk_sample(graph: Graph, num_vertices: int, prev_state: RandomWalkSampleState,
+                           args: argparse.Namespace) -> SampleState:
         """Random walk sampling. Start from a vertex and walk along the edges, sampling every vertex that is a part of
         the walk. With a probability of 0.15, restart the walk from the original vertex. To prevent getting stuck,
         after making N attempts, where N = the target number of vertices in the sample, change the starting vertex to a
@@ -121,9 +137,9 @@ class Sample():
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : RandomWalkSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -132,11 +148,12 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = RandomWalkSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         sample_num += len(state.sample_idx)
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
@@ -161,21 +178,21 @@ class Sample():
                 vertex = start
 
         state.sample_idx = np.asarray(state.index_set)
-        return Sample(state, graph, old_true_block_assignment)
-    # End of Random_walk_sampling()
+        return state
+    # End of random_walk_sample()
 
     @staticmethod
-    def random_jump_sample(graph: Graph, old_true_block_assignment: np.ndarray, prev_state: RandomJumpSampleState,
-                           args: argparse.Namespace) -> 'Sample':
+    def random_jump_sample(graph: Graph, num_vertices: int, prev_state: RandomJumpSampleState,
+                           args: argparse.Namespace) -> SampleState:
         """Random jump sampling. Start from a vertex and walk along the edges, sampling every vertex that is a part of
         the walk. With a probability of 0.15, restart the walk from a new vertex.
 
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : RandomWalkSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -184,11 +201,12 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = RandomJumpSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         sample_num += len(state.sample_idx)
         num_tries = 0
         start = np.random.randint(sample_num)  # start with a random vertex
@@ -214,20 +232,20 @@ class Sample():
                 vertex = start
 
         state.sample_idx = np.asarray(state.index_set)
-        return Sample(state, graph, old_true_block_assignment)
+        return state
     # End of random_jump_sample()
 
     @staticmethod
-    def degree_weighted_sample(graph: Graph, assignment: np.ndarray, prev_state: DegreeWeightedSampleState,
-                               args: argparse.Namespace) -> 'Sample':
+    def degree_weighted_sample(graph: Graph, num_vertices: int, prev_state: DegreeWeightedSampleState,
+                               args: argparse.Namespace) -> SampleState:
         """Degree-weighted sampling. The probability of selecting a vertex is proportional to its degree.
 
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : UniformRandomSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -236,33 +254,33 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = DegreeWeightedSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
-        vertex_degrees = np.asarray([graph.vertex(v).in_degree() + graph.vertex(v).out_degree()
-                                     for v in graph.vertices()])
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
+        vertex_degrees = graph.get_total_degrees(np.arange(graph.num_vertices()))
         vertex_degrees[state.sample_idx] = 0
         state.sample_idx = np.concatenate(
             (state.sample_idx, np.random.choice(graph.num_vertices(), sample_num, replace=False,
                                                 p=vertex_degrees / np.sum(vertex_degrees)))
         )
-        return Sample(state, graph, assignment)
-    # End of Random_walk_sampling()
+        return state
+    # End of degree_weighted_sample()
 
     @staticmethod
-    def random_node_neighbor_sample(graph: Graph, assignment: np.ndarray, prev_state: RandomNodeNeighborSampleState,
-                                    args: argparse.Namespace) -> 'Sample':
+    def random_node_neighbor_sample(graph: Graph, num_vertices: int, prev_state: RandomNodeNeighborSampleState,
+                                    args: argparse.Namespace) -> SampleState:
         """Random node neighbor sampling. Whenever a single vertex is selected, all its out neighbors are selected
         as well.
 
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : UniformRandomSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -271,11 +289,12 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = RandomNodeNeighborSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         choices = np.setdiff1d(np.asarray(range(graph.num_vertices())), state.sample_idx)
         random_samples = np.random.choice(choices, sample_num, replace=False)
         sample_num += len(state.sample_idx)
@@ -290,12 +309,12 @@ class Sample():
             if len(state.index_set) >= sample_num:
                 break
         state.sample_idx = np.asarray(state.index_set[:sample_num])
-        return Sample(state, graph, assignment)
+        return state
     # End of random_node_neighbor_sample()
 
     @staticmethod
-    def forest_fire_sample(graph: Graph, assignment: np.ndarray, prev_state: ForestFireSampleState,
-                           args: argparse.Namespace) -> 'Sample':
+    def forest_fire_sample(graph: Graph, num_vertices: int, prev_state: ForestFireSampleState,
+                           args: argparse.Namespace) -> SampleState:
         """Forest-fire sampling with forward probability = 0.7. At every stage, select 70% of the neighbors of the
         current sample. Vertices that were not selected are 'blacklisted', and no longer viable for future selection.
         If all vertices are thus 'burnt' before the target number of vertices has been selected, restart sampling from
@@ -304,9 +323,9 @@ class Sample():
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : UniformRandomSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -315,11 +334,12 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = ForestFireSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         sample_num += len(state.sample_idx)
         while len(state.index_set) == 0 or len(state.index_set) % sample_num != 0:
             for vertex in state.current_fire_front:
@@ -357,21 +377,20 @@ class Sample():
                 state.current_fire_front = list(state.next_fire_front)
                 state.next_fire_front = list()
         state.sample_idx = np.asarray(state.index_set[:sample_num])
-        return Sample(state, graph, assignment)
+        return state
     # End of forest_fire_sample()
 
     @staticmethod
-    def expansion_snowball_sample(graph: Graph, assignment: np.ndarray, prev_state: ExpansionSnowballSampleState,
-                                  args: argparse.Namespace) -> 'Sample':
-        """Expansion snowball sampling. At every iteration, picks a vertex adjacent to the current sample that
-        contributes the most new neighbors.
+    def max_degree_sample(graph: Graph, num_vertices: int, prev_state: DegreeWeightedSampleState,
+                          args: argparse.Namespace) -> SampleState:
+        """Max-degree sampling. Simply samples the highest-degree vertices.
 
         Parameters
         ----------
         graph : Graph
-            the graph from which to sample vertices
-        assignment : np.ndarray[int]
-            the vertex-to-community assignment
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
         prev_state : UniformRandomSampleState
             the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
             should be passed in here.
@@ -380,11 +399,45 @@ class Sample():
 
         Returns
         -------
-        sample : Sample
-            the resulting Sample object
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
+        """
+        state = MaxDegreeSampleState(graph.num_vertices(), prev_state)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
+        vertex_degrees = graph.get_total_degrees(np.arange(graph.num_vertices()))
+        vertex_degrees[state.sample_idx] = 0
+        top_indices = np.argpartition(vertex_degrees, -sample_num)[-sample_num:]
+        state.sample_idx = np.concatenate((state.sample_idx, top_indices))
+        return state
+    # End of max_degree_sample()
+
+    @staticmethod
+    def expansion_snowball_sample(graph: Graph, num_vertices: int, prev_state: ExpansionSnowballSampleState,
+                                  args: argparse.Namespace) -> SampleState:
+        """Expansion snowball sampling. At every iteration, picks a vertex adjacent to the current sample that
+        contributes the most new neighbors.
+
+        Parameters
+        ----------
+        graph : Graph
+            the filtered graph from which to sample vertices
+        num_vertices : int
+            number of vertices in the unfiltered graph
+        prev_state : UniformRandomSampleState
+            the state of the previous sample in the stack. If there is no previous sample, an empty SampleState object
+            should be passed in here.
+        args : argparse.Namespace
+            the command-line arguments provided by the user
+
+        Returns
+        -------
+        state : SampleState
+            the sample state with the sampled vertex ids (Note: these ids correspond to the filtered graph, and have
+            to be mapped back to the unfiltered graph)
         """
         state = ExpansionSnowballSampleState(graph.num_vertices(), prev_state)
-        sample_num = int((graph.num_vertices() * (args.sample_size / 100)) / args.sample_iterations)
+        sample_num = int((num_vertices * (args.sample_size / 100)) / args.sample_iterations)
         sample_num += len(state.sample_idx)
         if not state.neighbors:  # If there are no neighbors, start with the state.start vertex
             state.index_flag[state.start] = True
@@ -435,7 +488,7 @@ class Sample():
                                          graph.get_out_neighbors(neighbor), graph.get_in_neighbors(neighbor),
                                          state.neighbors)
         state.sample_idx = np.asarray(state.index_set)
-        return Sample(state, graph, assignment)
+        return state
     # End of expansion_snowball_sample()
 
     @staticmethod

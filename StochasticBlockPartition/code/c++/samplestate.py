@@ -44,68 +44,6 @@ class SampleState():
 # End of SampleState
 
 
-class UniformRandomSampleState(SampleState):
-    def __init__(self, num_vertices: int, prev_state: 'UniformRandomSampleState') -> None:
-        SampleState.__init__(self, prev_state.sample_size)
-        self.empty = False
-        if not prev_state.empty:
-            self.sample_idx = copy(prev_state.sample_idx)
-    # End of __init__()
-# End of UniformRandomSampleState
-
-
-class RandomWalkSampleState(SampleState):
-    def __init__(self, num_vertices: int, prev_state: 'RandomWalkSampleState') -> None:
-        SampleState.__init__(self, prev_state.sample_size)
-        self.empty = False
-        self.sampled_marker = [False] * num_vertices
-        self.index_set = list()  # type: List[int]
-        if not prev_state.empty:
-            self.sampled_marker = copy(prev_state.sampled_marker)
-            self.index_set = copy(prev_state.index_set)
-            self.sample_idx = copy(prev_state.sample_idx)
-    # End of __init__()
-# End of RandomWalkSampleState
-
-
-class RandomJumpSampleState(SampleState):
-    def __init__(self, num_vertices: int, prev_state: 'RandomJumpSampleState') -> None:
-        SampleState.__init__(self, prev_state.sample_size)
-        self.empty = False
-        self.sampled_marker = [False] * num_vertices
-        self.index_set = list()  # type: List[int]
-        if not prev_state.empty:
-            self.sampled_marker = copy(prev_state.sampled_marker)
-            self.index_set = copy(prev_state.index_set)
-            self.sample_idx = copy(prev_state.sample_idx)
-    # End of __init__()
-# End of RandomJumpSampleState
-
-
-class DegreeWeightedSampleState(SampleState):
-    def __init__(self, num_vertices, prev_state: 'DegreeWeightedSampleState') -> None:
-        SampleState.__init__(self, prev_state.sample_size)
-        self.empty = False
-        if not prev_state.empty:
-            self.sample_idx = copy(prev_state.sample_idx)
-    # End of __init__()
-# End of DegreeWeightedSampleState
-
-
-class RandomNodeNeighborSampleState(SampleState):
-    def __init__(self, num_vertices: int, prev_state: 'RandomNodeNeighborSampleState') -> None:
-        SampleState.__init__(self, prev_state.sample_size)
-        self.empty = False
-        self.sampled_marker = [False] * num_vertices
-        self.index_set = list()  # type: List[int]
-        if not prev_state.empty:
-            self.sample_idx = copy(prev_state.sample_idx)
-            self.sampled_marker = copy(prev_state.sampled_marker)
-            self.index_set = copy(prev_state.index_set)
-    # End of __init__()
-# End of RandomNodeNeighborSampleState
-
-
 class ForestFireSampleState(SampleState):
     def __init__(self, num_vertices: int, prev_state: 'ForestFireSampleState') -> None:
         SampleState.__init__(self, prev_state.sample_size)
@@ -126,6 +64,16 @@ class ForestFireSampleState(SampleState):
             self.num_burnt = copy(prev_state.num_burnt)
     # End of __init__()
 # End of ForestFireSampleState
+
+
+class DegreeWeightedSampleState(SampleState):
+    def __init__(self, num_vertices, prev_state: 'DegreeWeightedSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of DegreeWeightedSampleState
 
 
 class ExpansionSnowballSampleState(SampleState):
@@ -149,3 +97,65 @@ class ExpansionSnowballSampleState(SampleState):
             self.sample_idx = copy(prev_state.sample_idx)
     # End of __init__()
 # End of ExpansionSnowballSampleState
+
+
+class MaxDegreeSampleState(SampleState):
+    def __init__(self, num_vertices, prev_state: 'MaxDegreeSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of MaxDegreeSampleState
+
+
+class RandomJumpSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'RandomJumpSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        self.sampled_marker = [False] * num_vertices
+        self.index_set = list()  # type: List[int]
+        if not prev_state.empty:
+            self.sampled_marker = copy(prev_state.sampled_marker)
+            self.index_set = copy(prev_state.index_set)
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of RandomJumpSampleState
+
+
+class RandomNodeNeighborSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'RandomNodeNeighborSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        self.sampled_marker = [False] * num_vertices
+        self.index_set = list()  # type: List[int]
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+            self.sampled_marker = copy(prev_state.sampled_marker)
+            self.index_set = copy(prev_state.index_set)
+    # End of __init__()
+# End of RandomNodeNeighborSampleState
+
+
+class RandomWalkSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'RandomWalkSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        self.sampled_marker = [False] * num_vertices
+        self.index_set = list()  # type: List[int]
+        if not prev_state.empty:
+            self.sampled_marker = copy(prev_state.sampled_marker)
+            self.index_set = copy(prev_state.index_set)
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of RandomWalkSampleState
+
+
+class UniformRandomSampleState(SampleState):
+    def __init__(self, num_vertices: int, prev_state: 'UniformRandomSampleState') -> None:
+        SampleState.__init__(self, prev_state.sample_size)
+        self.empty = False
+        if not prev_state.empty:
+            self.sample_idx = copy(prev_state.sample_idx)
+    # End of __init__()
+# End of UniformRandomSampleState
