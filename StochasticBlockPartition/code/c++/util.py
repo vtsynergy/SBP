@@ -316,13 +316,13 @@ def finetune_assignment(partition: BlockState, args: argparse.Namespace) -> Bloc
         return partition
     for i in range(100):
         entropy = partition.entropy()
-        delta_entropy, nattempts, nmoves = partition.mcmc_sweep(parallel=True, d=0, allow_vacate=False)
+        delta_entropy, nattempts, nmoves = partition.mcmc_sweep(d=0, allow_vacate=False)
         if args.verbose:
             print("dE: {} attempts: {} moves: {} E: {}".format(delta_entropy, nattempts, nmoves, entropy))
         total_attempts += nattempts
         total_moves += nmoves
         total_iterations += 1
-        if -delta_entropy < 0.001 * entropy:
+        if -delta_entropy < 1e-4 * entropy:
             break
     print("Finetuning results: {} iterations | {} attempts | {} moves | delta entropy = {}".format(
         total_iterations, total_attempts, total_moves, partition.entropy() - start_entropy
