@@ -93,7 +93,7 @@ if __name__ == "__main__":
         print("Performing stochastic block partitioning")
         evaluation = Evaluation(args, graph)
         # Please refer to the graph-tool documentation under graph-tool.inference for details on the input parameters
-        partition = minimize_blockmodel_dl(graph, mcmc_args={'parallel': True},
+        partition = minimize_blockmodel_dl(graph,
                                            shrink_args={'parallel': True}, verbose=args.verbose,
                                            mcmc_equilibrate_args={'verbose': args.verbose, 'epsilon': 1e-4})
         t_partition = timeit.default_timer()
