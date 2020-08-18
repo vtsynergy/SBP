@@ -15,8 +15,8 @@ Graph Graph::load(argparse::ArgumentParser &args) {
     for (std::vector<std::string> &edge : csv_contents) {
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indeces vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;
-        num_vertices = (from + 1 < num_vertices) ? from + 1 : num_vertices;
-        num_vertices = (to + 1 < num_vertices) ? to + 1 : num_vertices;
+        num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
+        num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
         utils::insert(out_neighbors, from , to);
         utils::insert(in_neighbors, to, from);
     }

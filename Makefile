@@ -1,6 +1,7 @@
-INCLUDES=-I./argparse/include -I./include
-
+INCLUDES=-I./argparse/include -I./include -I./include/partition -I./include/partition/sparse
 CC=g++ -std=c++17
+FILES=main.cpp graph.cpp utils.cpp sbp.cpp block_merge.cpp common.cpp finetune.cpp
+FILES+=partition/partition.cpp partition/partition_triplet.cpp partition/sparse/boost_mapped_matrix.cpp
 
 .PHONY: init_parser
 
@@ -12,7 +13,7 @@ init_parser:
 	git submodule update
 
 main: init_parser main.cpp
-	$(CC) -o main main.cpp graph.cpp utils.cpp $(INCLUDES)
+	$(CC) -g -fopenmp -o main $(FILES) $(INCLUDES)
 
 runmain: main
 	./main -d ../graph_challenge/data

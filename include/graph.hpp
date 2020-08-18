@@ -15,17 +15,18 @@
 
 #include "argparse/argparse.hpp"
 
+#include "partition/sparse/typedefs.hpp"
 #include "utils.hpp"
 
 // #include "sparse/boost_mapped_matrix.hpp"
 
 // typedef py::EigenDRef<Eigen::Matrix<int, Eigen::Dynamic, 2>> Matrix2Column;
 
-typedef std::vector<std::vector<int>> VarLengthMatrix;
+// typedef std::vector<std::vector<int>> VarLengthMatrix;
 
 class Graph {
     public:
-        Graph(VarLengthMatrix &out_neighbors, VarLengthMatrix &in_neighbors, int num_vertices, int num_edges,
+        Graph(NeighborList &out_neighbors, NeighborList &in_neighbors, int num_vertices, int num_edges,
         const std::vector<int> &assignment = std::vector<int>()) {
             this->out_neighbors = out_neighbors;
             this->in_neighbors = in_neighbors;
@@ -40,7 +41,7 @@ class Graph {
         /// Assumes the true assignmnet file is named:
         /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_truePartition.tsv
         static Graph load(argparse::ArgumentParser &args);
-    private:
+    // private:
         /// For every vertex, stores the outgoing neighbors as a std::vector<int>
         NeighborList out_neighbors;
         /// For every vertex, stores the incoming neighbors as a std::vector<int>

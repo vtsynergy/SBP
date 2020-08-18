@@ -5,6 +5,8 @@
 #include "argparse/argparse.hpp"
 
 #include "graph.hpp"
+#include "sbp.hpp"
+#include "partition/partition.hpp"
 
 /// Parses the command-line arguments passed in by the user.
 /// Exits with an error message if parsing is unsuccessful.
@@ -75,4 +77,5 @@ int main(int argc, char* argv[]) {
     std::cout << "Parsed out the arguments" << std::endl;
     // std::cout << args << std::endl;
     Graph graph = Graph::load(args);
+    Partition blockmodel = sbp::stochastic_block_partition(graph);
 }
