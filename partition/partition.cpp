@@ -123,7 +123,7 @@ Partition Partition::from_sample(int num_blocks, NeighborList &neighbors, std::v
 
 void Partition::initialize_edge_counts(NeighborList &neighbors) {
     /// TODO: this recreates the matrix (unnecessary)
-    this->blockmodel = BoostMappedMatrix(this->num_blocks, this->num_blocks);
+    this->blockmodel = DictMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);

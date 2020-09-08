@@ -132,7 +132,7 @@ bool finetune::early_stop(int iteration, double initial_entropy, std::vector<dou
 //   - blockmodel proposed_block row
 //   - blockmodel proposed_block col
 // Writes: NA
-EdgeCountUpdates finetune::edge_count_updates(BoostMappedMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates finetune::edge_count_updates(DictMatrix &blockmodel, int current_block, int proposed_block,
                                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
     std::vector<int> block_row = blockmodel.getrow(current_block);
     std::vector<int> block_col = blockmodel.getcol(current_block);
@@ -223,11 +223,16 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
     }
     // Create Arrays using unique blocks
     int num_unique_blocks = block_counts.size();
-    std::vector<double> counts = utils::constant<double>(num_unique_blocks, 0);
-    std::vector<double> proposal_weights = utils::constant<double>(num_unique_blocks, 0);
-    std::vector<double> block_weights = utils::constant<double>(num_unique_blocks, 0);
-    std::vector<double> block_degrees = utils::constant<double>(num_unique_blocks, 0);
-    std::vector<double> proposal_degrees = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> counts = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> proposal_weights = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> block_weights = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> block_degrees = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> proposal_degrees = utils::constant<double>(num_unique_blocks, 0);    
+    std::vector<double> counts(num_unique_blocks, 0);
+    std::vector<double> proposal_weights(num_unique_blocks, 0);
+    std::vector<double> block_weights(num_unique_blocks, 0);
+    std::vector<double> block_degrees(num_unique_blocks, 0);
+    std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
     std::vector<int> proposal_row = partition.getBlockmodel().getrow(proposal.proposal);
     std::vector<int> proposal_col = partition.getBlockmodel().getcol(proposal.proposal);

@@ -2,6 +2,7 @@ INCLUDES=-I./argparse/include -I./include -I./include/partition -I./include/part
 CC=g++ -std=c++17
 FILES=main.cpp graph.cpp utils.cpp sbp.cpp block_merge.cpp common.cpp finetune.cpp
 FILES+=partition/partition.cpp partition/partition_triplet.cpp partition/sparse/boost_mapped_matrix.cpp
+FILES+=partition/sparse/dict_matrix.cpp
 
 .PHONY: init_parser
 

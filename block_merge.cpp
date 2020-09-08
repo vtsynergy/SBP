@@ -22,9 +22,11 @@ Partition &block_merge::merge_blocks(Partition &partition, NeighborList &out_nei
         }
     }
 
+    // std::cout << "carrying out best merges" << std::endl;
     partition.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
+    // std::cout << "initializing edge counts" << std::endl;
     partition.initialize_edge_counts(out_neighbors);
-
+    // std::cout << "done bm" << std::endl;
     return partition;
 }
 
@@ -39,6 +41,7 @@ block_merge::ProposalEvaluation block_merge::propose_merge(int current_block, Pa
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
     double delta_entropy =
         compute_delta_entropy(current_block, proposal.proposal, partition, updates, new_block_degrees);
+    // std::cout << "dE: " << delta_entropy << std::endl;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
@@ -88,7 +91,7 @@ double block_merge::compute_delta_entropy(int current_block, int proposal, Parti
     return delta_entropy;
 }
 
-EdgeCountUpdates block_merge::edge_count_updates(BoostMappedMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates block_merge::edge_count_updates(DictMatrix &blockmodel, int current_block, int proposed_block,
                                                  EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
     std::vector<int> proposal_row = blockmodel.getrow(proposed_block);

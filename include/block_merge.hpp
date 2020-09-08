@@ -7,11 +7,12 @@
 #include <numeric>
 #include <random>
 
-#include <omp.h>
+// #include <omp.h>
 
 #include "common.hpp"
 #include "partition/partition.hpp"
-#include "partition/sparse/boost_mapped_matrix.hpp"
+// #include "partition/sparse/boost_mapped_matrix.hpp"
+#include "partition/sparse/dict_matrix.hpp"
 #include "partition/sparse/typedefs.hpp"
 #include "utils.hpp"
 
@@ -32,7 +33,7 @@ ProposalEvaluation propose_merge(int current_block, Partition &partition, std::v
 
 /// Computes the new edge counts for the affected blocks (communities) 
 /// under a proposed block merge
-EdgeCountUpdates edge_count_updates(BoostMappedMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates edge_count_updates(DictMatrix &blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks);
 
 /// Computes the change in entropy under a proposed block merge

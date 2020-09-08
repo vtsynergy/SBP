@@ -123,3 +123,5 @@ dmypy.json
 # Data and trial runs
 **/eval
 **/data
+*.py
+*.ipynb
