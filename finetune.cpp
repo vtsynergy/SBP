@@ -132,7 +132,7 @@ bool finetune::early_stop(int iteration, double initial_entropy, std::vector<dou
 //   - blockmodel proposed_block row
 //   - blockmodel proposed_block col
 // Writes: NA
-EdgeCountUpdates finetune::edge_count_updates(DictMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
     std::vector<int> block_row = blockmodel.getrow(current_block);
     std::vector<int> block_col = blockmodel.getcol(current_block);

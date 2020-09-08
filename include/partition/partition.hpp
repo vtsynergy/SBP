@@ -10,7 +10,7 @@
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
-#include "sparse/dict_matrix.hpp"
+#include "sparse/dict_transpose_matrix.hpp"
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 
@@ -30,7 +30,7 @@ class Partition {
         this->num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
-        this->blockmodel = DictMatrix(this->num_blocks, this->num_blocks);
+        this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
         // Set the block assignment to be the range [0, this->num_blocks)
         this->block_assignment = utils::range<int>(0, this->num_blocks);
 
@@ -74,8 +74,8 @@ class Partition {
     /// TODO
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// TODO: Get rid of getters and setters?
-    DictMatrix &getBlockmodel() { return this->blockmodel; }
-    void setBlockmodel(DictMatrix blockmodel) { this->blockmodel = blockmodel; }
+    DictTransposeMatrix &getBlockmodel() { return this->blockmodel; }
+    void setBlockmodel(DictTransposeMatrix blockmodel) { this->blockmodel = blockmodel; }
     std::vector<int> &getBlock_assignment() { return this->block_assignment; }
     void setBlock_assignment(std::vector<int> block_assignment) { this->block_assignment = block_assignment; }
     std::vector<int> &getBlock_degrees() { return this->block_degrees; }
@@ -98,7 +98,7 @@ class Partition {
   private:
     // Structure
     int num_blocks;
-    DictMatrix blockmodel;
+    DictTransposeMatrix blockmodel;
     // Known info
     std::vector<int> block_assignment;
     std::vector<int> block_degrees;

@@ -91,7 +91,7 @@ double block_merge::compute_delta_entropy(int current_block, int proposal, Parti
     return delta_entropy;
 }
 
-EdgeCountUpdates block_merge::edge_count_updates(DictMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates block_merge::edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                                  EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
     std::vector<int> proposal_row = blockmodel.getrow(proposed_block);
