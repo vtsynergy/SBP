@@ -4,6 +4,7 @@
 
 #include "argparse/argparse.hpp"
 
+#include "evaluate.hpp"
 #include "graph.hpp"
 #include "sbp.hpp"
 #include "partition/partition.hpp"
@@ -78,4 +79,5 @@ int main(int argc, char* argv[]) {
     // std::cout << args << std::endl;
     Graph graph = Graph::load(args);
     Partition blockmodel = sbp::stochastic_block_partition(graph);
+    evaluate::evaluate_partition(graph, blockmodel);
 }
