@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <map>
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
@@ -22,6 +23,13 @@ typedef struct edge_count_updates_t {
     std::vector<int> block_col;
     std::vector<int> proposal_col;
 } EdgeCountUpdates;
+
+typedef struct sparse_edge_count_updates_t {
+    std::map<int, int> block_row;
+    std::map<int, int> proposal_row;
+    std::map<int, int> block_col;
+    std::map<int, int> proposal_col;
+} SparseEdgeCountUpdates;
 
 class Partition {
   public:

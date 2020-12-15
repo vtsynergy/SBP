@@ -42,8 +42,9 @@ std::vector<int> BoostMappedMatrix::getrow(int row) {
 }
 
 std::vector<int> BoostMappedMatrix::getcol(int col) {
-    check_col_bounds(col);
-    std::vector<int> col_values = utils::constant<int>(this->nrows, 0);
+    // check_col_bounds(col);
+    // std::vector<int> col_values = utils::constant<int>(this->nrows, 0);
+    std::vector<int> col_values(this->nrows, 0);
     // int col_values [this->nrows];
     for (int row = 0; row < nrows; ++row) {
         col_values[row] = matrix(row, col);

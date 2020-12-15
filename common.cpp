@@ -53,13 +53,46 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
+std::map<int, int> common::exclude_indices(std::map<int, int> &in, int index1, int index2) {
+    std::map<int, int> out;
+    for (const std::pair<int, int> &element: in) {
+        if (element.first == index1 || element.first == index2)
+            continue;
+        int offset = 0;
+        if (element.first > index1)
+            offset += 1;
+        if (element.first > index2)
+            offset += 1;
+        out[element.first - offset] = element.second;
+    }
+    return out;
+}
+
 std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int> &indices) {
+    // if (omp_get_thread_num() == 0)
+    //     std::cout << "dense version" << std::endl;
     std::vector<int> results;
     for (int i = 0; i < indices.size(); ++i) {
         int index = indices[i];
         if (index != 0) {
             int value = values[i];
+            // if (omp_get_thread_num() == 0)
+            //     std::cout << "pushing " << value << " because " << i << " = " << index << std::endl;
             results.push_back(value);
+        }
+    }
+    return results;
+}
+
+std::vector<int> common::index_nonzero(std::vector<int> &values, std::map<int, int> &indices_map) {
+    // if (omp_get_thread_num() == 0)
+    //     std::cout << "sparse version" << std::endl;
+    std::vector<int> results;
+    for (const std::pair<int, int> &element : indices_map) {
+        if (element.second != 0) {
+            // if (omp_get_thread_num() == 0)
+            //     std::cout << "pushing " << values[element.first] << " because " << element.first << " = " << element.second << std::endl;
+            results.push_back(values[element.first]);
         }
     }
     return results;
@@ -71,6 +104,16 @@ std::vector<int> common::nonzeros(std::vector<int> &in) {
         int value = in[i];
         if (value != 0) {
             values.push_back(value);
+        }
+    }
+    return values;
+}
+
+std::vector<int> common::nonzeros(std::map<int, int> &in) {
+    std::vector<int> values;
+    for (const std::pair<int, int> &element : in) {
+        if (element.second != 0) {
+            values.push_back(element.second);
         }
     }
     return values;

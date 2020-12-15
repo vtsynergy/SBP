@@ -47,7 +47,9 @@ class BoostMappedMatrix {
     void check_col_bounds(int col);
     int ncols;
     int nrows;
-    boost::numeric::ublas::mapped_matrix<int> matrix;
+    boost::numeric::ublas::compressed_matrix<int> matrix;
+    // boost::numeric::ublas::mapped_matrix<int> matrix;
+    // boost::numeric::ublas::coordinate_matrix<int> matrix;
 };
 
 #endif // CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP

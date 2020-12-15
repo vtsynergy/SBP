@@ -40,6 +40,27 @@ int DictTransposeMatrix::get(int row, int col) {
     return matrix[row][col];
 }
 
+std::vector<int> DictTransposeMatrix::getcol(int col) {
+    check_col_bounds(col);
+    std::vector<int> col_values(this->nrows, 0);
+    const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
+    for (const std::pair<int, int> element : matrix_col) {
+        col_values[element.first] = element.second;
+    }
+    return col_values;
+}
+
+std::map<int, int> DictTransposeMatrix::getcol_sparse(int col) {
+    check_col_bounds(col);
+    std::map<int, int> col_values;
+    const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
+    for (const std::pair<int, int> element : matrix_col) {
+        // col_values[element.first] = element.second;
+        col_values.insert(element);
+    }
+    return col_values;
+}
+
 std::vector<int> DictTransposeMatrix::getrow(int row) {
     check_row_bounds(row);
     std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
@@ -51,17 +72,17 @@ std::vector<int> DictTransposeMatrix::getrow(int row) {
     for (const std::pair<int, int> element : matrix_row) {
         row_values[element.first] = element.second;
     }
-    return row_values;  // py::array_t<int>(this->ncols, row_values);
+    return row_values;
 }
 
-std::vector<int> DictTransposeMatrix::getcol(int col) {
-    check_col_bounds(col);
-    std::vector<int> col_values(this->nrows, 0);
-    const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
-    for (const std::pair<int, int> element : matrix_col) {
-        col_values[element.first] = element.second;
+std::map<int, int> DictTransposeMatrix::getrow_sparse(int row) {
+    check_row_bounds(row);
+    std::map<int, int> row_values;
+    const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+    for (const std::pair<int, int> element : matrix_row) {
+        row_values[element.first] = element.second;
     }
-    return col_values;
+    return row_values;
 }
 
 EdgeWeights DictTransposeMatrix::incoming_edges(int block) {

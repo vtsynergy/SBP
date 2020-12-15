@@ -48,14 +48,21 @@ bool accept(double delta_entropy, double hastings_correction);
 EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
 double compute_delta_entropy(int current_block, int proposal, Partition &partition, EdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees);
+double compute_delta_entropy(int current_block, int proposal, Partition &partition, SparseEdgeCountUpdates &updates,
+                             common::NewBlockDegrees &block_degrees);
 bool early_stop(int iteration, PartitionTriplet &partitions, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
 EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
+SparseEdgeCountUpdates edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                                                 EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
 EdgeWeights edge_weights(NeighborList &neighbors, int vertex);
 double hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
+                           common::NewBlockDegrees &new_block_degrees);
+double hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                           common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 double overall_entropy(Partition &partition, int num_vertices, int num_edges);
 ProposalEvaluation propose_move(Partition &partition, int vertex, NeighborList &out_neighbors,

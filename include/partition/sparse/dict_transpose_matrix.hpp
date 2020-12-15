@@ -4,6 +4,7 @@
 #ifndef CPPSBP_PARTITION_SPARSE_DICT_TRANSPOSE_MATRIX_HPP
 #define CPPSBP_PARTITION_SPARSE_DICT_TRANSPOSE_MATRIX_HPP
 
+#include <map>
 #include <unordered_map>
 
 #include "csparse_matrix.hpp"
@@ -27,8 +28,14 @@ class DictTransposeMatrix {
     void add(int row, std::vector<int> cols, std::vector<int> values);
     DictTransposeMatrix copy();
     int get(int row, int col);
+    /// Returns all values in the requested column as a dense vector.
     std::vector<int> getcol(int col);
+    /// Returns all values in the requested row as a dense vector.
     std::vector<int> getrow(int row);
+    /// Returns all values in the requested column as a sparse vector (ordered map).
+    std::map<int, int> getcol_sparse(int col);
+    /// Returns all values in the requested column as a sparse vector (ordered map).
+    std::map<int, int> getrow_sparse(int row);
     EdgeWeights incoming_edges(int block);
     Indices nonzero();
     EdgeWeights outgoing_edges(int block);

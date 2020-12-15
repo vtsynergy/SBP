@@ -92,6 +92,62 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     return delta_entropy;
 }
 
+double finetune::compute_delta_entropy(int current_block, int proposal, Partition &partition,
+                                       SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
+    // Blockmodel indexing
+    std::map<int, int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
+    std::map<int, int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
+    std::map<int, int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
+    std::map<int, int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
+
+    // TODO: get rid of unneeded excludes and indexing for sparse implementation
+    // Exclude current_block, proposal to prevent double counting
+    std::map<int, int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
+    std::map<int, int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
+    old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
+    old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
+    std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
+    std::vector<int> old_block_degrees_out = common::exclude_indices(partition.getBlock_degrees_out(), current_block, proposal);
+
+    // Remove 0 indices
+    std::vector<int> new_block_row_degrees_in = common::index_nonzero(block_degrees.block_degrees_in, updates.block_row); // added
+    std::vector<int> new_proposal_row_degrees_in = common::index_nonzero(block_degrees.block_degrees_in, updates.proposal_row);
+    std::vector<int> new_block_row = common::nonzeros(updates.block_row); // added
+    std::vector<int> new_proposal_row = common::nonzeros(updates.proposal_row);
+    std::vector<int> new_block_col_degrees_out = common::index_nonzero(new_block_degrees_out, new_block_col); // added
+    std::vector<int> new_proposal_col_degrees_out = common::index_nonzero(new_block_degrees_out, new_proposal_col);
+    std::vector<int> new_block_col_vector = common::nonzeros(new_block_col); // added
+    std::vector<int> new_proposal_col_vector = common::nonzeros(new_proposal_col);
+
+    std::vector<int> old_block_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_block_row);
+    std::vector<int> old_proposal_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_proposal_row);
+    std::vector<int> old_block_row_vector = common::nonzeros(old_block_row);
+    std::vector<int> old_proposal_row_vector = common::nonzeros(old_proposal_row);
+    std::vector<int> old_block_col_degrees_out = common::index_nonzero(old_block_degrees_out, old_block_col);
+    std::vector<int> old_proposal_col_degrees_out = common::index_nonzero(old_block_degrees_out, old_proposal_col);
+    std::vector<int> old_block_col_vector = common::nonzeros(old_block_col);
+    std::vector<int> old_proposal_col_vector = common::nonzeros(old_proposal_col);
+
+    double delta_entropy = 0.0;
+    delta_entropy -= common::delta_entropy_temp(new_block_row, new_block_row_degrees_in,
+                                                block_degrees.block_degrees_out[current_block]); // added
+    delta_entropy -= common::delta_entropy_temp(new_proposal_row, new_proposal_row_degrees_in,
+                                                block_degrees.block_degrees_out[proposal]);
+    delta_entropy -= common::delta_entropy_temp(new_block_col_vector, new_block_col_degrees_out,
+                                                block_degrees.block_degrees_in[current_block]); // added
+    delta_entropy -= common::delta_entropy_temp(new_proposal_col_vector, new_proposal_col_degrees_out,
+                                                block_degrees.block_degrees_in[proposal]);
+    delta_entropy += common::delta_entropy_temp(old_block_row_vector, old_block_row_degrees_in,
+                                                partition.getBlock_degrees_out()[current_block]);
+    delta_entropy += common::delta_entropy_temp(old_proposal_row_vector, old_proposal_row_degrees_in,
+                                                partition.getBlock_degrees_out()[proposal]);
+    delta_entropy += common::delta_entropy_temp(old_block_col_vector, old_block_col_degrees_out,
+                                                partition.getBlock_degrees_in()[current_block]);
+    delta_entropy += common::delta_entropy_temp(old_proposal_col_vector, old_proposal_col_degrees_out,
+                                                partition.getBlock_degrees_in()[proposal]);
+    return delta_entropy;
+}
+
 // Reads:
 //   - partition.overall_entropy
 // Writes: NA
@@ -180,6 +236,55 @@ EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, i
     return EdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
 }
 
+SparseEdgeCountUpdates finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block,
+                                                           int proposed_block, EdgeWeights &out_blocks,
+                                                           EdgeWeights &in_blocks, int self_edge_weight) {
+    std::map<int, int> block_row = blockmodel.getrow_sparse(current_block);
+    std::map<int, int> block_col = blockmodel.getcol_sparse(current_block);
+    std::map<int, int> proposal_row = blockmodel.getrow_sparse(proposed_block);
+    std::map<int, int> proposal_col = blockmodel.getcol_sparse(proposed_block);
+
+    int count_in_block = 0, count_out_block = 0;
+    int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
+
+    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
+        int index = in_blocks.indices[i];
+        int value = in_blocks.values[i];
+        if (index == current_block) {
+            count_in_block += value;
+        }
+        if (index == proposed_block) {
+            count_in_proposal += value;
+        }
+        block_col[index] -= value;
+        proposal_col[index] += value;
+    }
+    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
+        int index = out_blocks.indices[i];
+        int value = out_blocks.values[i];
+        if (index == current_block) {
+            count_out_block += value;
+        }
+        if (index == proposed_block) {
+            count_out_proposal += value;
+        }
+        block_row[index] -= value;
+        proposal_row[index] += value;
+    }
+
+    proposal_row[current_block] -= count_in_proposal;
+    proposal_row[proposed_block] += count_in_proposal;
+    proposal_col[current_block] -= count_out_proposal;
+    proposal_col[proposed_block] += count_out_proposal;
+
+    block_row[current_block] -= count_in_block;
+    block_row[proposed_block] += count_in_block;
+    block_col[current_block] -= count_out_block;
+    block_col[proposed_block] += count_out_block;
+
+    return SparseEdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
+}
+
 // Reads: NA
 // Writes: NA
 /// Returns the edge weights for the neighbors of a given vertex.
@@ -254,7 +359,56 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
     return p_backward / p_forward;
 }
 
-
+double finetune::hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                     common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
+                                     common::NewBlockDegrees &new_block_degrees) {
+    if (proposal.num_neighbor_edges == 0) {
+        return 1.0;
+    }
+    // Compute block weights
+    std::map<int, int> block_counts;
+    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
+        int block = out_blocks.indices[i];
+        int weight = out_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
+        int block = in_blocks.indices[i];
+        int weight = in_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    // Create Arrays using unique blocks
+    int num_unique_blocks = block_counts.size();
+    // std::vector<double> counts = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> proposal_weights = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> block_weights = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> block_degrees = utils::constant<double>(num_unique_blocks, 0);
+    // std::vector<double> proposal_degrees = utils::constant<double>(num_unique_blocks, 0);    
+    std::vector<double> counts(num_unique_blocks, 0);
+    std::vector<double> proposal_weights(num_unique_blocks, 0);
+    std::vector<double> block_weights(num_unique_blocks, 0);
+    std::vector<double> block_degrees(num_unique_blocks, 0);
+    std::vector<double> proposal_degrees(num_unique_blocks, 0);
+    // Indexing
+    std::vector<int> proposal_row = partition.getBlockmodel().getrow(proposal.proposal);
+    std::vector<int> proposal_col = partition.getBlockmodel().getcol(proposal.proposal);
+    // Fill Arrays
+    int index = 0;
+    int num_blocks = partition.getNum_blocks();
+    std::vector<int> &current_block_degrees = partition.getBlock_degrees();
+    for (auto const &entry : block_counts) {
+        counts[index] = entry.second;
+        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
+        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
+        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
+        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
+        index++;
+    }
+    // Compute p_forward and p_backward
+    double p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    double p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    return p_backward / p_forward;
+}
 
 // Reads:
 //   - partition.blockmodel nonzero indices
@@ -355,8 +509,9 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
         }
     }
 
-    EdgeCountUpdates updates = edge_count_updates(partition.getBlockmodel(), current_block, proposal.proposal,
-                                                  blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
+    SparseEdgeCountUpdates updates = edge_count_updates_sparse(partition.getBlockmodel(), current_block,
+                                                               proposal.proposal, blocks_out_neighbors,
+                                                               blocks_in_neighbors, self_edge_weight);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
     double hastings =
         hastings_correction(partition, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
@@ -478,7 +633,7 @@ Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, Part
             // Block assignment used to re-create the Partition after each batch to improve mixing time of
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(partition.getBlock_assignment());
-            #pragma omp parallel for
+            #pragma omp parallel for schedule(dynamic)
             for (int vertex = start; vertex < end; ++vertex) {
                 VertexMove proposal = propose_gibbs_move(partition, vertex, graph.out_neighbors,
                                                          graph.in_neighbors);

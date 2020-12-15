@@ -43,12 +43,25 @@ int choose_neighbor(SparseVector<double> &multinomial_distribution);
 NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition, common::ProposalAndEdgeCounts &proposal);
 /// TODO
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
-/// TODO
+
+/// Removes entries from in whose index is index1 or index
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);
-/// TODO
+
+/// Removes entries from in whose index is index1 or index
+std::map<int, int> exclude_indices(std::map<int, int> &in, int index1, int index2);
+
+/// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
 std::vector<int> index_nonzero(std::vector<int> &values, std::vector<int> &indices);
-/// TODO
+
+/// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
+std::vector<int> index_nonzero(std::vector<int> &values, std::map<int, int> &indices);
+
+/// Returns the non-zero values in <in>
 std::vector<int> nonzeros(std::vector<int> &in);
+
+/// Returns the non-zero values in <in>
+std::vector<int> nonzeros(std::map<int, int> &in);
+
 /// TODO
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                         std::vector<int> &block_partition, Partition &partition, bool block_merge = false);
