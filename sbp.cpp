@@ -16,6 +16,7 @@ Partition sbp::stochastic_block_partition(Graph &graph) {
                       << partition.getNum_blocks() - partition.getNum_blocks_to_merge() << std::endl;
         }
         partition = block_merge::merge_blocks(partition, graph.out_neighbors);
+        std::cout << "Starting MCMC vertex moves" << std::endl;
         partition = finetune::asynchronous_gibbs(partition, graph, partition_triplet);
         partition = partition_triplet.get_next_partition(partition);
     }

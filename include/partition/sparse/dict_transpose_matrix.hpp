@@ -16,6 +16,7 @@
 
 /**
  * C++ interface of the dictionary (map of maps) sparse matrix, with a transpose for faster column indexing
+ * TODO: figure out where 0s are being added to the matrix, and whether or not we need to get rid of that
  */
 class DictTransposeMatrix {
   public:

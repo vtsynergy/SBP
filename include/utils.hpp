@@ -154,6 +154,15 @@ inline std::vector<double> operator/(const std::vector<double> &lhs, const doubl
     return result;
 }
 
+/// Allows elementwise multiplication of a std::vector<double> and a scalar.
+inline std::vector<double> operator*(const std::vector<double> &lhs, const double &rhs) {
+    std::vector<double> result(lhs.size());
+    for (int i = 0; i < lhs.size(); ++i) {
+        result[i] = lhs[i] * rhs;
+    }
+    return result;
+}
+
 /// Allows elementwise addition of two std::vector<double> objects.
 inline std::vector<double> operator+(const std::vector<double> &lhs, const std::vector<double> &rhs) {
     std::vector<double> result(lhs.size());
