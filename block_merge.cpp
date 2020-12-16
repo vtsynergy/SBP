@@ -109,13 +109,13 @@ double block_merge::compute_delta_entropy_sparse(int current_block, int proposal
                                                  SparseEdgeCountUpdates &updates,
                                                  common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    std::map<int, int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
-    std::map<int, int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
-    std::map<int, int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
-    std::map<int, int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
+    MapVector<int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
+    MapVector<int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
+    MapVector<int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
+    MapVector<int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
 
     // Exclude current_block, proposal to prevent double counting
-    std::map<int, int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
+    MapVector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
     old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
     old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
     std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
@@ -186,8 +186,8 @@ SparseEdgeCountUpdates block_merge::edge_count_updates_sparse(DictTransposeMatri
                                                               int proposed_block, EdgeWeights &out_blocks,
                                                               EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
-    std::map<int, int> proposal_row = blockmodel.getrow_sparse(proposed_block);
-    std::map<int, int> proposal_col = blockmodel.getcol_sparse(proposed_block);
+    MapVector<int> proposal_row = blockmodel.getrow_sparse(proposed_block);
+    MapVector<int> proposal_col = blockmodel.getcol_sparse(proposed_block);
     int count_self = blockmodel.get(current_block, current_block);
     int count_in = count_self, count_out = count_self;
     for (uint i = 0; i < in_blocks.indices.size(); ++i) {
@@ -210,7 +210,7 @@ SparseEdgeCountUpdates block_merge::edge_count_updates_sparse(DictTransposeMatri
     proposal_row[proposed_block] += count_in;
     proposal_col[current_block] -= count_out;
     proposal_col[proposed_block] += count_out;
-    return SparseEdgeCountUpdates{std::map<int, int>(), proposal_row, std::map<int, int>(), proposal_col};
+    return SparseEdgeCountUpdates{MapVector<int>(), proposal_row, MapVector<int>(), proposal_col};
 }
 
 

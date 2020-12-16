@@ -53,8 +53,8 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
-std::map<int, int> common::exclude_indices(std::map<int, int> &in, int index1, int index2) {
-    std::map<int, int> out;
+MapVector<int> common::exclude_indices(MapVector<int> &in, int index1, int index2) {
+    MapVector<int> out;
     for (const std::pair<int, int> &element: in) {
         if (element.first == index1 || element.first == index2)
             continue;
@@ -84,7 +84,7 @@ std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int
     return results;
 }
 
-std::vector<int> common::index_nonzero(std::vector<int> &values, std::map<int, int> &indices_map) {
+std::vector<int> common::index_nonzero(std::vector<int> &values, MapVector<int> &indices_map) {
     // if (omp_get_thread_num() == 0)
     //     std::cout << "sparse version" << std::endl;
     std::vector<int> results;
@@ -109,7 +109,7 @@ std::vector<int> common::nonzeros(std::vector<int> &in) {
     return values;
 }
 
-std::vector<int> common::nonzeros(std::map<int, int> &in) {
+std::vector<int> common::nonzeros(MapVector<int> &in) {
     std::vector<int> values;
     for (const std::pair<int, int> &element : in) {
         if (element.second != 0) {

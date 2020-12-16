@@ -95,15 +95,15 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
 double finetune::compute_delta_entropy(int current_block, int proposal, Partition &partition,
                                        SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    std::map<int, int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
-    std::map<int, int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
-    std::map<int, int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
-    std::map<int, int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
+    MapVector<int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
+    MapVector<int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
+    MapVector<int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
+    MapVector<int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
 
     // TODO: get rid of unneeded excludes and indexing for sparse implementation
     // Exclude current_block, proposal to prevent double counting
-    std::map<int, int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
-    std::map<int, int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
+    MapVector<int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
+    MapVector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
     old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
     old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
     std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
@@ -239,10 +239,10 @@ EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, i
 SparseEdgeCountUpdates finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block,
                                                            int proposed_block, EdgeWeights &out_blocks,
                                                            EdgeWeights &in_blocks, int self_edge_weight) {
-    std::map<int, int> block_row = blockmodel.getrow_sparse(current_block);
-    std::map<int, int> block_col = blockmodel.getcol_sparse(current_block);
-    std::map<int, int> proposal_row = blockmodel.getrow_sparse(proposed_block);
-    std::map<int, int> proposal_col = blockmodel.getcol_sparse(proposed_block);
+    MapVector<int> block_row = blockmodel.getrow_sparse(current_block);
+    MapVector<int> block_col = blockmodel.getcol_sparse(current_block);
+    MapVector<int> proposal_row = blockmodel.getrow_sparse(proposed_block);
+    MapVector<int> proposal_col = blockmodel.getcol_sparse(proposed_block);
 
     int count_in_block = 0, count_out_block = 0;
     int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;

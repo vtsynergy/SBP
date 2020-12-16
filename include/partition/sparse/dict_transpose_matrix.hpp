@@ -9,6 +9,7 @@
 
 #include "csparse_matrix.hpp"
 // TODO: figure out where to put utils.hpp so this never happens
+#include "typedefs.hpp"
 #include "../../utils.hpp"
 
 // #include <Eigen/Core>
@@ -33,9 +34,9 @@ class DictTransposeMatrix {
     /// Returns all values in the requested row as a dense vector.
     std::vector<int> getrow(int row);
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    std::map<int, int> getcol_sparse(int col);
+    MapVector<int> getcol_sparse(int col);
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    std::map<int, int> getrow_sparse(int row);
+    MapVector<int> getrow_sparse(int row);
     EdgeWeights incoming_edges(int block);
     Indices nonzero();
     EdgeWeights outgoing_edges(int block);

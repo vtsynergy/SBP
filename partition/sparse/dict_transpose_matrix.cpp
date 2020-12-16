@@ -50,15 +50,16 @@ std::vector<int> DictTransposeMatrix::getcol(int col) {
     return col_values;
 }
 
-std::map<int, int> DictTransposeMatrix::getcol_sparse(int col) {
+MapVector<int> DictTransposeMatrix::getcol_sparse(int col) {
     check_col_bounds(col);
-    std::map<int, int> col_values;
-    const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
-    for (const std::pair<int, int> element : matrix_col) {
-        // col_values[element.first] = element.second;
-        col_values.insert(element);
-    }
-    return col_values;
+    return this->matrix_transpose[col];
+    // std::map<int, int> col_values;
+    // const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
+    // for (const std::pair<int, int> element : matrix_col) {
+    //     // col_values[element.first] = element.second;
+    //     col_values.insert(element);
+    // }
+    // return col_values;
 }
 
 std::vector<int> DictTransposeMatrix::getrow(int row) {
@@ -75,14 +76,15 @@ std::vector<int> DictTransposeMatrix::getrow(int row) {
     return row_values;
 }
 
-std::map<int, int> DictTransposeMatrix::getrow_sparse(int row) {
+MapVector<int> DictTransposeMatrix::getrow_sparse(int row) {
     check_row_bounds(row);
-    std::map<int, int> row_values;
-    const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-    for (const std::pair<int, int> element : matrix_row) {
-        row_values[element.first] = element.second;
-    }
-    return row_values;
+    return this->matrix[row];
+    // std::map<int, int> row_values;
+    // const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+    // for (const std::pair<int, int> element : matrix_row) {
+    //     row_values[element.first] = element.second;
+    // }
+    // return row_values;
 }
 
 EdgeWeights DictTransposeMatrix::incoming_edges(int block) {

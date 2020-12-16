@@ -48,19 +48,19 @@ double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);
 
 /// Removes entries from in whose index is index1 or index
-std::map<int, int> exclude_indices(std::map<int, int> &in, int index1, int index2);
+MapVector<int> exclude_indices(MapVector<int> &in, int index1, int index2);
 
 /// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
 std::vector<int> index_nonzero(std::vector<int> &values, std::vector<int> &indices);
 
 /// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
-std::vector<int> index_nonzero(std::vector<int> &values, std::map<int, int> &indices);
+std::vector<int> index_nonzero(std::vector<int> &values, MapVector<int> &indices);
 
 /// Returns the non-zero values in <in>
 std::vector<int> nonzeros(std::vector<int> &in);
 
 /// Returns the non-zero values in <in>
-std::vector<int> nonzeros(std::map<int, int> &in);
+std::vector<int> nonzeros(MapVector<int> &in);
 
 /// TODO
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,

@@ -4,6 +4,7 @@
 #ifndef SBP_TYPEDEFS_HPP
 #define SBP_TYPEDEFS_HPP
 
+#include <unordered_map>
 #include <vector>
 
 typedef std::vector<std::vector<int>> NeighborList;
@@ -29,6 +30,9 @@ struct SparseVector {
         return result;
     }
 };
+
+template <typename T> 
+using MapVector = std::unordered_map<int, T>;
 
 // template<class T>
 // using SparseVector = std::vector

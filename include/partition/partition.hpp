@@ -25,10 +25,10 @@ typedef struct edge_count_updates_t {
 } EdgeCountUpdates;
 
 typedef struct sparse_edge_count_updates_t {
-    std::map<int, int> block_row;
-    std::map<int, int> proposal_row;
-    std::map<int, int> block_col;
-    std::map<int, int> proposal_col;
+    MapVector<int> block_row;
+    MapVector<int> proposal_row;
+    MapVector<int> block_col;
+    MapVector<int> proposal_col;
 } SparseEdgeCountUpdates;
 
 class Partition {
