@@ -100,7 +100,7 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     MapVector<int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
     MapVector<int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
 
-    // TODO: get rid of unneeded excludes and indexing for sparse implementation
+    // TODO: optimize the exclude_indices method
     // Exclude current_block, proposal to prevent double counting
     MapVector<int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
     MapVector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
@@ -109,41 +109,22 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
     std::vector<int> old_block_degrees_out = common::exclude_indices(partition.getBlock_degrees_out(), current_block, proposal);
 
-    // Remove 0 indices
-    std::vector<int> new_block_row_degrees_in = common::index_nonzero(block_degrees.block_degrees_in, updates.block_row); // added
-    std::vector<int> new_proposal_row_degrees_in = common::index_nonzero(block_degrees.block_degrees_in, updates.proposal_row);
-    std::vector<int> new_block_row = common::nonzeros(updates.block_row); // added
-    std::vector<int> new_proposal_row = common::nonzeros(updates.proposal_row);
-    std::vector<int> new_block_col_degrees_out = common::index_nonzero(new_block_degrees_out, new_block_col); // added
-    std::vector<int> new_proposal_col_degrees_out = common::index_nonzero(new_block_degrees_out, new_proposal_col);
-    std::vector<int> new_block_col_vector = common::nonzeros(new_block_col); // added
-    std::vector<int> new_proposal_col_vector = common::nonzeros(new_proposal_col);
-
-    std::vector<int> old_block_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_block_row);
-    std::vector<int> old_proposal_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_proposal_row);
-    std::vector<int> old_block_row_vector = common::nonzeros(old_block_row);
-    std::vector<int> old_proposal_row_vector = common::nonzeros(old_proposal_row);
-    std::vector<int> old_block_col_degrees_out = common::index_nonzero(old_block_degrees_out, old_block_col);
-    std::vector<int> old_proposal_col_degrees_out = common::index_nonzero(old_block_degrees_out, old_proposal_col);
-    std::vector<int> old_block_col_vector = common::nonzeros(old_block_col);
-    std::vector<int> old_proposal_col_vector = common::nonzeros(old_proposal_col);
-
     double delta_entropy = 0.0;
-    delta_entropy -= common::delta_entropy_temp(new_block_row, new_block_row_degrees_in,
-                                                block_degrees.block_degrees_out[current_block]); // added
-    delta_entropy -= common::delta_entropy_temp(new_proposal_row, new_proposal_row_degrees_in,
+    delta_entropy -= common::delta_entropy_temp(updates.block_row, block_degrees.block_degrees_in,
+                                                block_degrees.block_degrees_out[current_block]);
+    delta_entropy -= common::delta_entropy_temp(updates.proposal_row, block_degrees.block_degrees_in,
                                                 block_degrees.block_degrees_out[proposal]);
-    delta_entropy -= common::delta_entropy_temp(new_block_col_vector, new_block_col_degrees_out,
-                                                block_degrees.block_degrees_in[current_block]); // added
-    delta_entropy -= common::delta_entropy_temp(new_proposal_col_vector, new_proposal_col_degrees_out,
+    delta_entropy -= common::delta_entropy_temp(new_block_col, new_block_degrees_out,
+                                                block_degrees.block_degrees_in[current_block]);
+    delta_entropy -= common::delta_entropy_temp(new_proposal_col, new_block_degrees_out,
                                                 block_degrees.block_degrees_in[proposal]);
-    delta_entropy += common::delta_entropy_temp(old_block_row_vector, old_block_row_degrees_in,
+    delta_entropy += common::delta_entropy_temp(old_block_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[current_block]);
-    delta_entropy += common::delta_entropy_temp(old_proposal_row_vector, old_proposal_row_degrees_in,
+    delta_entropy += common::delta_entropy_temp(old_proposal_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[proposal]);
-    delta_entropy += common::delta_entropy_temp(old_block_col_vector, old_block_col_degrees_out,
+    delta_entropy += common::delta_entropy_temp(old_block_col, old_block_degrees_out,
                                                 partition.getBlock_degrees_in()[current_block]);
-    delta_entropy += common::delta_entropy_temp(old_proposal_col_vector, old_proposal_col_degrees_out,
+    delta_entropy += common::delta_entropy_temp(old_proposal_col, old_block_degrees_out,
                                                 partition.getBlock_degrees_in()[proposal]);
     return delta_entropy;
 }

@@ -44,6 +44,8 @@ NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partitio
 /// TODO
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
 
+double delta_entropy_temp(MapVector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
+
 /// Removes entries from in whose index is index1 or index
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);
 

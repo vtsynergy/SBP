@@ -40,6 +40,18 @@ double common::delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int>
     return utils::sum<double>(result);
 }
 
+double common::delta_entropy_temp(MapVector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {
+    double result = 0.0;
+    for (const std::pair<int, int> &pair : row_or_col) {
+        if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
+            continue;
+        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    return result;
+}
+
 std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int index2) {
     std::vector<int> out = utils::constant<int>(in.size() - 1, 0);
     int count = 0;
@@ -53,6 +65,7 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
+// TODO: optimize this so as not to iterate over entire map
 MapVector<int> common::exclude_indices(MapVector<int> &in, int index1, int index2) {
     MapVector<int> out;
     for (const std::pair<int, int> &element: in) {
