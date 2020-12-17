@@ -65,11 +65,11 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
-MapVector<int> common::exclude_indices(MapVector<int> &in, int index1, int index2) {
-    MapVector<int> out(in);
-    out.erase(index1);
-    out.erase(index2);
-    return out;
+MapVector<int>& common::exclude_indices(MapVector<int> &in, int index1, int index2) {
+    // MapVector<int> out(in);
+    in.erase(index1);
+    in.erase(index2);
+    return in;
 }
 
 std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int> &indices) {

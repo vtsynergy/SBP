@@ -55,8 +55,9 @@ bool early_stop(int iteration, PartitionTriplet &partitions, double initial_entr
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
 EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
-SparseEdgeCountUpdates edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
-                                                 EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
+void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
+                               SparseEdgeCountUpdates &updates);
 EdgeWeights edge_weights(NeighborList &neighbors, int vertex);
 double hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,

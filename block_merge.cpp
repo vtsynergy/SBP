@@ -51,8 +51,9 @@ block_merge::ProposalEvaluation block_merge::propose_merge_sparse(int current_bl
     EdgeWeights in_blocks = partition.getBlockmodel().incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
         common::propose_new_block(current_block, out_blocks, in_blocks, block_partition, partition, true);
-    SparseEdgeCountUpdates updates =
-        edge_count_updates_sparse(partition.getBlockmodel(), current_block, proposal.proposal, out_blocks, in_blocks);
+    SparseEdgeCountUpdates updates;
+    edge_count_updates_sparse(partition.getBlockmodel(), current_block, proposal.proposal, out_blocks, in_blocks,
+                              updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
     double delta_entropy =
         compute_delta_entropy_sparse(current_block, proposal.proposal, partition, updates, new_block_degrees);
@@ -166,12 +167,12 @@ EdgeCountUpdates block_merge::edge_count_updates(DictTransposeMatrix &blockmodel
     return EdgeCountUpdates{std::vector<int>(), proposal_row, std::vector<int>(), proposal_col};
 }
 
-SparseEdgeCountUpdates block_merge::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block,
-                                                              int proposed_block, EdgeWeights &out_blocks,
-                                                              EdgeWeights &in_blocks) {
+void block_merge::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                                            EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                            SparseEdgeCountUpdates &updates) {
     // TODO: these are copy constructors, can we safely get rid of them?
-    MapVector<int> proposal_row = blockmodel.getrow_sparse(proposed_block);
-    MapVector<int> proposal_col = blockmodel.getcol_sparse(proposed_block);
+    updates.proposal_row = blockmodel.getrow_sparse(proposed_block);
+    updates.proposal_col = blockmodel.getcol_sparse(proposed_block);
     int count_self = blockmodel.get(current_block, current_block);
     int count_in = count_self, count_out = count_self;
     for (uint i = 0; i < in_blocks.indices.size(); ++i) {
@@ -180,7 +181,7 @@ SparseEdgeCountUpdates block_merge::edge_count_updates_sparse(DictTransposeMatri
         if (index == proposed_block) {
             count_in += value;
         }
-        proposal_col[index] += value;
+        updates.proposal_col[index] += value;
     }
     for (uint i = 0; i < out_blocks.indices.size(); ++i) {
         int index = out_blocks.indices[i];
@@ -188,13 +189,12 @@ SparseEdgeCountUpdates block_merge::edge_count_updates_sparse(DictTransposeMatri
         if (index == proposed_block) {
             count_out += value;
         }
-        proposal_row[index] += value;
+        updates.proposal_row[index] += value;
     }
-    proposal_row[current_block] -= count_in;
-    proposal_row[proposed_block] += count_in;
-    proposal_col[current_block] -= count_out;
-    proposal_col[proposed_block] += count_out;
-    return SparseEdgeCountUpdates{MapVector<int>(), proposal_row, MapVector<int>(), proposal_col};
+    updates.proposal_row[current_block] -= count_in;
+    updates.proposal_row[proposed_block] += count_in;
+    updates.proposal_col[current_block] -= count_out;
+    updates.proposal_col[proposed_block] += count_out;
 }
 
 

@@ -102,8 +102,8 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     MapVector<int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
 
     // Exclude current_block, proposal to prevent double counting
-    MapVector<int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
-    MapVector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
+    MapVector<int> &new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
+    MapVector<int> &new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
     old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
     old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
 
@@ -215,13 +215,13 @@ EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, i
     return EdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
 }
 
-SparseEdgeCountUpdates finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block,
-                                                           int proposed_block, EdgeWeights &out_blocks,
-                                                           EdgeWeights &in_blocks, int self_edge_weight) {
-    MapVector<int> block_row = blockmodel.getrow_sparse(current_block);
-    MapVector<int> block_col = blockmodel.getcol_sparse(current_block);
-    MapVector<int> proposal_row = blockmodel.getrow_sparse(proposed_block);
-    MapVector<int> proposal_col = blockmodel.getcol_sparse(proposed_block);
+void finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                                         EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
+                                         SparseEdgeCountUpdates &updates) {
+    updates.block_row = blockmodel.getrow_sparse(current_block);
+    updates.block_col = blockmodel.getcol_sparse(current_block);
+    updates.proposal_row = blockmodel.getrow_sparse(proposed_block);
+    updates.proposal_col = blockmodel.getcol_sparse(proposed_block);
 
     int count_in_block = 0, count_out_block = 0;
     int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
@@ -235,8 +235,8 @@ SparseEdgeCountUpdates finetune::edge_count_updates_sparse(DictTransposeMatrix &
         if (index == proposed_block) {
             count_in_proposal += value;
         }
-        block_col[index] -= value;
-        proposal_col[index] += value;
+        updates.block_col[index] -= value;
+        updates.proposal_col[index] += value;
     }
     for (uint i = 0; i < out_blocks.indices.size(); ++i) {
         int index = out_blocks.indices[i];
@@ -247,21 +247,19 @@ SparseEdgeCountUpdates finetune::edge_count_updates_sparse(DictTransposeMatrix &
         if (index == proposed_block) {
             count_out_proposal += value;
         }
-        block_row[index] -= value;
-        proposal_row[index] += value;
+        updates.block_row[index] -= value;
+        updates.proposal_row[index] += value;
     }
 
-    proposal_row[current_block] -= count_in_proposal;
-    proposal_row[proposed_block] += count_in_proposal;
-    proposal_col[current_block] -= count_out_proposal;
-    proposal_col[proposed_block] += count_out_proposal;
+    updates.proposal_row[current_block] -= count_in_proposal;
+    updates.proposal_row[proposed_block] += count_in_proposal;
+    updates.proposal_col[current_block] -= count_out_proposal;
+    updates.proposal_col[proposed_block] += count_out_proposal;
 
-    block_row[current_block] -= count_in_block;
-    block_row[proposed_block] += count_in_block;
-    block_col[current_block] -= count_out_block;
-    block_col[proposed_block] += count_out_block;
-
-    return SparseEdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
+    updates.block_row[current_block] -= count_in_block;
+    updates.block_row[proposed_block] += count_in_block;
+    updates.block_col[current_block] -= count_out_block;
+    updates.block_col[proposed_block] += count_out_block;
 }
 
 // Reads: NA
@@ -488,9 +486,11 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
         }
     }
 
-    SparseEdgeCountUpdates updates = edge_count_updates_sparse(partition.getBlockmodel(), current_block,
+    // TODO: try moving updates to be created outside of the function
+    SparseEdgeCountUpdates updates;
+    edge_count_updates_sparse(partition.getBlockmodel(), current_block,
                                                                proposal.proposal, blocks_out_neighbors,
-                                                               blocks_in_neighbors, self_edge_weight);
+                                                               blocks_in_neighbors, self_edge_weight, updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
     double hastings =
         hastings_correction(partition, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);

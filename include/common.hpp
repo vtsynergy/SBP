@@ -50,7 +50,7 @@ double delta_entropy_temp(MapVector<int> &row_or_col, std::vector<int> &block_de
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);
 
 /// Removes entries from in whose index is index1 or index
-MapVector<int> exclude_indices(MapVector<int> &in, int index1, int index2);
+MapVector<int>& exclude_indices(MapVector<int> &in, int index1, int index2);
 
 /// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
 std::vector<int> index_nonzero(std::vector<int> &values, std::vector<int> &indices);

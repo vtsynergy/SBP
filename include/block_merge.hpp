@@ -39,11 +39,10 @@ ProposalEvaluation propose_merge_sparse(int current_block, Partition &partition,
 EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks);
 
-/// Computes the new edge counts for the affected blocks (communities) under a proposed block merge.
-/// Returns the results as sparse vectors (unordered_maps)
-SparseEdgeCountUpdates edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block,
-                                                 int proposed_block, EdgeWeights &out_blocks,
-                                                 EdgeWeights &in_blocks);
+/// Fills the new edge counts for the affected blocks (communities) under a proposed block merge.
+/// Results are stored as sparse vectors (unordered_maps)
+void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
 
 /// Computes the change in entropy under a proposed block merge
 double compute_delta_entropy(int current_block, int proposal, Partition &partition, EdgeCountUpdates &updates,
