@@ -65,32 +65,19 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
-// TODO: optimize this so as not to iterate over entire map
 MapVector<int> common::exclude_indices(MapVector<int> &in, int index1, int index2) {
-    MapVector<int> out;
-    for (const std::pair<int, int> &element: in) {
-        if (element.first == index1 || element.first == index2)
-            continue;
-        int offset = 0;
-        if (element.first > index1)
-            offset += 1;
-        if (element.first > index2)
-            offset += 1;
-        out[element.first - offset] = element.second;
-    }
+    MapVector<int> out(in);
+    out.erase(index1);
+    out.erase(index2);
     return out;
 }
 
 std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int> &indices) {
-    // if (omp_get_thread_num() == 0)
-    //     std::cout << "dense version" << std::endl;
     std::vector<int> results;
     for (int i = 0; i < indices.size(); ++i) {
         int index = indices[i];
         if (index != 0) {
             int value = values[i];
-            // if (omp_get_thread_num() == 0)
-            //     std::cout << "pushing " << value << " because " << i << " = " << index << std::endl;
             results.push_back(value);
         }
     }

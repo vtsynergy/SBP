@@ -105,6 +105,7 @@ double block_merge::compute_delta_entropy(int current_block, int proposal, Parti
     return delta_entropy;
 }
 
+// TODO: reduce amount of copy constructors used
 double block_merge::compute_delta_entropy_sparse(int current_block, int proposal, Partition &partition,
                                                  SparseEdgeCountUpdates &updates,
                                                  common::NewBlockDegrees &block_degrees) {
@@ -118,21 +119,19 @@ double block_merge::compute_delta_entropy_sparse(int current_block, int proposal
     MapVector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
     old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
     old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
-    std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
-    std::vector<int> old_block_degrees_out = common::exclude_indices(partition.getBlock_degrees_out(), current_block, proposal);
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.proposal_row, block_degrees.block_degrees_in,
                                                 block_degrees.block_degrees_out[proposal]);
-    delta_entropy -= common::delta_entropy_temp(new_proposal_col, new_block_degrees_out,
+    delta_entropy -= common::delta_entropy_temp(new_proposal_col, block_degrees.block_degrees_out,
                                                 block_degrees.block_degrees_in[proposal]);
     delta_entropy += common::delta_entropy_temp(old_block_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[current_block]);
     delta_entropy += common::delta_entropy_temp(old_proposal_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[proposal]);
-    delta_entropy += common::delta_entropy_temp(old_block_col, old_block_degrees_out,
+    delta_entropy += common::delta_entropy_temp(old_block_col, partition.getBlock_degrees_out(),
                                                 partition.getBlock_degrees_in()[current_block]);
-    delta_entropy += common::delta_entropy_temp(old_proposal_col, old_block_degrees_out,
+    delta_entropy += common::delta_entropy_temp(old_proposal_col, partition.getBlock_degrees_out(),
                                                 partition.getBlock_degrees_in()[proposal]);
     return delta_entropy;
 }
