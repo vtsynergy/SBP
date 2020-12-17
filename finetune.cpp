@@ -92,38 +92,32 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     return delta_entropy;
 }
 
-// TODO: reduce amount of copy constructors used
 double finetune::compute_delta_entropy(int current_block, int proposal, Partition &partition,
                                        SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    MapVector<int> old_block_row = partition.getBlockmodel().getrow_sparse(current_block); // M_r_t1
-    MapVector<int> old_proposal_row = partition.getBlockmodel().getrow_sparse(proposal);   // M_s_t1
-    MapVector<int> old_block_col = partition.getBlockmodel().getcol_sparse(current_block); // M_t2_r
-    MapVector<int> old_proposal_col = partition.getBlockmodel().getcol_sparse(proposal);   // M_t2_s
-
-    // Exclude current_block, proposal to prevent double counting
-    MapVector<int> &new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
-    MapVector<int> &new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
-    old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
-    old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
+    const DictTransposeMatrix &blockmodel = partition.getBlockmodel();
+    const MapVector<int> &old_block_row = blockmodel.getrow_sparse(current_block); // M_r_t1
+    const MapVector<int> &old_proposal_row = blockmodel.getrow_sparse(proposal);   // M_s_t1
+    const MapVector<int> &old_block_col = blockmodel.getcol_sparse(current_block); // M_t2_r
+    const MapVector<int> &old_proposal_col = blockmodel.getcol_sparse(proposal);   // M_t2_s
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.block_row, block_degrees.block_degrees_in,
                                                 block_degrees.block_degrees_out[current_block]);
     delta_entropy -= common::delta_entropy_temp(updates.proposal_row, block_degrees.block_degrees_in,
                                                 block_degrees.block_degrees_out[proposal]);
-    delta_entropy -= common::delta_entropy_temp(new_block_col, block_degrees.block_degrees_out,
-                                                block_degrees.block_degrees_in[current_block]);
-    delta_entropy -= common::delta_entropy_temp(new_proposal_col, block_degrees.block_degrees_out,
-                                                block_degrees.block_degrees_in[proposal]);
+    delta_entropy -= common::delta_entropy_temp(updates.block_col, block_degrees.block_degrees_out,
+                                                block_degrees.block_degrees_in[current_block], current_block, proposal);
+    delta_entropy -= common::delta_entropy_temp(updates.proposal_col, block_degrees.block_degrees_out,
+                                                block_degrees.block_degrees_in[proposal], current_block, proposal);
     delta_entropy += common::delta_entropy_temp(old_block_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[current_block]);
     delta_entropy += common::delta_entropy_temp(old_proposal_row, partition.getBlock_degrees_in(),
                                                 partition.getBlock_degrees_out()[proposal]);
     delta_entropy += common::delta_entropy_temp(old_block_col, partition.getBlock_degrees_out(),
-                                                partition.getBlock_degrees_in()[current_block]);
+                                                partition.getBlock_degrees_in()[current_block], current_block, proposal);
     delta_entropy += common::delta_entropy_temp(old_proposal_col, partition.getBlock_degrees_out(),
-                                                partition.getBlock_degrees_in()[proposal]);
+                                                partition.getBlock_degrees_in()[proposal], current_block, proposal);
     return delta_entropy;
 }
 
@@ -486,7 +480,6 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
         }
     }
 
-    // TODO: try moving updates to be created outside of the function
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(partition.getBlockmodel(), current_block,
                                                                proposal.proposal, blocks_out_neighbors,

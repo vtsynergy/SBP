@@ -40,10 +40,24 @@ double common::delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int>
     return utils::sum<double>(result);
 }
 
-double common::delta_entropy_temp(MapVector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {
+double common::delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree) {
     double result = 0.0;
     for (const std::pair<int, int> &pair : row_or_col) {
         if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
+            continue;
+        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    return result;
+}
+
+double common::delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                                  int current_block, int proposal) {
+    double result = 0.0;
+    for (const std::pair<int, int> &pair : row_or_col) {
+        // 0s sometimes get inserted into the sparse matrix
+        if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
             continue;
         double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
         temp = (double) pair.second * std::log(temp);

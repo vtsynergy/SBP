@@ -40,11 +40,18 @@ int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighb
 int choose_neighbor(SparseVector<double> &multinomial_distribution);
 
 /// Computes the block degrees under a proposed move
-NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition, common::ProposalAndEdgeCounts &proposal);
-/// TODO
+NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition,
+                                          common::ProposalAndEdgeCounts &proposal);
+
+/// Computes the entropy of one row or column of data
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
 
-double delta_entropy_temp(MapVector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
+/// Computes the entropy of one row or column of sparse data
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
+
+/// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int current_block, int proposal);
 
 /// Removes entries from in whose index is index1 or index
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);

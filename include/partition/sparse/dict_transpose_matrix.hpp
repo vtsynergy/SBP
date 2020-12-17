@@ -36,8 +36,12 @@ class DictTransposeMatrix {
     std::vector<int> getrow(int row);
     /// Returns all values in the requested column as a sparse vector (ordered map).
     MapVector<int> getcol_sparse(int col);
+    /// Returns all values in the requested column as a sparse vector (ordered map) reference.
+    const MapVector<int>& getcol_sparse(int col) const;
     /// Returns all values in the requested column as a sparse vector (ordered map).
     MapVector<int> getrow_sparse(int row);
+    /// Returns all values in the requested column as a sparse vector (ordered map) reference.
+    const MapVector<int>& getrow_sparse(int row) const;
     EdgeWeights incoming_edges(int block);
     Indices nonzero();
     EdgeWeights outgoing_edges(int block);
@@ -53,6 +57,8 @@ class DictTransposeMatrix {
   private:
     void check_row_bounds(int row);
     void check_col_bounds(int col);
+    void check_row_bounds(int row) const;
+    void check_col_bounds(int col) const;
     int ncols;
     int nrows;
     std::vector<std::unordered_map<int, int>> matrix;

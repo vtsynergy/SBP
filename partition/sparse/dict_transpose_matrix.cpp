@@ -20,6 +20,18 @@ void DictTransposeMatrix::check_col_bounds(int col) {
     }
 }
 
+void DictTransposeMatrix::check_row_bounds(int row) const {
+    if (row < 0 || row >= this->nrows) {
+        throw IndexOutOfBoundsException(row, this->nrows);
+    }
+}
+
+void DictTransposeMatrix::check_col_bounds(int col) const {
+    if (col < 0 || col >= this->ncols) {
+        throw IndexOutOfBoundsException(col, this->ncols);
+    }
+}
+
 DictTransposeMatrix DictTransposeMatrix::copy() {
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
     DictTransposeMatrix dict_matrix(this->nrows, this->ncols);
@@ -53,13 +65,11 @@ std::vector<int> DictTransposeMatrix::getcol(int col) {
 MapVector<int> DictTransposeMatrix::getcol_sparse(int col) {
     check_col_bounds(col);
     return this->matrix_transpose[col];
-    // std::map<int, int> col_values;
-    // const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
-    // for (const std::pair<int, int> element : matrix_col) {
-    //     // col_values[element.first] = element.second;
-    //     col_values.insert(element);
-    // }
-    // return col_values;
+}
+
+const MapVector<int>& DictTransposeMatrix::getcol_sparse(int col) const {
+    check_col_bounds(col);
+    return this->matrix_transpose[col];
 }
 
 std::vector<int> DictTransposeMatrix::getrow(int row) {
@@ -79,12 +89,11 @@ std::vector<int> DictTransposeMatrix::getrow(int row) {
 MapVector<int> DictTransposeMatrix::getrow_sparse(int row) {
     check_row_bounds(row);
     return this->matrix[row];
-    // std::map<int, int> row_values;
-    // const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-    // for (const std::pair<int, int> element : matrix_row) {
-    //     row_values[element.first] = element.second;
-    // }
-    // return row_values;
+}
+
+const MapVector<int>& DictTransposeMatrix::getrow_sparse(int row) const {
+    check_row_bounds(row);
+    return this->matrix[row];
 }
 
 EdgeWeights DictTransposeMatrix::incoming_edges(int block) {
@@ -97,18 +106,6 @@ EdgeWeights DictTransposeMatrix::incoming_edges(int block) {
         values.push_back(element.second);
     }
     return EdgeWeights {indices, values};
-
-    // for (int row = 0; row < this->nrows; ++row) {
-    //     const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-    //     for (const std::pair<int, int> &element : matrix_row) {
-    //         if (element.first == block) {
-    //             indices.push_back(row);
-    //             values.push_back(element.second);
-    //             break;
-    //         }
-    //     }
-    // }
-    // return EdgeWeights {indices, values};
 }
 
 Indices DictTransposeMatrix::nonzero() {
@@ -120,12 +117,6 @@ Indices DictTransposeMatrix::nonzero() {
             row_vector.push_back(row);
             col_vector.push_back(element.first);
         }
-        // for (int col = 0; col < ncols; ++col) {
-        //     if (matrix(row, col) != 0) {
-        //         row_vector.push_back(row);
-        //         col_vector.push_back(col);
-        //     }
-        // }
     }
     return Indices{row_vector, col_vector};
 }
@@ -145,9 +136,6 @@ int DictTransposeMatrix::sum() {
         for (const std::pair<int, int> &element : matrix_row) {
             total += element.second;
         }
-        // for (int col = 0; col < ncols; ++col) {
-        //     total += matrix(row, col);
-        // }
     }
     return total;
 }
@@ -159,17 +147,11 @@ std::vector<int> DictTransposeMatrix::sum(int axis) {
     if (axis == 0) {  // sum across columns
         std::vector<int> totals(this->ncols, 0);
         for (int row_index = 0; row_index < this->nrows; ++row_index) {
-        // for (const std::unordered_map<int, int> &row : this->matrix) {
             const std::unordered_map<int, int> &row = this->matrix[row_index];
             for (const std::pair<int, int> &element : row) {
                 totals[element.first] += totals[element.second];
             }
         }
-        // for (int row = 0; row < this->nrows; ++row) {
-        //     for (int col = 0; col < this->ncols; ++col) {
-        //         totals[col] += this->matrix(row, col);
-        //     }
-        // }
         return totals;  // py::array_t<int>(this->ncols, totals);
     } else {  // (axis == 1) sum across rows
         std::vector<int> totals(this->nrows, 0);
@@ -178,9 +160,6 @@ std::vector<int> DictTransposeMatrix::sum(int axis) {
             for (const std::pair<int, int> &element : matrix_row) {
                 totals[row] += element.second;
             }
-            // for (int col = 0; col < this->ncols; ++col) {
-            //     totals[row] += this->matrix(row, col);
-            // }
         }
         return totals;
     }
