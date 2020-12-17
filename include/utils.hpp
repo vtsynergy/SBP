@@ -28,6 +28,14 @@ namespace utils {
 /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_truePartition.tsv
 std::string build_filepath(argparse::ArgumentParser &args);
 
+/// Divides all elements in a MapVector<int> by a scalar, and stores the result in `result`
+inline void div(const MapVector<int> &lhs, const double &rhs, SparseVector<double> &result) {
+    for (const std::pair<int, int> &pair : lhs) {
+        result.idx.push_back(pair.first);
+        result.data.push_back((double) pair.second / rhs);
+    }
+}
+
 /// Assumes filepath corresponds to the path of a CSV file, and reads it as such.
 /// All data stored as strings.
 /// Note: does NOT differentiate between header row and data rows, and does NOT do data type conversion.
@@ -64,6 +72,15 @@ template <typename T> inline T sum(const std::vector<T> &vector) {
     T result = 0;
     for (const T &value : vector) {
         result += value;
+    }
+    return result;
+}
+
+/// Returns the sum of the elements in a vector, where sum and vector types are different.
+template <typename T, typename Y> inline T sum(const MapVector<Y> &vector) {
+    T result = 0;
+    for (const std::pair<int, Y> &pair : vector) {
+        result += pair.second;
     }
     return result;
 }

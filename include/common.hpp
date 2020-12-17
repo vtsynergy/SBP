@@ -36,8 +36,9 @@ typedef struct proposal_and_edge_counts_t {
 /// TODO
 int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights);
 
-/// TODO
-int choose_neighbor(SparseVector<double> &multinomial_distribution);
+/// Chooses a neighboring block using a multinomial distribution based on the number of edges connecting the current
+/// block to the neighboring blocks.
+int choose_neighbor(const SparseVector<double> &multinomial_distribution);
 
 /// Computes the block degrees under a proposed move
 NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition,
@@ -71,7 +72,7 @@ std::vector<int> nonzeros(std::vector<int> &in);
 /// Returns the non-zero values in <in>
 std::vector<int> nonzeros(MapVector<int> &in);
 
-/// TODO
+/// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                         std::vector<int> &block_partition, Partition &partition, bool block_merge = false);
 /// TODO

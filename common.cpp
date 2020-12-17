@@ -6,7 +6,7 @@ int common::choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int>
     return neighbor_indices[index];
 }
 
-int common::choose_neighbor(SparseVector<double> &multinomial_distribution) {
+int common::choose_neighbor(const SparseVector<double> &multinomial_distribution) {
     // std::cout << "in choose_neighbor" << std::endl;
     // std::cout << "data.size = " << multinomial_distribution.data.size() << " idx.size = ";
     // std::cout << multinomial_distribution.idx.size() << std::endl;
@@ -136,52 +136,48 @@ std::vector<int> common::nonzeros(MapVector<int> &in) {
 common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeWeights &out_blocks,
                                                         EdgeWeights &in_blocks, std::vector<int> &block_partition,
                                                         Partition &partition, bool block_merge) {
-    // std::cout << "in propose_new_block" << std::endl;
     std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
     std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
     int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
     int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     int k = k_out + k_in;
     int num_blocks = partition.getNum_blocks();
-    // std::cout << "done setting up" << std::endl;
+
     if (k == 0) { // If the current block has no neighbors, propose merge with random block
-        // std::cout << "choosing random block" << std::endl;
         int proposal = propose_random_block(current_block, num_blocks);
-        // std::cout << "done choosing random block" << std::endl;
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor = choose_neighbor(neighbor_indices, neighbor_weights);
     int neighbor_block = block_partition[neighbor];
-    // With a probability inversely proportional to block degree, propose a random block merge
 
+    // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((float)partition.getBlock_degrees()[neighbor_block] + num_blocks))) {
-        // std::cout << "choosing random block 2" << std::endl;
         int proposal = propose_random_block(current_block, num_blocks);
-        // std::cout << "done choosing random block 2" << std::endl;
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
+
     // Build multinomial distribution
-    std::vector<double> row = utils::to_double<int>(partition.getBlockmodel().getrow(neighbor_block));
-    std::vector<double> col = utils::to_double<int>(partition.getBlockmodel().getcol(neighbor_block));
-    std::vector<double> block_degrees = row + col;
-    if (block_merge) {
-        block_degrees[current_block] = 0.0;
-        double total_degrees = utils::sum<double>(block_degrees);
-        if (total_degrees == 0.0) { // Neighbor block has no neighbors, so propose a random block
-            // std::cout << "choosing random block 3" << std::endl;
+    double total_edges = 0.0;
+    const DictTransposeMatrix &blockmodel = partition.getBlockmodel();
+    const MapVector<int> &col = blockmodel.getcol_sparse(neighbor_block);
+    MapVector<int> edges = partition.getBlockmodel().getrow_sparse(neighbor_block);
+    for (const std::pair<int, int> &pair : col) {
+        edges[pair.first] += pair.second;
+    }
+    if (block_merge) {  // Make sure proposal != current_block
+        edges[current_block] = 0;
+        total_edges = utils::sum<double, int>(edges);
+        if (total_edges == 0.0) { // Neighbor block has no neighbors, so propose a random block
             int proposal = propose_random_block(current_block, num_blocks);
-            // std::cout << "done choosing random block 3" << std::endl;
             return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
         }
+    } else {
+        total_edges = utils::sum<double, int>(edges);
     }
     // Propose a block based on the multinomial distribution of block neighbor edges
-    // std::cout << "choosing neighbor: sum of block degrees = " << utils::sum<double>(block_degrees) << std::endl;
-    SparseVector<double> block_degrees_sparse = utils::to_sparse<double>(block_degrees);  // .sparseView();
-    // std::cout << "converted to sparse with size: " << block_degrees_sparse.data.size() << std::endl;
-    SparseVector<double> multinomial_distribution = block_degrees_sparse / utils::sum<double>(block_degrees);
-    // std::cout << "division done with size: " << multinomial_distribution.data.size() << std::endl;
+    SparseVector<double> multinomial_distribution;
+    utils::div(edges, total_edges, multinomial_distribution);
     int proposal = choose_neighbor(multinomial_distribution);
-    // std::cout << "done choosing neighbor" << std::endl;
     return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 
