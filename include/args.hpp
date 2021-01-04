@@ -3,6 +3,7 @@
 #define TCLAP_WRAPPER_ARGS
 
 #include <iostream>
+#include <omp.h>
 #include <string>
 
 #include "tclap/CmdLine.h"
@@ -19,6 +20,7 @@ class Args {
     std::string tag;
     std::string delimiter;
     bool undirected;
+    int threads;
 
     /// Parses the command-line options and stores the results in an easy-to-retrieve manner.
     Args(int argc, char** argv) {
@@ -53,6 +55,8 @@ class Args {
                                                    false, "\t", "string, usually `\\t` or `,`", parser);
             TCLAP::SwitchArg undirected("u", "undirected", "If set, graph will be treated as undirected", parser,
                                         false);
+            TCLAP::ValueArg<int> threads("", "threads", "The number of OpenMP threads to use. If less than 1, will set "
+                                         "number of threads to number of logical CPU cores", false, 0, "int", parser);
             parser.parse(argc, argv);
             this->overlap = overlap.getValue();
             this->blocksizevar = blocksizevar.getValue();
@@ -63,6 +67,7 @@ class Args {
             this->tag = tag.getValue();
             this->delimiter = delimiter.getValue();
             this->undirected = undirected.getValue();
+            this->threads = threads.getValue();
         } catch (TCLAP::ArgException &exception) {
             std::cerr << "ERROR: " << exception.error() << " for argument " << exception.argId() << std::endl;
             exit(-1);
