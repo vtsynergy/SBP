@@ -519,7 +519,7 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
 //   - partition.blockmodel proposed_block col
 //   - partition.overall_entropy
 /// TODO
-Partition &finetune::reassign_vertices(Partition &partition, Graph &graph, PartitionTriplet &partitions) {
+Partition &finetune::metropolis_hastings(Partition &partition, Graph &graph, PartitionTriplet &partitions) {
     if (partition.getNum_blocks() == 1) {
         return partition;
     }

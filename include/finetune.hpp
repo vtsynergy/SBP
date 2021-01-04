@@ -70,7 +70,7 @@ ProposalEvaluation propose_move(Partition &partition, int vertex, NeighborList &
                                 NeighborList &in_neighbors);
 VertexMove propose_gibbs_move(Partition &partition, int vertex, NeighborList &out_neighbors,
                             NeighborList &in_neighbors);
-Partition &reassign_vertices(Partition &partition, Graph &graph, PartitionTriplet &partitions);
+Partition &metropolis_hastings(Partition &partition, Graph &graph, PartitionTriplet &partitions);
 Partition &asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions);
 Partition &finetune_assignment(Partition &partition, Graph &graph);
 
