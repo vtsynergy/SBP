@@ -71,7 +71,7 @@ ProposalEvaluation propose_move(Partition &partition, int vertex, NeighborList &
 VertexMove propose_gibbs_move(Partition &partition, int vertex, NeighborList &out_neighbors,
                             NeighborList &in_neighbors);
 Partition &metropolis_hastings(Partition &partition, Graph &graph, PartitionTriplet &partitions);
-Partition &asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions);
+Partition &asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions, Args &args);
 Partition &finetune_assignment(Partition &partition, Graph &graph);
 
 } // namespace finetune

@@ -18,7 +18,7 @@ Partition sbp::stochastic_block_partition(Graph &graph, Args &args) {
         partition = block_merge::merge_blocks(partition, graph.out_neighbors);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
-            partition = finetune::asynchronous_gibbs(partition, graph, partition_triplet);
+            partition = finetune::asynchronous_gibbs(partition, graph, partition_triplet, args);
         else  // args.algorithm == "metropolis_hastings"
             partition = finetune::metropolis_hastings(partition, graph, partition_triplet);
         partition = partition_triplet.get_next_partition(partition);

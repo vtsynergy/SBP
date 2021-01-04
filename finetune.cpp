@@ -585,7 +585,7 @@ Partition &finetune::finetune_assignment(Partition &partition, Graph &graph) {
 }
 
 /// TODO
-Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions) {
+Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions, Args &args) {
     if (partition.getNum_blocks() == 1) {
         return partition;
     }
@@ -597,7 +597,7 @@ Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, Part
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
-        int num_batches = 10;
+        int num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices / num_batches));
         for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
