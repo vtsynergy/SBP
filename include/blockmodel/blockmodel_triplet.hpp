@@ -1,5 +1,5 @@
 /**
- * Stores the triplet of partitions needed for the fibonacci search.
+ * Stores the triplet of blockmodels needed for the fibonacci search.
  */
 #ifndef CPPSBP_PARTITION_PARTITION_TRIPLET_HPP
 #define CPPSBP_PARTITION_PARTITION_TRIPLET_HPP
@@ -7,35 +7,35 @@
 #include <iostream>
 #include <limits>
 
-#include "partition.hpp"
+#include "blockmodel.hpp"
 
 static const float BLOCK_REDUCTION_RATE = 0.5;
 
-class PartitionTriplet {
+class BlockmodelTriplet {
 
 public:
     /// TODO
-    PartitionTriplet() : optimal_num_blocks_found(false) {}
+    BlockmodelTriplet() : optimal_num_blocks_found(false) {}
     /// TODO
     bool optimal_num_blocks_found;
     /// TODO
-    void update(Partition &partition);
+    void update(Blockmodel &blockmodel);
     /// TODO
     void status();
     /// TODO
-    Partition &get(int i) { return partitions[i]; }
+    Blockmodel &get(int i) { return blockmodels[i]; }
     /// TODO
     bool golden_ratio_not_reached();
     /// TODO
     bool is_done();
     /// TODO
-    Partition get_next_partition(Partition &old_partition);
+    Blockmodel get_next_blockmodel(Blockmodel &old_blockmodel);
 
 private:
-    /// Partitions arranged in order of decreasing number of blocks.
-    /// If the first partition is empty, then the golden ratio bracket has not yet been established.
+    /// Blockmodels arranged in order of decreasing number of blocks.
+    /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
     /// TODO
-    Partition partitions[3];
+    Blockmodel blockmodels[3];
     /// TODO
     int lower_difference();
     /// TODO

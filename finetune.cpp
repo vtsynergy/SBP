@@ -30,20 +30,20 @@ EdgeWeights finetune::block_edge_weights(std::vector<int> &block_assignment, Edg
 }
 
 // Reads: 
-//   - partition.blockmodel current_block row
-//   - partition.blockmodel current_block col
-//   - partition.blockmodel proposal row
-//   - partition.blockmodel proposal col
-//   - partition.block_degrees_out
-//   - partition.block_degrees_in
+//   - blockmodel.blockmodel current_block row
+//   - blockmodel.blockmodel current_block col
+//   - blockmodel.blockmodel proposal row
+//   - blockmodel.blockmodel proposal col
+//   - blockmodel.block_degrees_out
+//   - blockmodel.block_degrees_in
 // Writes: NA
-double finetune::compute_delta_entropy(int current_block, int proposal, Partition &partition, EdgeCountUpdates &updates,
+double finetune::compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
                                        common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    std::vector<int> old_block_row = partition.getBlockmodel().getrow(current_block); // M_r_t1
-    std::vector<int> old_proposal_row = partition.getBlockmodel().getrow(proposal);   // M_s_t1
-    std::vector<int> old_block_col = partition.getBlockmodel().getcol(current_block); // M_t2_r
-    std::vector<int> old_proposal_col = partition.getBlockmodel().getcol(proposal);   // M_t2_s
+    std::vector<int> old_block_row = blockmodel.getBlockmodel().getrow(current_block); // M_r_t1
+    std::vector<int> old_proposal_row = blockmodel.getBlockmodel().getrow(proposal);   // M_s_t1
+    std::vector<int> old_block_col = blockmodel.getBlockmodel().getcol(current_block); // M_t2_r
+    std::vector<int> old_proposal_col = blockmodel.getBlockmodel().getcol(proposal);   // M_t2_s
 
     // Exclude current_block, proposal to prevent double counting
     std::vector<int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
@@ -51,7 +51,7 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     old_block_col = common::exclude_indices(old_block_col, current_block, proposal);       // M_t2_r
     old_proposal_col = common::exclude_indices(old_proposal_col, current_block, proposal); // M_t2_s
     std::vector<int> new_block_degrees_out = common::exclude_indices(block_degrees.block_degrees_out, current_block, proposal);
-    std::vector<int> old_block_degrees_out = common::exclude_indices(partition.getBlock_degrees_out(), current_block, proposal);
+    std::vector<int> old_block_degrees_out = common::exclude_indices(blockmodel.getBlock_degrees_out(), current_block, proposal);
 
     // Remove 0 indices
     std::vector<int> new_block_row_degrees_in = common::index_nonzero(block_degrees.block_degrees_in, updates.block_row); // added
@@ -63,8 +63,8 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     new_block_col = common::nonzeros(new_block_col); // added
     new_proposal_col = common::nonzeros(new_proposal_col);
 
-    std::vector<int> old_block_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_block_row);
-    std::vector<int> old_proposal_row_degrees_in = common::index_nonzero(partition.getBlock_degrees_in(), old_proposal_row);
+    std::vector<int> old_block_row_degrees_in = common::index_nonzero(blockmodel.getBlock_degrees_in(), old_block_row);
+    std::vector<int> old_proposal_row_degrees_in = common::index_nonzero(blockmodel.getBlock_degrees_in(), old_proposal_row);
     old_block_row = common::nonzeros(old_block_row);
     old_proposal_row = common::nonzeros(old_proposal_row);
     std::vector<int> old_block_col_degrees_out = common::index_nonzero(old_block_degrees_out, old_block_col);
@@ -82,24 +82,24 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
     delta_entropy -= common::delta_entropy_temp(new_proposal_col, new_proposal_col_degrees_out,
                                                 block_degrees.block_degrees_in[proposal]);
     delta_entropy += common::delta_entropy_temp(old_block_row, old_block_row_degrees_in,
-                                                partition.getBlock_degrees_out()[current_block]);
+                                                blockmodel.getBlock_degrees_out()[current_block]);
     delta_entropy += common::delta_entropy_temp(old_proposal_row, old_proposal_row_degrees_in,
-                                                partition.getBlock_degrees_out()[proposal]);
+                                                blockmodel.getBlock_degrees_out()[proposal]);
     delta_entropy += common::delta_entropy_temp(old_block_col, old_block_col_degrees_out,
-                                                partition.getBlock_degrees_in()[current_block]);
+                                                blockmodel.getBlock_degrees_in()[current_block]);
     delta_entropy += common::delta_entropy_temp(old_proposal_col, old_proposal_col_degrees_out,
-                                                partition.getBlock_degrees_in()[proposal]);
+                                                blockmodel.getBlock_degrees_in()[proposal]);
     return delta_entropy;
 }
 
-double finetune::compute_delta_entropy(int current_block, int proposal, Partition &partition,
+double finetune::compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel,
                                        SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    const DictTransposeMatrix &blockmodel = partition.getBlockmodel();
-    const MapVector<int> &old_block_row = blockmodel.getrow_sparse(current_block); // M_r_t1
-    const MapVector<int> &old_proposal_row = blockmodel.getrow_sparse(proposal);   // M_s_t1
-    const MapVector<int> &old_block_col = blockmodel.getcol_sparse(current_block); // M_t2_r
-    const MapVector<int> &old_proposal_col = blockmodel.getcol_sparse(proposal);   // M_t2_s
+    const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
+    const MapVector<int> &old_block_row = matrix.getrow_sparse(current_block); // M_r_t1
+    const MapVector<int> &old_proposal_row = matrix.getrow_sparse(proposal);   // M_s_t1
+    const MapVector<int> &old_block_col = matrix.getcol_sparse(current_block); // M_t2_r
+    const MapVector<int> &old_proposal_col = matrix.getcol_sparse(proposal);   // M_t2_s
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.block_row, block_degrees.block_degrees_in,
@@ -110,21 +110,21 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Partitio
                                                 block_degrees.block_degrees_in[current_block], current_block, proposal);
     delta_entropy -= common::delta_entropy_temp(updates.proposal_col, block_degrees.block_degrees_out,
                                                 block_degrees.block_degrees_in[proposal], current_block, proposal);
-    delta_entropy += common::delta_entropy_temp(old_block_row, partition.getBlock_degrees_in(),
-                                                partition.getBlock_degrees_out()[current_block]);
-    delta_entropy += common::delta_entropy_temp(old_proposal_row, partition.getBlock_degrees_in(),
-                                                partition.getBlock_degrees_out()[proposal]);
-    delta_entropy += common::delta_entropy_temp(old_block_col, partition.getBlock_degrees_out(),
-                                                partition.getBlock_degrees_in()[current_block], current_block, proposal);
-    delta_entropy += common::delta_entropy_temp(old_proposal_col, partition.getBlock_degrees_out(),
-                                                partition.getBlock_degrees_in()[proposal], current_block, proposal);
+    delta_entropy += common::delta_entropy_temp(old_block_row, blockmodel.getBlock_degrees_in(),
+                                                blockmodel.getBlock_degrees_out()[current_block]);
+    delta_entropy += common::delta_entropy_temp(old_proposal_row, blockmodel.getBlock_degrees_in(),
+                                                blockmodel.getBlock_degrees_out()[proposal]);
+    delta_entropy += common::delta_entropy_temp(old_block_col, blockmodel.getBlock_degrees_out(),
+                                                blockmodel.getBlock_degrees_in()[current_block], current_block, proposal);
+    delta_entropy += common::delta_entropy_temp(old_proposal_col, blockmodel.getBlock_degrees_out(),
+                                                blockmodel.getBlock_degrees_in()[proposal], current_block, proposal);
     return delta_entropy;
 }
 
 // Reads:
-//   - partition.overall_entropy
+//   - blockmodel.overall_entropy
 // Writes: NA
-bool finetune::early_stop(int iteration, PartitionTriplet &partitions, double initial_entropy,
+bool finetune::early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                           std::vector<double> &delta_entropies) {
     if (iteration < 3) {
         return false;
@@ -133,7 +133,7 @@ bool finetune::early_stop(int iteration, PartitionTriplet &partitions, double in
     double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
     average /= -3.0;
     double threshold;
-    if (partitions.get(2).empty) { // Golden ratio bracket not yet established
+    if (blockmodels.get(2).empty) { // Golden ratio bracket not yet established
         threshold = 5e-4 * initial_entropy;
     } else {
         threshold = 1e-4 * initial_entropy;
@@ -142,7 +142,7 @@ bool finetune::early_stop(int iteration, PartitionTriplet &partitions, double in
 }
 
 // Reads:
-//   - partition.overall_entropy
+//   - blockmodel.overall_entropy
 // Writes: NA
 bool finetune::early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies) {
     if (iteration < 3) {
@@ -273,13 +273,13 @@ EdgeWeights finetune::edge_weights(NeighborList &neighbors, int vertex) {
 }
 
 // Reads:
-//   - partition.blockmodel proposal row
-//   - partition.blockmodel proposal col
-//   - partition.num_blocks
-//   - partition.block_degrees
+//   - blockmodel.blockmodel proposal row
+//   - blockmodel.blockmodel proposal col
+//   - blockmodel.num_blocks
+//   - blockmodel.block_degrees
 // Writes: NA
 /// TODO
-double finetune::hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                      common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                                      common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
@@ -310,12 +310,12 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
     std::vector<double> block_degrees(num_unique_blocks, 0);
     std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
-    std::vector<int> proposal_row = partition.getBlockmodel().getrow(proposal.proposal);
-    std::vector<int> proposal_col = partition.getBlockmodel().getcol(proposal.proposal);
+    std::vector<int> proposal_row = blockmodel.getBlockmodel().getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.getBlockmodel().getcol(proposal.proposal);
     // Fill Arrays
     int index = 0;
-    int num_blocks = partition.getNum_blocks();
-    std::vector<int> &current_block_degrees = partition.getBlock_degrees();
+    int num_blocks = blockmodel.getNum_blocks();
+    std::vector<int> &current_block_degrees = blockmodel.getBlock_degrees();
     for (auto const &entry : block_counts) {
         counts[index] = entry.second;
         proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
@@ -330,7 +330,7 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
     return p_backward / p_forward;
 }
 
-double finetune::hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                      common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                                      common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
@@ -361,12 +361,12 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
     std::vector<double> block_degrees(num_unique_blocks, 0);
     std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
-    std::vector<int> proposal_row = partition.getBlockmodel().getrow(proposal.proposal);
-    std::vector<int> proposal_col = partition.getBlockmodel().getcol(proposal.proposal);
+    std::vector<int> proposal_row = blockmodel.getBlockmodel().getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.getBlockmodel().getcol(proposal.proposal);
     // Fill Arrays
     int index = 0;
-    int num_blocks = partition.getNum_blocks();
-    std::vector<int> &current_block_degrees = partition.getBlock_degrees();
+    int num_blocks = blockmodel.getNum_blocks();
+    std::vector<int> &current_block_degrees = blockmodel.getBlock_degrees();
     for (auto const &entry : block_counts) {
         counts[index] = entry.second;
         proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
@@ -382,57 +382,57 @@ double finetune::hastings_correction(Partition &partition, EdgeWeights &out_bloc
 }
 
 // Reads:
-//   - partition.blockmodel nonzero indices
-//   - partition.blockmodel nonzero values
-//   - partition degrees in
-//   - partition degrees out
-//   - partition.num_blocks
+//   - blockmodel.blockmodel nonzero indices
+//   - blockmodel.blockmodel nonzero values
+//   - blockmodel degrees in
+//   - blockmodel degrees out
+//   - blockmodel.num_blocks
 // Writes: NA
 /// TODO
-double finetune::overall_entropy(Partition &partition, int num_vertices, int num_edges) {
-    double log_posterior_p = partition.log_posterior_probability();
-    double x = pow(partition.getNum_blocks(), 2) / num_edges;
+double finetune::overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges) {
+    double log_posterior_p = blockmodel.log_posterior_probability();
+    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (num_edges * h) + (num_vertices * log(partition.getNum_blocks())) - log_posterior_p;
+    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
 }
 
 // Reads:
-//   - partition.block_assignment
-//   - partition.num_blocks
-//   - partition.blockmodel random_neighbor row
-//   - partition.blockmodel random_neighbor col
-//   - partition.blockmodel current_block row
-//   - partition.blockmodel current_block col
-//   - partition.blockmodel proposed_block row
-//   - partition.blockmodel proposed_block col
-//   - partition.block_degrees_out
-//   - partition.block_degrees_in
-//   - partition.block_degrees
+//   - blockmodel.block_assignment
+//   - blockmodel.num_blocks
+//   - blockmodel.blockmodel random_neighbor row
+//   - blockmodel.blockmodel random_neighbor col
+//   - blockmodel.blockmodel current_block row
+//   - blockmodel.blockmodel current_block col
+//   - blockmodel.blockmodel proposed_block row
+//   - blockmodel.blockmodel proposed_block col
+//   - blockmodel.block_degrees_out
+//   - blockmodel.block_degrees_in
+//   - blockmodel.block_degrees
 // Writes:
-//   - partition.block_assignment vertex
-//   - partition.block_degrees_out
-//   - partition.block_degrees_in
-//   - partition.block_degrees
-//   - partition.blockmodel current_block row
-//   - partition.blockmodel current_block col
-//   - partition.blockmodel proposed_block row
-//   - partition.blockmodel proposed_block col
+//   - blockmodel.block_assignment vertex
+//   - blockmodel.block_degrees_out
+//   - blockmodel.block_degrees_in
+//   - blockmodel.block_degrees
+//   - blockmodel.blockmodel current_block row
+//   - blockmodel.blockmodel current_block col
+//   - blockmodel.blockmodel proposed_block row
+//   - blockmodel.blockmodel proposed_block col
 /// TODO
-finetune::ProposalEvaluation finetune::propose_move(Partition &partition, int vertex,
+finetune::ProposalEvaluation finetune::propose_move(Blockmodel &blockmodel, int vertex,
                                                     NeighborList &out_neighbors, NeighborList &in_neighbors) {
     bool did_move = false;
-    int current_block = partition.getBlock_assignment()[vertex];
+    int current_block = blockmodel.getBlock_assignment()[vertex];
     EdgeWeights vertex_out_neighbors = edge_weights(out_neighbors, vertex);
     EdgeWeights vertex_in_neighbors = edge_weights(in_neighbors, vertex);
 
     common::ProposalAndEdgeCounts proposal = common::propose_new_block(
-        current_block, vertex_out_neighbors, vertex_in_neighbors, partition.getBlock_assignment(), partition, false);
+        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
         return ProposalEvaluation{0.0, did_move};
     }
 
-    EdgeWeights blocks_out_neighbors = block_edge_weights(partition.getBlock_assignment(), vertex_out_neighbors);
-    EdgeWeights blocks_in_neighbors = block_edge_weights(partition.getBlock_assignment(), vertex_in_neighbors);
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.getBlock_assignment(), vertex_out_neighbors);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.getBlock_assignment(), vertex_in_neighbors);
     int self_edge_weight = 0;
     for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
         if (vertex_out_neighbors.indices[i] == vertex) {
@@ -441,15 +441,15 @@ finetune::ProposalEvaluation finetune::propose_move(Partition &partition, int ve
         }
     }
 
-    EdgeCountUpdates updates = edge_count_updates(partition.getBlockmodel(), current_block, proposal.proposal,
+    EdgeCountUpdates updates = edge_count_updates(blockmodel.getBlockmodel(), current_block, proposal.proposal,
                                                   blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double hastings =
-        hastings_correction(partition, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+        hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
     double delta_entropy =
-        compute_delta_entropy(current_block, proposal.proposal, partition, updates, new_block_degrees);
+        compute_delta_entropy(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     if (accept(delta_entropy, hastings)) {
-        partition.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
+        blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
         did_move = true;
     }
@@ -457,21 +457,21 @@ finetune::ProposalEvaluation finetune::propose_move(Partition &partition, int ve
 }
 
 /// TODO
-finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vertex,
+finetune::VertexMove finetune::propose_gibbs_move(Blockmodel &blockmodel, int vertex,
                                                   NeighborList &out_neighbors, NeighborList &in_neighbors) {
     bool did_move = false;
-    int current_block = partition.getBlock_assignment()[vertex];
+    int current_block = blockmodel.getBlock_assignment()[vertex];
     EdgeWeights vertex_out_neighbors = edge_weights(out_neighbors, vertex);
     EdgeWeights vertex_in_neighbors = edge_weights(in_neighbors, vertex);
 
     common::ProposalAndEdgeCounts proposal = common::propose_new_block(
-        current_block, vertex_out_neighbors, vertex_in_neighbors, partition.getBlock_assignment(), partition, false);
+        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
         return VertexMove{0.0, did_move, -1, -1};
     }
 
-    EdgeWeights blocks_out_neighbors = block_edge_weights(partition.getBlock_assignment(), vertex_out_neighbors);
-    EdgeWeights blocks_in_neighbors = block_edge_weights(partition.getBlock_assignment(), vertex_in_neighbors);
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.getBlock_assignment(), vertex_out_neighbors);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.getBlock_assignment(), vertex_in_neighbors);
     int self_edge_weight = 0;
     for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
         if (vertex_out_neighbors.indices[i] == vertex) {
@@ -481,14 +481,14 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
     }
 
     SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(partition.getBlockmodel(), current_block,
+    edge_count_updates_sparse(blockmodel.getBlockmodel(), current_block,
                                                                proposal.proposal, blocks_out_neighbors,
                                                                blocks_in_neighbors, self_edge_weight, updates);
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, partition, proposal);
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double hastings =
-        hastings_correction(partition, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+        hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
     double delta_entropy =
-        compute_delta_entropy(current_block, proposal.proposal, partition, updates, new_block_degrees);
+        compute_delta_entropy(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     if (accept(delta_entropy, hastings)) {
         did_move = true;
         return VertexMove{delta_entropy, did_move, vertex, proposal.proposal};
@@ -497,40 +497,40 @@ finetune::VertexMove finetune::propose_gibbs_move(Partition &partition, int vert
 }
 
 // Reads:
-//   - partition.block_assignment
-//   - partition.num_blocks
-//   - partition.blockmodel random_neighbor row
-//   - partition.blockmodel random_neighbor col
-//   - partition.blockmodel current_block row
-//   - partition.blockmodel current_block col
-//   - partition.blockmodel proposed_block row
-//   - partition.blockmodel proposed_block col
-//   - partition.block_degrees_out
-//   - partition.block_degrees_in
-//   - partition.block_degrees
+//   - blockmodel.block_assignment
+//   - blockmodel.num_blocks
+//   - blockmodel.blockmodel random_neighbor row
+//   - blockmodel.blockmodel random_neighbor col
+//   - blockmodel.blockmodel current_block row
+//   - blockmodel.blockmodel current_block col
+//   - blockmodel.blockmodel proposed_block row
+//   - blockmodel.blockmodel proposed_block col
+//   - blockmodel.block_degrees_out
+//   - blockmodel.block_degrees_in
+//   - blockmodel.block_degrees
 // Writes:
-//   - partition.block_assignment vertex
-//   - partition.block_degrees_out
-//   - partition.block_degrees_in
-//   - partition.block_degrees
-//   - partition.blockmodel current_block row
-//   - partition.blockmodel current_block col
-//   - partition.blockmodel proposed_block row
-//   - partition.blockmodel proposed_block col
-//   - partition.overall_entropy
+//   - blockmodel.block_assignment vertex
+//   - blockmodel.block_degrees_out
+//   - blockmodel.block_degrees_in
+//   - blockmodel.block_degrees
+//   - blockmodel.blockmodel current_block row
+//   - blockmodel.blockmodel current_block col
+//   - blockmodel.blockmodel proposed_block row
+//   - blockmodel.blockmodel proposed_block col
+//   - blockmodel.overall_entropy
 /// TODO
-Partition &finetune::metropolis_hastings(Partition &partition, Graph &graph, PartitionTriplet &partitions) {
-    if (partition.getNum_blocks() == 1) {
-        return partition;
+Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices; ++vertex) {
-            ProposalEvaluation proposal = propose_move(partition, vertex, graph.out_neighbors,
+            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors,
                                                        graph.in_neighbors);
             if (proposal.did_move) {
                 vertex_moves++;
@@ -539,30 +539,30 @@ Partition &finetune::metropolis_hastings(Partition &partition, Graph &graph, Par
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
-        std::cout << delta_entropy / partition.getOverall_entropy() << std::endl;
+        std::cout << delta_entropy / blockmodel.getOverall_entropy() << std::endl;
         total_vertex_moves += vertex_moves;
         // Early stopping
-        if (early_stop(iteration, partitions, partition.getOverall_entropy(), delta_entropies)) {
+        if (early_stop(iteration, blockmodels, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
         }
     }
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << partition.getOverall_entropy() << std::endl;
-    return partition;
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
 }
 
 /// TODO
-Partition &finetune::finetune_assignment(Partition &partition, Graph &graph) {
+Blockmodel &finetune::finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     int total_vertex_moves = 0;
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices; ++vertex) {
-            ProposalEvaluation proposal = propose_move(partition, vertex, graph.out_neighbors,
+            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors,
                                                        graph.in_neighbors);
             if (proposal.did_move) {
                 vertex_moves++;
@@ -571,28 +571,28 @@ Partition &finetune::finetune_assignment(Partition &partition, Graph &graph) {
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of finetuning moves: " << vertex_moves << ", delta S: ";
-        std::cout << delta_entropy / partition.getOverall_entropy() << std::endl;
+        std::cout << delta_entropy / blockmodel.getOverall_entropy() << std::endl;
         total_vertex_moves += vertex_moves;
         // Early stopping
-        if (early_stop(iteration, partition.getOverall_entropy(), delta_entropies)) {
+        if (early_stop(iteration, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
         }
     }
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << partition.getOverall_entropy() << std::endl;
-    return partition;
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
 }
 
 /// TODO
-Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions, Args &args) {
-    if (partition.getNum_blocks() == 1) {
-        return partition;
+Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args) {
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
-    double initial_entropy = partition.getOverall_entropy();
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    double initial_entropy = blockmodel.getOverall_entropy();
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
@@ -602,12 +602,12 @@ Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, Part
         for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices, (batch + 1) * batch_size);
-            // Block assignment used to re-create the Partition after each batch to improve mixing time of
+            // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
-            std::vector<int> block_assignment(partition.getBlock_assignment());
+            std::vector<int> block_assignment(blockmodel.getBlock_assignment());
             #pragma omp parallel for schedule(dynamic)
             for (int vertex = start; vertex < end; ++vertex) {
-                VertexMove proposal = propose_gibbs_move(partition, vertex, graph.out_neighbors,
+                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph.out_neighbors,
                                                          graph.in_neighbors);
                 if (proposal.did_move) {
                     vertex_moves++;
@@ -615,20 +615,20 @@ Partition &finetune::asynchronous_gibbs(Partition &partition, Graph &graph, Part
                     block_assignment[vertex] = proposal.proposed_block;
                 }
             }
-            partition = Partition(partition.getNum_blocks(), graph.out_neighbors,
-                                  partition.getBlock_reduction_rate(), block_assignment);
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors,
+                                    blockmodel.getBlock_reduction_rate(), block_assignment);
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
         std::cout << delta_entropy / initial_entropy << std::endl;
         total_vertex_moves += vertex_moves;
         // Early stopping
-        if (early_stop(iteration, partitions, initial_entropy, delta_entropies)) {
+        if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
             break;
         }
     }
-    partition.setOverall_entropy(overall_entropy(partition, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << partition.getOverall_entropy() << std::endl;
-    return partition;
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
 }

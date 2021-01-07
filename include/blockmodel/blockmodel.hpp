@@ -1,5 +1,5 @@
 /***
- * Stores the current graph partitioning results.
+ * Stores the current graph blockmodeling results.
  */
 #ifndef SBP_PARTITION_HPP
 #define SBP_PARTITION_HPP
@@ -31,10 +31,10 @@ typedef struct sparse_edge_count_updates_t {
     MapVector<int> proposal_col;
 } SparseEdgeCountUpdates;
 
-class Partition {
+class Blockmodel {
   public:
-    Partition() : empty(true) {}
-    Partition(int num_blocks, float block_reduction_rate) : empty(false) {
+    Blockmodel() : empty(true) {}
+    Blockmodel(int num_blocks, float block_reduction_rate) : empty(false) {
         this->num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
@@ -45,12 +45,12 @@ class Partition {
         // Number of blocks to merge
         this->num_blocks_to_merge = (int)(this->num_blocks * this->block_reduction_rate);
     }
-    Partition(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate)
-        : Partition(num_blocks, block_reduction_rate) {
+    Blockmodel(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate)
+        : Blockmodel(num_blocks, block_reduction_rate) {
         this->initialize_edge_counts(out_neighbors);
     }
-    Partition(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate, std::vector<int> &block_assignment)
-        : Partition(num_blocks, block_reduction_rate) {
+    Blockmodel(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate, std::vector<int> &block_assignment)
+        : Blockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->block_assignment = block_assignment;
         // Number of blocks to merge
@@ -60,12 +60,12 @@ class Partition {
     void carry_out_best_merges(std::vector<double> &delta_entropy_for_each_block,
                                std::vector<int> &best_merge_for_each_block);
     /// TODO
-    Partition clone_with_true_block_membership(NeighborList &neighbors, std::vector<int> &true_block_membership);
-    /// Returns a copy of the current Partition
-    Partition copy();
+    Blockmodel clone_with_true_block_membership(NeighborList &neighbors, std::vector<int> &true_block_membership);
+    /// Returns a copy of the current Blockmodel
+    Blockmodel copy();
     /// TODO documentation
     // TODO: move block_reduction_rate to some constants file
-    static Partition from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
+    static Blockmodel from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate);
     /// TODO
     void initialize_edge_counts(NeighborList &neighbors);

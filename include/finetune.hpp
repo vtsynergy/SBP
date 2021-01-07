@@ -1,5 +1,5 @@
 /**
- * The finetuning phase of the stochastic block partitioning algorithm.
+ * The finetuning phase of the stochastic block blockmodeling algorithm.
  */
 #ifndef SBP_FINETUNE_HPP
 #define SBP_FINETUNE_HPP
@@ -13,8 +13,8 @@
 
 #include "common.hpp"
 #include "graph.hpp"
-#include "partition/partition.hpp"
-#include "partition/partition_triplet.hpp"
+#include "blockmodel/blockmodel.hpp"
+#include "blockmodel/blockmodel_triplet.hpp"
 #include "utils.hpp"
 
 /*******************
@@ -46,11 +46,11 @@ static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning ite
 
 bool accept(double delta_entropy, double hastings_correction);
 EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
-double compute_delta_entropy(int current_block, int proposal, Partition &partition, EdgeCountUpdates &updates,
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees);
-double compute_delta_entropy(int current_block, int proposal, Partition &partition, SparseEdgeCountUpdates &updates,
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, SparseEdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees);
-bool early_stop(int iteration, PartitionTriplet &partitions, double initial_entropy,
+bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
 EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
@@ -59,20 +59,20 @@ void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_bloc
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
 EdgeWeights edge_weights(NeighborList &neighbors, int vertex);
-double hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
-double hastings_correction(Partition &partition, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
-double overall_entropy(Partition &partition, int num_vertices, int num_edges);
-ProposalEvaluation propose_move(Partition &partition, int vertex, NeighborList &out_neighbors,
+double overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges);
+ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
                                 NeighborList &in_neighbors);
-VertexMove propose_gibbs_move(Partition &partition, int vertex, NeighborList &out_neighbors,
+VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
                             NeighborList &in_neighbors);
-Partition &metropolis_hastings(Partition &partition, Graph &graph, PartitionTriplet &partitions);
-Partition &asynchronous_gibbs(Partition &partition, Graph &graph, PartitionTriplet &partitions, Args &args);
-Partition &finetune_assignment(Partition &partition, Graph &graph);
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
+Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
 } // namespace finetune
 

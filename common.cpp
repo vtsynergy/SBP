@@ -17,12 +17,12 @@ int common::choose_neighbor(const SparseVector<double> &multinomial_distribution
     return multinomial_distribution.idx[index];
 }
 
-common::NewBlockDegrees common::compute_new_block_degrees(int current_block, Partition &partition,
+common::NewBlockDegrees common::compute_new_block_degrees(int current_block, Blockmodel &blockmodel,
                                                           common::ProposalAndEdgeCounts &proposal) {
     // TODO: These are copy constructors. Maybe getting rid of them will speed things up?
-    std::vector<int> new_block_degrees_out(partition.getBlock_degrees_out());
-    std::vector<int> new_block_degrees_in(partition.getBlock_degrees_in());
-    std::vector<int> new_block_degrees_total(partition.getBlock_degrees());
+    std::vector<int> new_block_degrees_out(blockmodel.getBlock_degrees_out());
+    std::vector<int> new_block_degrees_in(blockmodel.getBlock_degrees_in());
+    std::vector<int> new_block_degrees_total(blockmodel.getBlock_degrees());
     new_block_degrees_out[current_block] -= proposal.num_out_neighbor_edges;
     new_block_degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
     new_block_degrees_in[current_block] -= proposal.num_in_neighbor_edges;
@@ -134,33 +134,33 @@ std::vector<int> common::nonzeros(MapVector<int> &in) {
 }
 
 common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeWeights &out_blocks,
-                                                        EdgeWeights &in_blocks, std::vector<int> &block_partition,
-                                                        Partition &partition, bool block_merge) {
+                                                        EdgeWeights &in_blocks, std::vector<int> &block_blockmodel,
+                                                        Blockmodel &blockmodel, bool block_merge) {
     std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
     std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
     int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
     int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     int k = k_out + k_in;
-    int num_blocks = partition.getNum_blocks();
+    int num_blocks = blockmodel.getNum_blocks();
 
     if (k == 0) { // If the current block has no neighbors, propose merge with random block
         int proposal = propose_random_block(current_block, num_blocks);
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor = choose_neighbor(neighbor_indices, neighbor_weights);
-    int neighbor_block = block_partition[neighbor];
+    int neighbor_block = block_blockmodel[neighbor];
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    if (std::rand() <= (num_blocks / ((float)partition.getBlock_degrees()[neighbor_block] + num_blocks))) {
+    if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
         int proposal = propose_random_block(current_block, num_blocks);
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const DictTransposeMatrix &blockmodel = partition.getBlockmodel();
-    const MapVector<int> &col = blockmodel.getcol_sparse(neighbor_block);
-    MapVector<int> edges = partition.getBlockmodel().getrow_sparse(neighbor_block);
+    const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
+    const MapVector<int> &col = matrix.getcol_sparse(neighbor_block);
+    MapVector<int> edges = blockmodel.getBlockmodel().getrow_sparse(neighbor_block);
     for (const std::pair<int, int> &pair : col) {
         edges[pair.first] += pair.second;
     }

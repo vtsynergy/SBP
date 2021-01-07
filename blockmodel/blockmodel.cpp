@@ -1,4 +1,4 @@
-#include "partition.hpp"
+#include "blockmodel.hpp"
 
 std::vector<int> build_mapping(std::vector<int> &values) {
     std::map<int, bool> unique_map;
@@ -25,7 +25,7 @@ std::vector<int> sort_indices(std::vector<double> &unsorted) {
     return indices;
 }
 
-void Partition::carry_out_best_merges(std::vector<double> &delta_entropy_for_each_block,
+void Blockmodel::carry_out_best_merges(std::vector<double> &delta_entropy_for_each_block,
                                       std::vector<int> &best_merge_for_each_block) {
     std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
@@ -55,7 +55,7 @@ void Partition::carry_out_best_merges(std::vector<double> &delta_entropy_for_eac
     this->num_blocks -= this->num_blocks_to_merge;
 }
 
-Partition Partition::clone_with_true_block_membership(NeighborList &neighbors,
+Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
                                                       std::vector<int> &true_block_membership) {
     int num_blocks = 0;
     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
@@ -68,22 +68,22 @@ Partition Partition::clone_with_true_block_membership(NeighborList &neighbors,
             num_blocks++;
         }
     }
-    return Partition(num_blocks, neighbors, this->block_reduction_rate, true_block_membership);
+    return Blockmodel(num_blocks, neighbors, this->block_reduction_rate, true_block_membership);
 }
 
-Partition Partition::copy() {
-    Partition partition_copy = Partition(this->num_blocks, this->block_reduction_rate);
-    partition_copy.block_assignment = std::vector<int>(this->block_assignment);
-    partition_copy.overall_entropy = this->overall_entropy;
-    partition_copy.blockmodel = this->blockmodel.copy();
-    partition_copy.block_degrees = std::vector<int>(this->block_degrees);
-    partition_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
-    partition_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
-    partition_copy.num_blocks_to_merge = 0;
-    return partition_copy;
+Blockmodel Blockmodel::copy() {
+    Blockmodel blockmodel_copy = Blockmodel(this->num_blocks, this->block_reduction_rate);
+    blockmodel_copy.block_assignment = std::vector<int>(this->block_assignment);
+    blockmodel_copy.overall_entropy = this->overall_entropy;
+    blockmodel_copy.blockmodel = this->blockmodel.copy();
+    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
+    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
+    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy.num_blocks_to_merge = 0;
+    return blockmodel_copy;
 }
 
-Partition Partition::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
+Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate) {
     // Fill in initial block assignment
     std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
@@ -118,10 +118,10 @@ Partition Partition::from_sample(int num_blocks, NeighborList &neighbors, std::v
         // block_counts.maxCoeff(&new_block);
         block_assignment[vertex] = new_block;
     }
-    return Partition(num_blocks, neighbors, block_reduction_rate, block_assignment);
+    return Blockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
 }
 
-void Partition::initialize_edge_counts(NeighborList &neighbors) {
+void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
     /// TODO: this recreates the matrix (unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
@@ -152,7 +152,7 @@ void Partition::initialize_edge_counts(NeighborList &neighbors) {
     this->block_degrees = this->block_degrees_out + this->block_degrees_in;
 }
 
-double Partition::log_posterior_probability() {
+double Blockmodel::log_posterior_probability() {
     Indices nonzero_indices = this->blockmodel.nonzero();
     std::vector<double> values = utils::to_double<int>(this->blockmodel.values());
     std::vector<double> degrees_in;
@@ -166,7 +166,7 @@ double Partition::log_posterior_probability() {
     return utils::sum<double>(temp);
 }
 
-void Partition::merge_blocks(int from_block, int to_block) {
+void Blockmodel::merge_blocks(int from_block, int to_block) {
     for (int index = 0; index < this->block_assignment.size(); ++index) {
         if (this->block_assignment[index] == from_block) {
             this->block_assignment[index] = to_block;
@@ -174,7 +174,7 @@ void Partition::merge_blocks(int from_block, int to_block) {
     }
 };
 
-void Partition::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
+void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                             std::vector<int> &new_block_degrees) {
     this->block_assignment[vertex] = new_block;
@@ -184,9 +184,9 @@ void Partition::move_vertex(int vertex, int current_block, int new_block, EdgeCo
     this->block_degrees = new_block_degrees;
 };
 
-void Partition::set_block_membership(int vertex, int block) { this->block_assignment[vertex] = block; }
+void Blockmodel::set_block_membership(int vertex, int block) { this->block_assignment[vertex] = block; }
 
-void Partition::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
+void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
     this->blockmodel.update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                         updates.block_col, updates.proposal_col);
 }

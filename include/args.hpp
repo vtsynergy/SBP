@@ -28,9 +28,9 @@ class Args {
     Args(int argc, char** argv) {
         /** Use tclap to retrieve the arguments here */
         try {
-            TCLAP::CmdLine parser("Stochastic block partitioning algorithm", ' ', "alpha.0.1");
+            TCLAP::CmdLine parser("Stochastic block blockmodeling algorithm", ' ', "alpha.0.1");
             TCLAP::ValueArg<std::string> algorithm("a", "algorithm", "The algorithm to use for the finetuning/MCMC "
-                                                   "step of stochastic block partitioning. Note: there is currently no "
+                                                   "step of stochastic block blockmodeling. Note: there is currently no "
                                                    "parallel implementation of metropolis hastings", false,
                                                    "async_gibbs", "async_gibbs|metropolis_hastings", parser);
             TCLAP::ValueArg<int> batches("", "batches", "The number of batches to use for the asynchronous_gibbs "
@@ -50,7 +50,7 @@ class Args {
                                 "filename for graph:"
                                 "<type>_<overlap>Overlap_<blocksizevar>BlockSizeVar_<numvertices>_nodes.tsv\n"
                                 "filename for truth:"
-                                "<type>_<overlap>Overlap_<blocksizevar>BlockSizeVar_<numvertices>_truePartition.tsv\n"
+                                "<type>_<overlap>Overlap_<blocksizevar>BlockSizeVar_<numvertices>_trueBlockmodel.tsv\n"
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);

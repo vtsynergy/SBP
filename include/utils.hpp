@@ -15,7 +15,7 @@
 
 // #include "argparse/argparse.hpp"
 #include "args.hpp"
-#include "partition/sparse/typedefs.hpp"
+#include "blockmodel/sparse/typedefs.hpp"
 #include "fs.hpp"
 // typedef std::vector<std::vector<int>> NeighborList;
 
@@ -27,7 +27,7 @@ namespace utils {
 /// Assumes the graph file is named:
 /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_nodes.tsv
 /// Assumes the true assignment file is named:
-/// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_truePartition.tsv
+/// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
 std::string build_filepath(Args &args);
 
 /// Divides all elements in a MapVector<int> by a scalar, and stores the result in `result`

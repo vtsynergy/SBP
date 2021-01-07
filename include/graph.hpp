@@ -15,7 +15,7 @@
 
 // #include "argparse/argparse.hpp"
 #include "args.hpp"
-#include "partition/sparse/typedefs.hpp"
+#include "blockmodel/sparse/typedefs.hpp"
 #include "fs.hpp"
 #include "utils.hpp"
 
@@ -40,7 +40,7 @@ class Graph {
         /// Assumes the graph file is named:
         /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_nodes.tsv
         /// Assumes the true assignment file is named:
-        /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_truePartition.tsv
+        /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
         static Graph load(Args &args);
     // private:
         /// For every vertex, stores the outgoing neighbors as a std::vector<int>

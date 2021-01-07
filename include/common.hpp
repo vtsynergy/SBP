@@ -10,9 +10,9 @@
 
 // #include <Eigen/Core>
 
-#include "partition/partition.hpp"
-#include "partition/sparse/csparse_matrix.hpp"
-#include "partition/sparse/typedefs.hpp"
+#include "blockmodel/blockmodel.hpp"
+#include "blockmodel/sparse/csparse_matrix.hpp"
+#include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
 
 namespace common {
@@ -41,7 +41,7 @@ int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighb
 int choose_neighbor(const SparseVector<double> &multinomial_distribution);
 
 /// Computes the block degrees under a proposed move
-NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition,
+NewBlockDegrees compute_new_block_degrees(int current_block, Blockmodel &blockmodel,
                                           common::ProposalAndEdgeCounts &proposal);
 
 /// Computes the entropy of one row or column of data
@@ -74,7 +74,7 @@ std::vector<int> nonzeros(MapVector<int> &in);
 
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        std::vector<int> &block_partition, Partition &partition, bool block_merge = false);
+                                        std::vector<int> &block_blockmodel, Blockmodel &blockmodel, bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
 

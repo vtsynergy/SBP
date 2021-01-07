@@ -50,12 +50,12 @@ double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &conti
     return f1_score;
 }
 
-void evaluate::evaluate_partition(const Graph &graph, Partition &partition) {
-    Hungarian::Matrix contingency_table = hungarian(graph, partition);
+void evaluate::evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
+    Hungarian::Matrix contingency_table = hungarian(graph, blockmodel);
     double f1_score = calculate_f1_score(graph, contingency_table);
 }
 
-Hungarian::Matrix evaluate::hungarian(const Graph &graph, Partition &partition) {
+Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel) {
     // Create contingency table
     std::set<int> true_communities;
     for (int community : graph.assignment) {
@@ -64,21 +64,21 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Partition &partition) 
         }
     }
     int num_true_communities = true_communities.size();
-    std::cout << "Partition correctness evaluation" << std::endl;
+    std::cout << "Blockmodel correctness evaluation" << std::endl;
     std::cout << "Number of vertices: " << graph.num_vertices << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
-    std::cout << "Number of communities in alg. assignment: " << partition.getNum_blocks() << std::endl;
+    std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
     std::vector<int> rows, cols;
     int nrows, ncols;
-    if (num_true_communities < partition.getNum_blocks()) {
+    if (num_true_communities < blockmodel.getNum_blocks()) {
         rows = graph.assignment;
-        cols = partition.getBlock_assignment();
+        cols = blockmodel.getBlock_assignment();
         nrows = num_true_communities;
-        ncols = partition.getNum_blocks();
+        ncols = blockmodel.getNum_blocks();
     } else {
-        rows = partition.getBlock_assignment();
+        rows = blockmodel.getBlock_assignment();
         cols = graph.assignment;
-        nrows = partition.getNum_blocks();
+        nrows = blockmodel.getNum_blocks();
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
@@ -95,7 +95,7 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Partition &partition) 
         exit(-1);
     }
 
-    std::vector<int> assignment(partition.getNum_blocks(), 0);
+    std::vector<int> assignment(blockmodel.getNum_blocks(), 0);
     for (int row = 0; row < result.assignment.size(); ++row) {
         for (int col = 0; col < result.assignment[0].size(); ++col) {
             if (result.assignment[row][col] == 1) {
@@ -113,7 +113,7 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Partition &partition) 
     }
 
     // Make sure rows represent algorithm communities, columns represent true communities
-    if (num_true_communities < partition.getNum_blocks()) {
+    if (num_true_communities < blockmodel.getNum_blocks()) {
         Hungarian::Matrix transpose_contingency_table(ncols, std::vector<int>(nrows, 0));
         for (int row = 0; row < nrows; ++row) {
             for (int col = 0; col < ncols; ++col) {
