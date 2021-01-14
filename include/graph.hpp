@@ -4,7 +4,7 @@
 #ifndef SBP_GRAPH_HPP
 #define SBP_GRAPH_HPP
 
-#include <filesystem>
+// #include <filesystem>
 // #include <fstream>
 #include <iostream>
 // #include <sstream>
@@ -13,9 +13,10 @@
 
 // #include <Eigen/Core>
 
-#include "argparse/argparse.hpp"
-
-#include "partition/sparse/typedefs.hpp"
+// #include "argparse/argparse.hpp"
+#include "args.hpp"
+#include "blockmodel/sparse/typedefs.hpp"
+#include "fs.hpp"
 #include "utils.hpp"
 
 // #include "sparse/boost_mapped_matrix.hpp"
@@ -38,9 +39,9 @@ class Graph {
         /// <args.directory>/<args.type>/<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar
         /// Assumes the graph file is named:
         /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_nodes.tsv
-        /// Assumes the true assignmnet file is named:
-        /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_truePartition.tsv
-        static Graph load(argparse::ArgumentParser &args);
+        /// Assumes the true assignment file is named:
+        /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
+        static Graph load(Args &args);
     // private:
         /// For every vertex, stores the outgoing neighbors as a std::vector<int>
         NeighborList out_neighbors;

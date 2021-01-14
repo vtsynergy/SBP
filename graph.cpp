@@ -1,11 +1,11 @@
 #include "graph.hpp"
 #include "utils.hpp"
 
-Graph Graph::load(argparse::ArgumentParser &args) {
-    // TODO: Add capability to process multiple "streaming" grpah parts
+Graph Graph::load(Args &args) {
+    // TODO: Add capability to process multiple "streaming" graph parts
     std::string basepath = utils::build_filepath(args);
-    std::filesystem::path graphpath = basepath + ".tsv";
-    std::filesystem::path truthpath = basepath + "_truePartition.tsv";
+    fs::path graphpath = basepath + ".tsv";
+    fs::path truthpath = basepath + "_truePartition.tsv";
     // TODO: Handle weighted graphs
     std::vector<std::vector<std::string>> csv_contents = utils::read_csv(graphpath);
     NeighborList out_neighbors;
@@ -13,7 +13,7 @@ Graph Graph::load(argparse::ArgumentParser &args) {
     int num_edges = csv_contents.size();
     int num_vertices = 0;
     for (std::vector<std::string> &edge : csv_contents) {
-        int from = std::stoi(edge[0]) - 1;  // Graph storage format indeces vertices from 1, not 0
+        int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;

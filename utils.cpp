@@ -1,27 +1,27 @@
 #include "utils.hpp"
 
-std::string utils::build_filepath(argparse::ArgumentParser &args) {
-    std::string directory = args.get("--directory");
-    std::string type = args.get("--type");
-    std::string overlap = args.get<std::string>("--overlap");
-    std::string blocksizevar = args.get<std::string>("--blocksizevar");
-    std::string vertices = args.get<std::string>("--numvertices");
+std::string utils::build_filepath(Args &args) {
+    // std::string directory = args.get("--directory");
+    // std::string type = args.get("--type");
+    // std::string overlap = args.get<std::string>("--overlap");
+    // std::string blocksizevar = args.get<std::string>("--blocksizevar");
+    // std::string vertices = args.get<std::string>("--numvertices");
     std::ostringstream filepathstream;
-    filepathstream << directory << "/" << type << "/" << overlap << "Overlap_" << blocksizevar;
-    filepathstream << "BlockSizeVar/" << type << "_" << overlap << "Overlap_" << blocksizevar;
-    filepathstream << "BlockSizeVar_" << vertices << "_nodes";
+    filepathstream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
+    filepathstream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
+    filepathstream << "BlockSizeVar_" << args.numvertices << "_nodes";
     // TODO: Add capability to process multiple "streaming" graph parts
     std::string filepath = filepathstream.str();
-    if (!std::filesystem::exists(filepath + ".tsv")) {
+    if (!fs::exists(filepath + ".tsv")) {
         std::cerr << "File doesn't exist: " << filepath + ".tsv" << std::endl;
         exit(-1);
     }
     return filepath;
 }
 
-std::vector<std::vector<std::string>> utils::read_csv(std::filesystem::path &filepath) {
+std::vector<std::vector<std::string>> utils::read_csv(fs::path &filepath) {
     std::vector<std::vector<std::string>> contents;
-    if (!std::filesystem::exists(filepath)) {
+    if (!fs::exists(filepath)) {
         std::cerr << "File doesn't exist: " << filepath << std::endl;
         return contents;
     }

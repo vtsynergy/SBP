@@ -10,9 +10,9 @@
 
 // #include <Eigen/Core>
 
-#include "partition/partition.hpp"
-#include "partition/sparse/csparse_matrix.hpp"
-#include "partition/sparse/typedefs.hpp"
+#include "blockmodel/blockmodel.hpp"
+#include "blockmodel/sparse/csparse_matrix.hpp"
+#include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
 
 namespace common {
@@ -36,35 +36,45 @@ typedef struct proposal_and_edge_counts_t {
 /// TODO
 int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights);
 
-/// TODO
-int choose_neighbor(SparseVector<double> &multinomial_distribution);
+/// Chooses a neighboring block using a multinomial distribution based on the number of edges connecting the current
+/// block to the neighboring blocks.
+int choose_neighbor(const SparseVector<double> &multinomial_distribution);
 
 /// Computes the block degrees under a proposed move
-NewBlockDegrees compute_new_block_degrees(int current_block, Partition &partition, common::ProposalAndEdgeCounts &proposal);
-/// TODO
+NewBlockDegrees compute_new_block_degrees(int current_block, Blockmodel &blockmodel,
+                                          common::ProposalAndEdgeCounts &proposal);
+
+/// Computes the entropy of one row or column of data
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
+
+/// Computes the entropy of one row or column of sparse data
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
+
+/// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int current_block, int proposal);
 
 /// Removes entries from in whose index is index1 or index
 std::vector<int> exclude_indices(std::vector<int> &in, int index1, int index2);
 
 /// Removes entries from in whose index is index1 or index
-std::map<int, int> exclude_indices(std::map<int, int> &in, int index1, int index2);
+MapVector<int>& exclude_indices(MapVector<int> &in, int index1, int index2);
 
 /// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
 std::vector<int> index_nonzero(std::vector<int> &values, std::vector<int> &indices);
 
 /// Returns a subset of <values> corresponding to the indices where the value of <indices> != 0
-std::vector<int> index_nonzero(std::vector<int> &values, std::map<int, int> &indices);
+std::vector<int> index_nonzero(std::vector<int> &values, MapVector<int> &indices);
 
 /// Returns the non-zero values in <in>
 std::vector<int> nonzeros(std::vector<int> &in);
 
 /// Returns the non-zero values in <in>
-std::vector<int> nonzeros(std::map<int, int> &in);
+std::vector<int> nonzeros(MapVector<int> &in);
 
-/// TODO
+/// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        std::vector<int> &block_partition, Partition &partition, bool block_merge = false);
+                                        std::vector<int> &block_blockmodel, Blockmodel &blockmodel, bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
 

@@ -9,15 +9,15 @@
 #include "hungarian.hpp"
 
 #include "graph.hpp"
-#include "partition/partition.hpp"
+#include "blockmodel/blockmodel.hpp"
 
 namespace evaluate {
 
 double calculate_f1_score(const Graph &graph, Hungarian::Matrix &contingency_table);
 
-void evaluate_partition(const Graph &graph, Partition &partition);
+void evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel);
 
-Hungarian::Matrix hungarian(const Graph &graph, Partition &partition);
+Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel);
 
 }
 
