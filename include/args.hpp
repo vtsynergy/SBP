@@ -8,6 +8,7 @@
 
 #include "tclap/CmdLine.h"
 
+// TODO: add a verbose argument
 class Args {
     public:  // Everything in here is public, because why not?
     /** Define all the arguments here for easy access */
@@ -17,8 +18,10 @@ class Args {
     std::string csv;  // TODO: save results in a csv file
     std::string delimiter;
     std::string directory;
+    int nodes;  // TODO: remove after this experiment
     int numvertices;
     std::string overlap;
+    std::string partition;
     std::string tag;  // TODO: add tag to saved results
     int threads;
     std::string type;
@@ -54,10 +57,14 @@ class Args {
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::ValueArg<int> nodes("", "nodes", "The number of partitions to create", false, 1, "int", parser);
             TCLAP::ValueArg<int> numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                              "int", parser);
             TCLAP::ValueArg<std::string> overlap("o", "overlap", "The degree of overlap between communities", false,
                                                  "low", "low|high|unk", parser);
+            TCLAP::ValueArg<std::string> partition("p", "partition", "The type of partitioning to use to divide the "
+                                                   "graph amongst the MPI Processes. Only matters when nprocs > 1",
+                                                   false, "round_robin", "round_robin|random|snowball", parser);
             TCLAP::ValueArg<std::string> tag("", "tag", "The tag value for this run, for differentiating different "
                                              "runs or adding custom parameters to the save file", false, "default tag",
                                              "string or param1=value1;param2=value2", parser);
@@ -74,8 +81,10 @@ class Args {
             this->csv = csv.getValue();
             this->delimiter = delimiter.getValue();
             this->directory = directory.getValue();
+            this->nodes = nodes.getValue();
             this->numvertices = numvertices.getValue();
             this->overlap = overlap.getValue();
+            this->partition = partition.getValue();
             this->tag = tag.getValue();
             this->threads = threads.getValue();
             this->type = type.getValue();

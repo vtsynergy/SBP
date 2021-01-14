@@ -7,7 +7,6 @@ Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_
     std::vector<double> delta_entropy_for_each_block =
         utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     std::vector<int> block_blockmodel = utils::range<int>(0, num_blocks);
-
     #pragma omp parallel for schedule(dynamic)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         // if (current_block == 0) {
