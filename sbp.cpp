@@ -1,6 +1,6 @@
 #include "sbp.hpp"
 
-Blockmodel sbp::stochastic_block_blockmodel(Graph &graph, Args &args) {
+Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
