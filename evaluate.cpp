@@ -72,7 +72,6 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
     for (int i = 0; i < true_assignment.size(); ++i) {
         true_assignment[i] = translator[true_assignment[i]];
     }
-    // int num_true_communities = true_communities.size();
     std::cout << "Blockmodel correctness evaluation" << std::endl;
     std::cout << "Number of vertices: " << graph.num_vertices << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
@@ -95,7 +94,6 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
         int row_block = rows[i];
         int col_block = cols[i];
         if (true_assignment[i] > -1) {
-            std::cout << "row_block: " << row_block << " col block: " << col_block << std::endl;
             contingency_table[row_block][col_block]++;
         }
     }

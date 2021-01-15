@@ -39,26 +39,19 @@ int main(int argc, char* argv[]) {
     Graph graph = Graph::load(args);
 
     if (num_processes > 1) {
-        if (rank == 0) {  // TODO: return this once we figure out the problem
-            for (int i = 0; i < num_processes; ++i) {
-                Graph partition = partition::partition(graph, i, num_processes, args);
-                Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
-                evaluate::evaluate_blockmodel(partition, partial_blockmodel);
-            }
+        double avg_f1;
+        Graph partition = partition::partition(graph, rank, num_processes, args);
+        Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
+        double f1 = evaluate::evaluate_blockmodel(partition, partial_blockmodel);
+        MPI_Reduce(&f1, &avg_f1, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        if (rank == 0) {
+            avg_f1 /= num_processes;
+            std::cout << "Average F1 Score across " << num_processes << " partitions = " << avg_f1 << std::endl;
         }
     } else {
-        double avg_f1 = 0.0;
-        for (int i = 0; i < args.nodes; ++i) {
-            Graph partition = partition::partition(graph, i, args.nodes, args);
-            Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
-            avg_f1 += evaluate::evaluate_blockmodel(partition, partial_blockmodel);
-        }
-        avg_f1 /= (double) args.nodes;
-        std::cout << "average f1 score across " << args.nodes << " partitions = " << avg_f1 << std::endl;
-        // std::cout << "Parsed out the arguments" << std::endl;
-        // Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
-        // // TODO: make sure evaluate_blockmodel doesn't crash on larger graphs
-        // evaluate::evaluate_blockmodel(graph, blockmodel);
+        Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
+        double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+        std::cout << "Final F1 score = " << f1 << std::endl;
     }
 
     MPI_Finalize();
