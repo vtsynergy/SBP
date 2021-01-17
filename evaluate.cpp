@@ -130,6 +130,9 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
             }
         }
         new_contingency_table = transpose_contingency_table;
+        int temp = ncols;
+        ncols = nrows;
+        nrows = temp;
     }
 
     std::cout << "Contingency Table" << std::endl;
