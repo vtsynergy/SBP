@@ -91,20 +91,21 @@ Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_
         utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     // TODO: keep track of already proposed merges, do not re-process those
-    #pragma omp parallel for schedule(dynamic)
+    int num_avoided = 0;  // number of avoided/skipped calculations
+    #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
-        // if (current_block == 0) {
-            // std::cout << "Total number of threads = "<< omp_get_num_threads() << std::endl;
-        // }
+        std::unordered_map<int, bool> past_proposals;
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, block_assignment);
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, block_assignment,
+                                                               past_proposals);
+            if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
                 best_merge_for_each_block[current_block] = proposal.proposed_block;
                 delta_entropy_for_each_block[current_block] = proposal.delta_entropy;
             }
         }
     }
-
+    std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
     if (args.approximate)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     else
@@ -129,17 +130,21 @@ block_merge::ProposalEvaluation block_merge::propose_merge(int current_block, Bl
 }
 
 block_merge::ProposalEvaluation block_merge::propose_merge_sparse(int current_block, Blockmodel &blockmodel,
-                                                                  std::vector<int> &block_blockmodel) {
+                                                                  std::vector<int> &block_blockmodel,
+                                                                  std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
         common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
+    if (past_proposals[proposal.proposal] == true)
+        return ProposalEvaluation{ proposal.proposal, std::numeric_limits<double>::max() };
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(blockmodel.getBlockmodel(), current_block, proposal.proposal, out_blocks, in_blocks,
                               updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double delta_entropy =
         compute_delta_entropy_sparse(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
+    past_proposals[proposal.proposal] = true;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 

@@ -4,6 +4,7 @@
 #ifndef CPPSBP_BLOCK_MERGE_HPP
 #define CPPSBP_BLOCK_MERGE_HPP
 
+#include <limits>
 #include <numeric>
 #include <random>
 
@@ -37,7 +38,8 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Ar
 ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
 
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+                                        std::unordered_map<int, bool> &past_proposals);
 
 /// Computes the new edge counts for the affected blocks (communities) 
 /// under a proposed block merge
