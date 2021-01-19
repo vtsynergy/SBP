@@ -15,7 +15,7 @@ Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
-        blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors);
+        blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors, args);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);

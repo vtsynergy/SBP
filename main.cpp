@@ -13,18 +13,18 @@
 #include "sbp.hpp"
 
 
-void handler(int sig) {
-    void *array[100];
-    size_t size;
-    size = backtrace(array, 100);
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(-1);
-}
+// void handler(int sig) {
+//     void *array[100];
+//     size_t size;
+//     size = backtrace(array, 100);
+//     fprintf(stderr, "Error: signal %d:\n", sig);
+//     backtrace_symbols_fd(array, size, STDERR_FILENO);
+//     exit(-1);
+// }
 
 
 int main(int argc, char* argv[]) {
-    signal(SIGABRT, handler);
+    // signal(SIGABRT, handler);
     int rank, num_processes;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);

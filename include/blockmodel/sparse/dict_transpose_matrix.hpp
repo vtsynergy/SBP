@@ -28,6 +28,11 @@ class DictTransposeMatrix {
     }
     void add(int row, int col, int val);
     void add(int row, std::vector<int> cols, std::vector<int> values);
+    /// Clears the value in a given row. Complexity ~O(number of blocks).
+    void clearrow(int row);
+    /// Clears the values in a given column. Complexity ~O(number of blocks).
+    void clearcol(int col);
+    /// Returns a copy of the current matrix.
     DictTransposeMatrix copy();
     int get(int row, int col);
     /// Returns all values in the requested column as a dense vector.
@@ -45,6 +50,10 @@ class DictTransposeMatrix {
     EdgeWeights incoming_edges(int block);
     Indices nonzero();
     EdgeWeights outgoing_edges(int block);
+    /// Sets the values in a row equal to the input vector.
+    void setrow(int row, const MapVector<int> &vector);
+    /// Sets the values in a column equal to the input vector.
+    void setcol(int col, const MapVector<int> &vector);
     void sub(int row, int col, int val);
     int sum();
     std::vector<int> sum(int axis = 0);

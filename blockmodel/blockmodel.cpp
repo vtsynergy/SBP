@@ -1,6 +1,6 @@
 #include "blockmodel.hpp"
 
-std::vector<int> build_mapping(std::vector<int> &values) {
+std::vector<int> Blockmodel::build_mapping(std::vector<int> &values) {
     std::map<int, bool> unique_map;
     for (int i = 0; i < values.size(); ++i) {
         unique_map[values[i]] = true;
@@ -14,7 +14,7 @@ std::vector<int> build_mapping(std::vector<int> &values) {
     return mapping;
 }
 
-std::vector<int> sort_indices(std::vector<double> &unsorted) {
+std::vector<int> Blockmodel::sort_indices(const std::vector<double> &unsorted) {
     // initialize original index locations
     std::vector<int> indices = utils::range<int>(0, unsorted.size());
 
@@ -25,8 +25,9 @@ std::vector<int> sort_indices(std::vector<double> &unsorted) {
     return indices;
 }
 
-void Blockmodel::carry_out_best_merges(std::vector<double> &delta_entropy_for_each_block,
-                                      std::vector<int> &best_merge_for_each_block) {
+// TODO: move to block_merge.cpp
+void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
+                                       const std::vector<int> &best_merge_for_each_block) {
     std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
     int num_merged = 0;
@@ -122,12 +123,13 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 }
 
 void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
-    /// TODO: this recreates the matrix (unnecessary)
+    /// TODO: this recreates the matrix (possibly unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
+    // TODO: find a way to parallelize the matrix filling step
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
         if (vertex_neighbors.size() == 0) {

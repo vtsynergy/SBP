@@ -13,6 +13,7 @@ class Args {
     public:  // Everything in here is public, because why not?
     /** Define all the arguments here for easy access */
     std::string algorithm;
+    bool approximate;
     int batches;
     std::string blocksizevar;
     std::string csv;  // TODO: save results in a csv file
@@ -36,6 +37,9 @@ class Args {
                                                    "step of stochastic block blockmodeling. Note: there is currently no "
                                                    "parallel implementation of metropolis hastings", false,
                                                    "async_gibbs", "async_gibbs|metropolis_hastings", parser);
+            TCLAP::SwitchArg approximate("", "approximate", "If set, an approximate version of the block merge "
+                                         "step will be used. It's slightly faster, but less accurate for complex "
+                                         "graphs.", parser, false);
             TCLAP::ValueArg<int> batches("", "batches", "The number of batches to use for the asynchronous_gibbs "
                                          "algorithm. Too many batches will lead to many updates and little parallelism,"
                                          " but too few will lead to poor results or more iterations", false, 10, "int",
@@ -76,6 +80,7 @@ class Args {
                                         false);
             parser.parse(argc, argv);
             this->algorithm = algorithm.getValue();
+            this->approximate = approximate.getValue();
             this->batches = batches.getValue();
             this->blocksizevar = blocksizevar.getValue();
             this->csv = csv.getValue();
