@@ -57,7 +57,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
 }
 
 Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
-                                                      std::vector<int> &true_block_membership) {
+                                                        std::vector<int> &true_block_membership) {
     int num_blocks = 0;
     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
     for (uint i = 0; i < true_block_membership.size(); ++i) {
@@ -85,7 +85,7 @@ Blockmodel Blockmodel::copy() {
 }
 
 Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
-                                 std::map<int, int> &mapping, float block_reduction_rate) {
+                                   std::map<int, int> &mapping, float block_reduction_rate) {
     // Fill in initial block assignment
     std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
     for (const auto &item : mapping) {
@@ -122,7 +122,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
     return Blockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
 }
 
-void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
+void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
@@ -177,8 +177,8 @@ void Blockmodel::merge_blocks(int from_block, int to_block) {
 };
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
-                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
-                            std::vector<int> &new_block_degrees) {
+                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                             std::vector<int> &new_block_degrees) {
     this->block_assignment[vertex] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
     this->block_degrees_out = new_block_degrees_out;

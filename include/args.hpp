@@ -23,6 +23,7 @@ class Args {
     int numvertices;
     std::string overlap;
     std::string partition;
+    int seed;
     std::string tag;  // TODO: add tag to saved results
     int threads;
     std::string type;
@@ -69,6 +70,7 @@ class Args {
             TCLAP::ValueArg<std::string> partition("p", "partition", "The type of partitioning to use to divide the "
                                                    "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                    false, "round_robin", "round_robin|random|snowball", parser);
+            TCLAP::ValueArg<int> seed("s", "seed", "The random number generator seed", false, 1234, "int", parser);
             TCLAP::ValueArg<std::string> tag("", "tag", "The tag value for this run, for differentiating different "
                                              "runs or adding custom parameters to the save file", false, "default tag",
                                              "string or param1=value1;param2=value2", parser);
@@ -90,6 +92,7 @@ class Args {
             this->numvertices = numvertices.getValue();
             this->overlap = overlap.getValue();
             this->partition = partition.getValue();
+            this->seed = seed.getValue();
             this->tag = tag.getValue();
             this->threads = threads.getValue();
             this->type = type.getValue();

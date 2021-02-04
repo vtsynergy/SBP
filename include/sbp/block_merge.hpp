@@ -1,8 +1,8 @@
 /**
  * The block merge phase of the stochastic block blockmodeling module.
  */
-#ifndef CPPSBP_BLOCK_MERGE_HPP
-#define CPPSBP_BLOCK_MERGE_HPP
+#ifndef SBP_BLOCK_MERGE_HPP
+#define SBP_BLOCK_MERGE_HPP
 
 #include <limits>
 #include <numeric>
@@ -15,7 +15,11 @@
 // #include "blockmodel/sparse/boost_mapped_matrix.hpp"
 #include "blockmodel/sparse/dict_transpose_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
-#include "utils.hpp"
+#include "mpi.h"
+#include "mpi_utils.hpp"
+#include "partition.hpp"
+
+namespace sbp {
 
 namespace block_merge {
 
@@ -25,6 +29,8 @@ typedef struct proposal_evaluation_t {
     int proposed_block;
     double delta_entropy;
 } ProposalEvaluation;
+
+namespace parallel {
 
 /// Performs the block merges with the highest change in entropy/MDL, recalculating change in entropy before each
 /// merge to account for dependencies between merges. This function modified the blockmodel.
@@ -59,6 +65,30 @@ double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockm
 double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
                                     SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
-} // block_merge
+} // namespace parallel
 
-#endif // CPPSBP_BLOCK_MERGE_HPP
+namespace naive_distributed {
+
+/// Fills the new edge counts for the affected blocks (communities) under a proposed block merge. Requires communication
+/// with other MPI nodes to retrieve/send information. Results are stored as sparse vectors (unordered_maps)
+void edge_count_updates_sparse(partition::BlockmodelPartition &partition, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates,
+                               utils::mpi::Info &mpi);
+
+/// Merges entire blocks (communities) in blockmodel together in a distributed manner.
+partition::BlockmodelPartition &merge_blocks(partition::BlockmodelPartition &blockmodel,
+                                             const NeighborList &out_neighbors, utils::mpi::Info &mpi, Args &args);
+
+/// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures.
+/// Requires communication with other MPI nodes to retrieve/send information.
+ProposalEvaluation propose_merge_sparse(int current_block, partition::BlockmodelPartition &partition,
+                                        std::vector<int> &block_assignment,
+                                        std::unordered_map<int, bool> &past_proposals, utils::mpi::Info &mpi);
+
+} // namespace naive_distributed
+
+} // namespace block_merge
+
+} // namespace sbp
+
+#endif // SBP_BLOCK_MERGE_HPP

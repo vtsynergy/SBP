@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <math.h>
+#include <mpi.h>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -21,6 +22,19 @@
 // typedef std::vector<std::vector<int>> NeighborList;
 
 namespace utils {
+
+// /// Data class that holds MPI-specific data
+// class MPI_Data {
+// public:
+//     /// Constructor that performs MPI initialization, and initializes public variables
+//     MPI_Data(int argc, char* argv[]) {
+//         MPI_Init(&argc, &argv);
+//         MPI_Comm_rank(MPI_COMM_WORLD, &(this->rank));
+//         MPI_Comm_size(MPI_COMM_WORLD, &(this->num_processes));
+//     }
+//     int rank;
+//     int num_processes;
+// };
 
 /// Builds the base path for the graph and true assignment .tsv files.
 /// Assumes the file is saved in the following directory:

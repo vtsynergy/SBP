@@ -1,6 +1,45 @@
 #include "partition.hpp"
 
-Graph partition::partition(const Graph &graph, int rank, int num_processes, Args &args) {
+namespace partition {
+
+bool BlockmodelPartition::contains(int community) {
+    return this->community_flag_[community];
+}
+
+GraphPartition distribute(const Graph &graph, utils::mpi::Info &mpi, Args &args) {
+    int target_num_vertices = graph.num_vertices / mpi.num_processes;
+    NeighborList in_neighbors(target_num_vertices);
+    NeighborList out_neighbors(target_num_vertices);
+    int num_vertices = 0, num_edges = 0;
+    std::unordered_map<int, bool> included;
+    for (int from = mpi.rank; from < graph.out_neighbors.size(); from += mpi.num_processes) {
+        if ((from % mpi.num_processes) == mpi.rank)
+            included[from] = true;
+        for (int to : graph.out_neighbors[from]) {
+            if ((to % mpi.num_processes) == mpi.rank)
+                included[to] = true;
+            if ((to % mpi.num_processes) == mpi.rank || (from % mpi.num_processes) == mpi.rank) {
+                utils::insert(out_neighbors, from, to);
+                utils::insert(in_neighbors, to, from);
+                num_edges++;
+            }
+        }
+    }
+    // TODO: change this to a std::unordered_map or something? Maybe copy over the entire assignment?
+    std::vector<int> assignment(graph.num_vertices, -1);
+    std::vector<int> vertices;
+    for (const std::pair<const int, int> &element : included) {
+        assignment[element.first] = graph.assignment[element.first];
+        vertices.push_back(element.first);
+    }
+    num_vertices = vertices.size();
+    std::cout << "NOTE: rank " << mpi.rank << "/" << mpi.num_processes - 1 << " has N = " << num_vertices << " E = ";
+    std::cout << num_edges << std::endl;
+    return GraphPartition(graph.num_vertices, graph.num_edges, vertices, out_neighbors, in_neighbors, num_vertices,
+                          num_edges, assignment);
+}
+
+Graph partition(const Graph &graph, int rank, int num_processes, Args &args) {
     int target_num_vertices = graph.num_vertices / num_processes;
     std::cout << "target num vertices = " << target_num_vertices << std::endl;
     if (target_num_vertices == graph.num_vertices)
@@ -15,7 +54,7 @@ Graph partition::partition(const Graph &graph, int rank, int num_processes, Args
     return partition_round_robin(graph, rank, num_processes, target_num_vertices);
 }
 
-Graph partition::partition_round_robin(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
+Graph partition_round_robin(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     int num_vertices = 0, num_edges = 0;
@@ -44,7 +83,7 @@ Graph partition::partition_round_robin(const Graph &graph, int rank, int num_pro
     return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
 }
 
-Graph partition::partition_random(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
+Graph partition_random(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     int num_vertices = 0, num_edges = 0;
@@ -80,7 +119,7 @@ Graph partition::partition_random(const Graph &graph, int rank, int num_processe
     return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
 }
 
-Graph partition::partition_snowball(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
+Graph partition_snowball(const Graph &graph, int rank, int num_processes, int target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     int num_vertices = 0, num_edges = 0;
@@ -148,3 +187,5 @@ Graph partition::partition_snowball(const Graph &graph, int rank, int num_proces
     std::cout << num_edges << std::endl;
     return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
 }
+
+} // namespace partition
