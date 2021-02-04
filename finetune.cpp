@@ -10,6 +10,56 @@ bool finetune::accept(double delta_entropy, double hastings_correction) {
     return random_probability <= accept_probability;
 }
 
+/// TODO
+Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels,
+                                         Args &args) {
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
+    }
+    std::vector<double> delta_entropies;
+    int total_vertex_moves = 0;
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    double initial_entropy = blockmodel.getOverall_entropy();
+
+    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        int vertex_moves = 0;
+        double delta_entropy = 0.0;
+        int num_batches = args.batches;
+        int batch_size = int(ceil(graph.num_vertices / num_batches));
+        for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
+            int start = batch * batch_size;
+            int end = std::min(graph.num_vertices, (batch + 1) * batch_size);
+            // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
+            // asynchronous Gibbs sampling
+            std::vector<int> block_assignment(blockmodel.getBlock_assignment());
+            #pragma omp parallel for schedule(dynamic)
+            for (int vertex = start; vertex < end; ++vertex) {
+                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph.out_neighbors,
+                                                         graph.in_neighbors);
+                if (proposal.did_move) {
+                    vertex_moves++;
+                    delta_entropy += proposal.delta_entropy;
+                    block_assignment[vertex] = proposal.proposed_block;
+                }
+            }
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors,
+                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+        }
+        delta_entropies.push_back(delta_entropy);
+        std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
+        std::cout << delta_entropy / initial_entropy << std::endl;
+        total_vertex_moves += vertex_moves;
+        // Early stopping
+        if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
+}
+
 // Reads: NA
 // Writes: NA
 EdgeWeights finetune::block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights) {
@@ -264,7 +314,7 @@ EdgeWeights finetune::edge_weights(NeighborList &neighbors, int vertex) {
     std::vector<int> indices;
     std::vector<int> values;
     // Assumes graph is undirected
-    std::vector<int> neighbor_vector = neighbors[vertex];
+    std::vector<int> &neighbor_vector = neighbors[vertex];
     for (int row = 0; row < neighbor_vector.size(); ++row) {
         indices.push_back(neighbor_vector[row]);
         values.push_back(1);
@@ -299,11 +349,6 @@ double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_bl
     }
     // Create Arrays using unique blocks
     int num_unique_blocks = block_counts.size();
-    // std::vector<double> counts = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> proposal_weights = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> block_weights = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> block_degrees = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> proposal_degrees = utils::constant<double>(num_unique_blocks, 0);    
     std::vector<double> counts(num_unique_blocks, 0);
     std::vector<double> proposal_weights(num_unique_blocks, 0);
     std::vector<double> block_weights(num_unique_blocks, 0);
@@ -350,11 +395,6 @@ double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_bl
     }
     // Create Arrays using unique blocks
     int num_unique_blocks = block_counts.size();
-    // std::vector<double> counts = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> proposal_weights = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> block_weights = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> block_degrees = utils::constant<double>(num_unique_blocks, 0);
-    // std::vector<double> proposal_degrees = utils::constant<double>(num_unique_blocks, 0);    
     std::vector<double> counts(num_unique_blocks, 0);
     std::vector<double> proposal_weights(num_unique_blocks, 0);
     std::vector<double> block_weights(num_unique_blocks, 0);
@@ -575,55 +615,6 @@ Blockmodel &finetune::finetune_assignment(Blockmodel &blockmodel, Graph &graph) 
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, blockmodel.getOverall_entropy(), delta_entropies)) {
-            break;
-        }
-    }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
-    return blockmodel;
-}
-
-/// TODO
-Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args) {
-    if (blockmodel.getNum_blocks() == 1) {
-        return blockmodel;
-    }
-    std::vector<double> delta_entropies;
-    int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
-    double initial_entropy = blockmodel.getOverall_entropy();
-
-    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-        int vertex_moves = 0;
-        double delta_entropy = 0.0;
-        int num_batches = args.batches;
-        int batch_size = int(ceil(graph.num_vertices / num_batches));
-        for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
-            int start = batch * batch_size;
-            int end = std::min(graph.num_vertices, (batch + 1) * batch_size);
-            // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
-            // asynchronous Gibbs sampling
-            std::vector<int> block_assignment(blockmodel.getBlock_assignment());
-            #pragma omp parallel for schedule(dynamic)
-            for (int vertex = start; vertex < end; ++vertex) {
-                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph.out_neighbors,
-                                                         graph.in_neighbors);
-                if (proposal.did_move) {
-                    vertex_moves++;
-                    delta_entropy += proposal.delta_entropy;
-                    block_assignment[vertex] = proposal.proposed_block;
-                }
-            }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors,
-                                    blockmodel.getBlock_reduction_rate(), block_assignment);
-        }
-        delta_entropies.push_back(delta_entropy);
-        std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
-        std::cout << delta_entropy / initial_entropy << std::endl;
-        total_vertex_moves += vertex_moves;
-        // Early stopping
-        if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
             break;
         }
     }

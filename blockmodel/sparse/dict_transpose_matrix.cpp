@@ -32,6 +32,20 @@ void DictTransposeMatrix::check_col_bounds(int col) const {
     }
 }
 
+void DictTransposeMatrix::clearcol(int col) {
+    this->matrix_transpose[col].clear();
+    for (MapVector<int> &row : this->matrix) {
+        row.erase(col);
+    }
+}
+
+void DictTransposeMatrix::clearrow(int row) {
+    this->matrix[row].clear();
+    for (MapVector<int> &col : this->matrix_transpose) {
+        col.erase(row);
+    }
+}
+
 DictTransposeMatrix DictTransposeMatrix::copy() {
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
     DictTransposeMatrix dict_matrix(this->nrows, this->ncols);
@@ -119,6 +133,28 @@ Indices DictTransposeMatrix::nonzero() {
         }
     }
     return Indices{row_vector, col_vector};
+}
+
+void DictTransposeMatrix::setcol(int col, const MapVector<int> &vector) {
+    this->matrix_transpose[col] = MapVector<int>(vector);
+    for (int row = 0; row < this->matrix.size(); ++row) {
+        MapVector<int>::const_iterator value = vector.find(row);
+        if (value == vector.end())  // value is not in vector
+            this->matrix[row].erase(col);
+        else
+            this->matrix[row][col] = value->second;
+    }
+}
+
+void DictTransposeMatrix::setrow(int row, const MapVector<int> &vector) {
+    this->matrix[row] = MapVector<int>(vector);
+    for (int col = 0; col < this->matrix.size(); ++col) {
+        MapVector<int>::const_iterator value = vector.find(col);
+        if (value == vector.end())  // value is not in vector
+            this->matrix_transpose[col].erase(row);
+        else
+            this->matrix_transpose[col][row] = value->second;
+    }
 }
 
 void DictTransposeMatrix::sub(int row, int col, int val) {

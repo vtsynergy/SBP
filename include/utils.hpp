@@ -11,6 +11,7 @@
 #include <numeric>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // #include "argparse/argparse.hpp"
@@ -45,6 +46,10 @@ std::vector<std::vector<std::string>> read_csv(fs::path &filepath);
 
 /// Inserts the given edge into the neighbors list. Assumes the graph is unweighted.
 void insert(NeighborList &neighbors, int from, int to);
+
+/// Inserts the given pair into the map if the element does not already exist. Returns true if the insertion happened,
+/// false otherwise.
+bool insert(std::unordered_map<int, int> &map, int key, int value);
 
 /// Concatenates two vectors without modifying them.
 template <typename T> inline std::vector<T> concatenate(std::vector<T> &a, std::vector<T> &b) {
@@ -134,6 +139,10 @@ template <typename T> inline int argmax(const std::vector<T> &vector) {
 
 /// Prints a vector
 template <typename T> inline void print(const std::vector<T> &vector) {
+    if (vector.size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
     std::cout << "[" << vector[0] << ", ";
     for (int nprinted = 1; nprinted < vector.size() - 1; nprinted++) {
         if (nprinted % 25 == 0) {

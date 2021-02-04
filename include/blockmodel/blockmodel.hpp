@@ -8,6 +8,7 @@
 #include <limits>
 #include <numeric>
 #include <map>
+#include <queue>
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
@@ -56,9 +57,11 @@ class Blockmodel {
         // Number of blocks to merge
         this->initialize_edge_counts(out_neighbors);
     }
+    /// TODO
+    std::vector<int> build_mapping(std::vector<int> &values);
     /// Performs the block merges with the highest change in entropy/MDL
-    void carry_out_best_merges(std::vector<double> &delta_entropy_for_each_block,
-                               std::vector<int> &best_merge_for_each_block);
+    void carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
+                               const std::vector<int> &best_merge_for_each_block);
     /// TODO
     Blockmodel clone_with_true_block_membership(NeighborList &neighbors, std::vector<int> &true_block_membership);
     /// Returns a copy of the current Blockmodel
@@ -116,6 +119,8 @@ class Blockmodel {
     // Computed info
     float overall_entropy;
     int num_blocks_to_merge;
+    /// Sorts the indices of an array in descending order according to the values of the array
+    std::vector<int> sort_indices(const std::vector<double> &unsorted);
 };
 
 #endif // SBP_PARTITION_HPP

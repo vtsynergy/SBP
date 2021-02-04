@@ -4,11 +4,12 @@
 #ifndef CPPSBP_BLOCK_MERGE_HPP
 #define CPPSBP_BLOCK_MERGE_HPP
 
+#include <limits>
 #include <numeric>
 #include <random>
 
 // #include <omp.h>
-
+#include "args.hpp"
 #include "common.hpp"
 #include "blockmodel/blockmodel.hpp"
 // #include "blockmodel/sparse/boost_mapped_matrix.hpp"
@@ -25,14 +26,20 @@ typedef struct proposal_evaluation_t {
     double delta_entropy;
 } ProposalEvaluation;
 
+/// Performs the block merges with the highest change in entropy/MDL, recalculating change in entropy before each
+/// merge to account for dependencies between merges. This function modified the blockmodel.
+void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
+                                    const std::vector<int> &best_merge_for_each_block);
+
 /// Merges entire blocks (communities) in blockmodel together
-Blockmodel &merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors);
+Blockmodel &merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Args &args);
 
 /// Proposes a merge for current_block based on the current blockmodel state
 ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
 
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+                                        std::unordered_map<int, bool> &past_proposals);
 
 /// Computes the new edge counts for the affected blocks (communities) 
 /// under a proposed block merge
