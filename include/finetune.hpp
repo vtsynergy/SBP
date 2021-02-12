@@ -70,7 +70,7 @@ ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, NeighborList
                                 NeighborList &in_neighbors);
 VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
                             NeighborList &in_neighbors);
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
 Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 

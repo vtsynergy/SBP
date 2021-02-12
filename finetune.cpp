@@ -1,5 +1,7 @@
 #include "finetune.hpp"
 
+#include <random>
+
 // Reads: NA
 // Writes: NA
 bool finetune::accept(double delta_entropy, double hastings_correction) {
@@ -20,12 +22,20 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
     int total_vertex_moves = 0;
     blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
     double initial_entropy = blockmodel.getOverall_entropy();
-
+    std::uniform_int_distribution<int> distribution(0, graph.num_vertices - 1);
+    auto generator_function = [&distribution](){ return distribution(common::generator); };
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         int num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices / num_batches));
+        std::vector<int> vertices = utils::range<int>(0, graph.num_vertices);
+        if (!args.sequential)
+            std::generate(vertices.begin(), vertices.end(), generator_function);
+        if (args.sequential && !(args.deterministic)) {
+            std::cout << "everyday I'm shuffling" << std::endl;
+            std::shuffle(vertices.begin(), vertices.end(), common::generator);
+        }
         for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices, (batch + 1) * batch_size);
@@ -33,7 +43,8 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(blockmodel.getBlock_assignment());
             #pragma omp parallel for schedule(dynamic)
-            for (int vertex = start; vertex < end; ++vertex) {
+            for (int i = start; i < end; ++i) {
+                int vertex = vertices[i];
                 VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph.out_neighbors,
                                                          graph.in_neighbors);
                 if (proposal.did_move) {
@@ -521,9 +532,8 @@ finetune::VertexMove finetune::propose_gibbs_move(Blockmodel &blockmodel, int ve
     }
 
     SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(blockmodel.getBlockmodel(), current_block,
-                                                               proposal.proposal, blocks_out_neighbors,
-                                                               blocks_in_neighbors, self_edge_weight, updates);
+    edge_count_updates_sparse(blockmodel.getBlockmodel(), current_block, proposal.proposal, blocks_out_neighbors,
+                              blocks_in_neighbors, self_edge_weight, updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double hastings =
         hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
@@ -559,17 +569,28 @@ finetune::VertexMove finetune::propose_gibbs_move(Blockmodel &blockmodel, int ve
 //   - blockmodel.blockmodel proposed_block col
 //   - blockmodel.overall_entropy
 /// TODO
-Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args) {
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
     blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    std::uniform_int_distribution<int> distribution(0, graph.num_vertices - 1);
+    auto generator_function = [&distribution](){ return distribution(common::generator); };
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
-        for (int vertex = 0; vertex < graph.num_vertices; ++vertex) {
+        std::vector<int> vertices = utils::range<int>(0, graph.num_vertices);
+        if (!args.sequential)
+            std::generate(vertices.begin(), vertices.end(), generator_function);
+        // std::vector<int> vertices = utils::range<int>(0, graph.num_vertices);
+        if (args.sequential && !args.deterministic) {
+            std::cout << "everyday i'm shuffling" << std::endl;
+            std::shuffle(vertices.begin(), vertices.end(), common::generator);
+        }
+        for (int i = 0; i < graph.num_vertices; ++i) {
+            int vertex = vertices[i];
             ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors,
                                                        graph.in_neighbors);
             if (proposal.did_move) {

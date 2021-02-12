@@ -20,7 +20,7 @@ Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);
         else  // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
+            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet, args);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     return blockmodel;

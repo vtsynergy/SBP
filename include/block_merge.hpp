@@ -7,6 +7,7 @@
 #include <limits>
 #include <numeric>
 #include <random>
+#include <vector>
 
 // #include <omp.h>
 #include "args.hpp"

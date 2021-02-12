@@ -36,17 +36,17 @@ void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
                                                                                           proposal);
             double delta_entropy_actual =
                 compute_delta_entropy_sparse(merge_from, proposal.proposal, blockmodel, updates, new_block_degrees);
-            if (std::isnan(delta_entropy_actual)) {
-                std::cout << merge_from << " --> " << merge_to << " : " << delta_entropy_actual << std::endl;
-                std::cout << "proposal --> k_out: " << proposal.num_out_neighbor_edges << " k_in: " << proposal.num_in_neighbor_edges << " k: " << proposal.num_neighbor_edges << std::endl;
-                std::cout << "new block degrees out: ";
-                utils::print<int>(new_block_degrees.block_degrees_out);
-                std::cout << "new block degrees in: ";
-                utils::print<int>(new_block_degrees.block_degrees_in);
-                std::cout << "new block degrees: ";
-                utils::print<int>(new_block_degrees.block_degrees);
-                exit(-100);
-            }
+            // if (std::isnan(delta_entropy_actual)) {
+            //     std::cout << merge_from << " --> " << merge_to << " : " << delta_entropy_actual << std::endl;
+            //     std::cout << "proposal --> k_out: " << proposal.num_out_neighbor_edges << " k_in: " << proposal.num_in_neighbor_edges << " k: " << proposal.num_neighbor_edges << std::endl;
+            //     std::cout << "new block degrees out: ";
+            //     utils::print<int>(new_block_degrees.block_degrees_out);
+            //     std::cout << "new block degrees in: ";
+            //     utils::print<int>(new_block_degrees.block_degrees_in);
+            //     std::cout << "new block degrees: ";
+            //     utils::print<int>(new_block_degrees.block_degrees);
+            //     exit(-100);
+            // }
             // If the actual change in entropy is more positive (greater) than anticipated, put it back in queue
             if (!queue.empty() && delta_entropy_actual > std::get<2>(queue.top())) {
                 std::get<2>(merge) = delta_entropy_actual;
@@ -108,8 +108,11 @@ Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_
     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
     if (args.approximate)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
-    else
-        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
+    // else
+    //     if (num_blocks < 0.1 * out_neighbors.size())  // average community or block size ~10
+    carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
+        // else
+        //     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     blockmodel.initialize_edge_counts(out_neighbors);
     return blockmodel;
 }

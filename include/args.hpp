@@ -18,11 +18,13 @@ class Args {
     std::string blocksizevar;
     std::string csv;  // TODO: save results in a csv file
     std::string delimiter;
+    bool deterministic;
     std::string directory;
     int nodes;  // TODO: remove after this experiment
     int numvertices;
     std::string overlap;
     std::string partition;
+    bool sequential;
     std::string tag;  // TODO: add tag to saved results
     int threads;
     std::string type;
@@ -52,6 +54,9 @@ class Args {
                                              false, "./eval/test", "path", parser);
             TCLAP::ValueArg<std::string> delimiter("", "delimiter", "The delimiter used in the file storing the graph",
                                                    false, "\t", "string, usually `\\t` or `,`", parser);
+            TCLAP::SwitchArg deterministic("", "deterministic", "If set, the graph vertices will be traversed in a "
+                                "deterministic order. This is likely to reduce accuracy. If sequential is false, this "
+                                "option is ignored.", parser, false);
             TCLAP::ValueArg<std::string> directory("d", "directory", 
                                 "The directory in which the graph is stored. The following structure is assumed:\n"
                                 "filename for graph:"
@@ -69,6 +74,9 @@ class Args {
             TCLAP::ValueArg<std::string> partition("p", "partition", "The type of partitioning to use to divide the "
                                                    "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                    false, "round_robin", "round_robin|random|snowball", parser);
+            TCLAP::SwitchArg sequential("", "sequential", "If set, all graph vertices will be guaranteed to be "
+                                "traversed in each iteration. If this option is not provided (set to false), the "
+                                "deterministic option is ignored.", parser, false);
             TCLAP::ValueArg<std::string> tag("", "tag", "The tag value for this run, for differentiating different "
                                              "runs or adding custom parameters to the save file", false, "default tag",
                                              "string or param1=value1;param2=value2", parser);
@@ -85,11 +93,13 @@ class Args {
             this->blocksizevar = blocksizevar.getValue();
             this->csv = csv.getValue();
             this->delimiter = delimiter.getValue();
+            this->deterministic = deterministic.getValue();
             this->directory = directory.getValue();
             this->nodes = nodes.getValue();
             this->numvertices = numvertices.getValue();
             this->overlap = overlap.getValue();
             this->partition = partition.getValue();
+            this->sequential = sequential.getValue();
             this->tag = tag.getValue();
             this->threads = threads.getValue();
             this->type = type.getValue();
