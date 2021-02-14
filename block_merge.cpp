@@ -108,9 +108,9 @@ Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_
     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
     if (args.approximate)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
-    // else
+    else
+        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
     //     if (num_blocks < 0.1 * out_neighbors.size())  // average community or block size ~10
-    carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
         // else
         //     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     blockmodel.initialize_edge_counts(out_neighbors);
