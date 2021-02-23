@@ -20,6 +20,7 @@ class Args {
     std::string delimiter;
     bool deterministic;
     std::string directory;
+    bool flat;
     int nodes;  // TODO: remove after this experiment
     int numvertices;
     std::string overlap;
@@ -66,6 +67,8 @@ class Args {
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::SwitchArg flat("", "flat", "Using the flat version of SBP instead of the more accurate, "
+                                  "hierarchical version.", parser, false);
             TCLAP::ValueArg<int> nodes("", "nodes", "The number of partitions to create", false, 1, "int", parser);
             TCLAP::ValueArg<int> numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                              "int", parser);
@@ -95,6 +98,7 @@ class Args {
             this->delimiter = delimiter.getValue();
             this->deterministic = deterministic.getValue();
             this->directory = directory.getValue();
+            this->flat = flat.getValue();
             this->nodes = nodes.getValue();
             this->numvertices = numvertices.getValue();
             this->overlap = overlap.getValue();

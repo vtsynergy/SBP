@@ -1,4 +1,5 @@
 #include "blockmodel_triplet.hpp"
+#include <math.h>
 
 void BlockmodelTriplet::update(Blockmodel &blockmodel) {
     int index;
@@ -64,6 +65,33 @@ int BlockmodelTriplet::upper_difference() {
     return this->get(0).getNum_blocks() - this->get(1).getNum_blocks();
 }
 
+int BlockmodelTriplet::get_mid(int min, int max) {
+    float phi = (1.0 + sqrt(5.0)) / 2.0;
+    float x = max - min;
+    int fibo_n_floor = int(floor(log((x * sqrt(5.0)) + 0.5) / log(phi)));
+    int n = fibo_n_floor - 1;
+    int fibo = int(round((pow(phi, n) / sqrt(5.0))));
+    int next_num_blocks = max - fibo;
+    std::cout << "next num blocks: " << next_num_blocks << std::endl;
+    return max - next_num_blocks;
+        // Calculate next number of blocks/communities
+        // def fibo(n):
+        //     phi = (1 + sqrt(5)) / 2
+        //     return int(round(phi ** n / sqrt(5)))
+
+        // def fibo_n_floor(x):
+        //     phi = (1 + sqrt(5)) / 2
+        //     n = floor(log(x * sqrt(5) + 0.5) / log(phi))
+        //     return int(n)
+
+        // def get_mid(a, b, random=False):
+        //     if random:
+        //         return a + numpy.random.randint(b - a + 1)
+        //     else:
+        //         n = fibo_n_floor(b - a)
+        //         return b - fibo(n - 1)
+}
+
 Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     old_blockmodel.setNum_blocks_to_merge(0);
     this->update(old_blockmodel);
@@ -72,7 +100,8 @@ Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     // If have not yet reached golden ratio, continue from middle blockmodel
     if (this->golden_ratio_not_reached()) {
         Blockmodel blockmodel = this->get(1).copy();
-        blockmodel.setNum_blocks_to_merge(int(blockmodel.getNum_blocks() * BLOCK_REDUCTION_RATE));
+        blockmodel.setNum_blocks_to_merge(get_mid(1, blockmodel.getNum_blocks()));
+        // blockmodel.setNum_blocks_to_merge(int(blockmodel.getNum_blocks() * BLOCK_REDUCTION_RATE));
         if (blockmodel.getNum_blocks_to_merge() == 0) {
             this->optimal_num_blocks_found = true;
         }
@@ -92,9 +121,10 @@ Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     } else {
         index = 1;
     }
-    int next_num_blocks_to_try = this->get(index + 1).getNum_blocks();
-    next_num_blocks_to_try += int((this->get(index).getNum_blocks() - this->get(index + 1).getNum_blocks()) * 0.618);
+    // int next_num_blocks_to_try = this->get(index + 1).getNum_blocks();
+    // next_num_blocks_to_try += int((this->get(index).getNum_blocks() - this->get(index + 1).getNum_blocks()) * 0.618);
     Blockmodel blockmodel = this->get(index).copy();
-    blockmodel.setNum_blocks_to_merge(blockmodel.getNum_blocks() - next_num_blocks_to_try);
+    blockmodel.setNum_blocks_to_merge(get_mid(this->get(index + 1).getNum_blocks(), this->get(index).getNum_blocks()));
+    // blockmodel.setNum_blocks_to_merge(blockmodel.getNum_blocks() - next_num_blocks_to_try);
     return blockmodel;
 }

@@ -25,6 +25,8 @@ public:
     void status();
     /// Returns a reference to one of the three blockmodels in the triplet.
     Blockmodel &get(int i) { return blockmodels[i]; }
+    /// Returns the next midpoint (in terms of number of blocks) in the block merge cycle.
+    int get_mid(int min, int max);
     /// Returns true if the algorithm has not yet reached the fine-grained search for the optimal number of communities.
     bool golden_ratio_not_reached();
     /// Returns true if blockmodeling is done. Either the number of blocks is down to 1, or the optimal number of
