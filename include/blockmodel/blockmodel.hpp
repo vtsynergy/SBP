@@ -9,6 +9,8 @@
 #include <numeric>
 #include <map>
 #include <queue>
+#include <random>
+#include <set>
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
@@ -32,19 +34,39 @@ typedef struct sparse_edge_count_updates_t {
     MapVector<int> proposal_col;
 } SparseEdgeCountUpdates;
 
+// If/when sampler gets it's own .hpp file, this should move there too.
+static std::random_device seeder;
+static std::default_random_engine generator(seeder());
+
+class Sampler {
+public:
+    Sampler(int num_blocks) : num_blocks(num_blocks) {
+        for (int i = 0; i < num_blocks; ++i) {
+            this->neighbors.push_back(std::set<int>());
+        }
+    }
+    // const std::set<int> &get_neighbors(int block) { return this->neighbors[block]; };
+    void insert(int from, int to);
+    int sample(int block);
+private:
+    std::vector<std::set<int>> neighbors;
+    int num_blocks;
+};
+
 class Blockmodel {
   public:
-    Blockmodel() : empty(true) {}
-    Blockmodel(int num_blocks, float block_reduction_rate) : empty(false) {
+    Blockmodel() : empty(true), sampler(Sampler(0)) {}
+    Blockmodel(int num_blocks, float block_reduction_rate) : empty(false), sampler(Sampler(num_blocks)) {
         this->num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
         this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
         // Set the block assignment to be the range [0, this->num_blocks)
         this->block_assignment = utils::range<int>(0, this->num_blocks);
-
+        this->_block_sizes = std::vector<int>(this->num_blocks, 0);
         // Number of blocks to merge
         this->num_blocks_to_merge = (int)(this->num_blocks * this->block_reduction_rate);
+        // this->sampler = Sampler(num_blocks);
     }
     Blockmodel(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate)
         : Blockmodel(num_blocks, block_reduction_rate) {
@@ -80,9 +102,12 @@ class Blockmodel {
     void move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                      std::vector<int> &new_block_degrees);
-    /// TODO
+    /// Samples a community for the current block's neighbors. If the current block has no neighbors, returns a random
+    /// community.
+    int sample(int block);
+    /// Sets the block membership of `vertex` to `block`.
     void set_block_membership(int vertex, int block);
-    /// TODO
+    /// Updates the blockmodel matrix by replacing the appropriate rows and columns with those in `updates`.
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// TODO: Get rid of getters and setters?
     DictTransposeMatrix &getBlockmodel() { return this->blockmodel; }
@@ -97,6 +122,7 @@ class Blockmodel {
     void setBlock_degrees_out(std::vector<int> block_degrees_out) { this->block_degrees_out = block_degrees_out; }
     float &getBlock_reduction_rate() { return this->block_reduction_rate; }
     void setBlock_reduction_rate(float block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
+    std::vector<int> &block_sizes() { return this->_block_sizes; }
     float &getOverall_entropy() { return this->overall_entropy; }
     void setOverall_entropy(float overall_entropy) { this->overall_entropy = overall_entropy; }
     int &getNum_blocks_to_merge() { return this->num_blocks_to_merge; }
@@ -115,10 +141,12 @@ class Blockmodel {
     std::vector<int> block_degrees;
     std::vector<int> block_degrees_in;
     std::vector<int> block_degrees_out;
+    std::vector<int> _block_sizes;
     float block_reduction_rate;
     // Computed info
     float overall_entropy;
     int num_blocks_to_merge;
+    Sampler sampler;
     /// Sorts the indices of an array in descending order according to the values of the array
     std::vector<int> sort_indices(const std::vector<double> &unsorted);
 };

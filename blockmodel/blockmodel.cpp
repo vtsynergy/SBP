@@ -80,6 +80,8 @@ Blockmodel Blockmodel::copy() {
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._block_sizes = std::vector<int>(this->_block_sizes);
+    // Create a Sampler as well?
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
 }
@@ -125,6 +127,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    this->sampler = Sampler(this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
@@ -148,7 +151,9 @@ void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
             // Update degrees
             this->block_degrees_out[block] += weight;
             this->block_degrees_in[neighbor_block] += weight;
+            this->sampler.insert(block, neighbor_block);
         }
+        this->_block_sizes[block]++;
     }
     // Count block degrees
     this->block_degrees = this->block_degrees_out + this->block_degrees_in;
@@ -172,9 +177,11 @@ void Blockmodel::merge_blocks(int from_block, int to_block) {
     for (int index = 0; index < this->block_assignment.size(); ++index) {
         if (this->block_assignment[index] == from_block) {
             this->block_assignment[index] = to_block;
+            this->_block_sizes[index]--;
+            this->_block_sizes[to_block]++;
         }
     }
-};
+}
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
@@ -184,11 +191,48 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
     this->block_degrees_out = new_block_degrees_out;
     this->block_degrees_in = new_block_degrees_in;
     this->block_degrees = new_block_degrees;
-};
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+}
 
-void Blockmodel::set_block_membership(int vertex, int block) { this->block_assignment[vertex] = block; }
+int Blockmodel::sample(int block) {
+    return this->sampler.sample(block);
+}
+
+void Blockmodel::set_block_membership(int vertex, int block) {
+    int current_block = this->block_assignment[vertex];
+    this->block_assignment[vertex] = block;
+    if (current_block >= 0)
+        this->_block_sizes[current_block]--;
+    this->_block_sizes[block]++;
+}
 
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
     this->blockmodel.update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                         updates.block_col, updates.proposal_col);
+}
+
+void Sampler::insert(int from, int to) {
+    if (from == to) return;
+    this->neighbors[from].insert(to);
+    this->neighbors[to].insert(from);
+}
+
+int Sampler::sample(int block) {
+    const std::set<int> &neighborhood = this->neighbors[block];
+    if (neighborhood.empty()) {  // sample a random block
+        std::uniform_int_distribution<int> distribution(0, this->num_blocks - 2);
+        int sampled = distribution(generator);
+        if (sampled >= block) {
+            sampled++;
+        }
+        return sampled;
+    }
+    std::uniform_int_distribution<int> distribution(0, neighborhood.size() - 1);
+    int index = distribution(generator);
+    // std::set doesn't have access by index - use iterator instead.
+    std::set<int>::iterator it = neighborhood.begin();
+    std::advance(it, index);
+    int sampled = *it;
+    return sampled;
 }

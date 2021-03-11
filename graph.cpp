@@ -20,6 +20,12 @@ Graph Graph::load(Args &args) {
         utils::insert(out_neighbors, from , to);
         utils::insert(in_neighbors, to, from);
     }
+    while (out_neighbors.size() < num_vertices) {
+        out_neighbors.push_back(std::vector<int>());
+    }
+    while (in_neighbors.size() < num_vertices) {
+        in_neighbors.push_back(std::vector<int>());
+    }
     csv_contents = utils::read_csv(truthpath);
     std::vector<int> assignment;
     if (!csv_contents.empty()) {
