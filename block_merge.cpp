@@ -1,8 +1,9 @@
 #include "block_merge.hpp"
 
-void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
-                                                 const std::vector<double> &delta_entropy_for_each_block,
-                                                 const std::vector<int> &best_merge_for_each_block) {
+namespace block_merge {
+
+void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
+                                    const std::vector<int> &best_merge_for_each_block, const Graph &graph) {
     // The following code is modeled after the `merge_sweep` function in
     // https://git.skewed.de/count0/graph-tool/-/blob/master/src/graph/inference/loops/merge_loop.hh
     typedef std::tuple<int, int, double> merge_t;
@@ -36,17 +37,6 @@ void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
                                                                                           proposal);
             double delta_entropy_actual =
                 compute_delta_entropy_sparse(merge_from, proposal.proposal, blockmodel, updates, new_block_degrees);
-            // if (std::isnan(delta_entropy_actual)) {
-            //     std::cout << merge_from << " --> " << merge_to << " : " << delta_entropy_actual << std::endl;
-            //     std::cout << "proposal --> k_out: " << proposal.num_out_neighbor_edges << " k_in: " << proposal.num_in_neighbor_edges << " k: " << proposal.num_neighbor_edges << std::endl;
-            //     std::cout << "new block degrees out: ";
-            //     utils::print<int>(new_block_degrees.block_degrees_out);
-            //     std::cout << "new block degrees in: ";
-            //     utils::print<int>(new_block_degrees.block_degrees_in);
-            //     std::cout << "new block degrees: ";
-            //     utils::print<int>(new_block_degrees.block_degrees);
-            //     exit(-100);
-            // }
             // If the actual change in entropy is more positive (greater) than anticipated, put it back in queue
             if (!queue.empty() && delta_entropy_actual > std::get<2>(queue.top())) {
                 std::get<2>(merge) = delta_entropy_actual;
@@ -61,7 +51,7 @@ void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
                     block_map[i] = merge_to;
                 }
             }
-            blockmodel.merge_blocks(merge_from, merge_to);
+            blockmodel.merge_blocks(merge_from, merge_to, graph);
             // 2. Update the matrix
             // NOTE: if getting funky results, try replacing the following with a matrix rebuild
             blockmodel.getBlockmodel().clearrow(merge_from);
@@ -83,7 +73,7 @@ void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
     blockmodel.setNum_blocks(blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge());
 }
 
-Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Args &args) {
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args) {
     // TODO: add block merge timings to evaluation
     int num_blocks = blockmodel.getNum_blocks();
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
@@ -107,18 +97,14 @@ Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_
     }
     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
     if (args.approximate)
-        blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
+        blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block, graph);
     else
-        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
-    //     if (num_blocks < 0.1 * out_neighbors.size())  // average community or block size ~10
-        // else
-        //     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
-    blockmodel.initialize_edge_counts(out_neighbors);
+        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, graph);
+    blockmodel.initialize_edge_counts(graph);
     return blockmodel;
 }
 
-block_merge::ProposalEvaluation block_merge::propose_merge(int current_block, Blockmodel &blockmodel,
-                                                           std::vector<int> &block_blockmodel) {
+ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel) {
     EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
@@ -132,9 +118,8 @@ block_merge::ProposalEvaluation block_merge::propose_merge(int current_block, Bl
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-block_merge::ProposalEvaluation block_merge::propose_merge_sparse(int current_block, Blockmodel &blockmodel,
-                                                                  std::vector<int> &block_blockmodel,
-                                                                  std::unordered_map<int, bool> &past_proposals) {
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+                                        std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
@@ -151,8 +136,8 @@ block_merge::ProposalEvaluation block_merge::propose_merge_sparse(int current_bl
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-double block_merge::compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel,
-                                          EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
+                             common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
     std::vector<int> old_block_row = blockmodel.getBlockmodel().getrow(current_block); // M_r_t1
     std::vector<int> old_proposal_row = blockmodel.getBlockmodel().getrow(proposal);   // M_s_t1
@@ -197,9 +182,8 @@ double block_merge::compute_delta_entropy(int current_block, int proposal, Block
     return delta_entropy;
 }
 
-double block_merge::compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
-                                                 SparseEdgeCountUpdates &updates,
-                                                 common::NewBlockDegrees &block_degrees) {
+double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
+                                    SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
     const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
     const MapVector<int> &old_block_row = matrix.getrow_sparse(current_block); // M_r_t1
@@ -223,8 +207,8 @@ double block_merge::compute_delta_entropy_sparse(int current_block, int proposal
     return delta_entropy;
 }
 
-EdgeCountUpdates block_merge::edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
-                                                 EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
+EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                                    EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
     std::vector<int> proposal_row = blockmodel.getrow(proposed_block);
     std::vector<int> proposal_col = blockmodel.getcol(proposed_block);
@@ -253,9 +237,8 @@ EdgeCountUpdates block_merge::edge_count_updates(DictTransposeMatrix &blockmodel
     return EdgeCountUpdates{std::vector<int>(), proposal_row, std::vector<int>(), proposal_col};
 }
 
-void block_merge::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
-                                            EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                            SparseEdgeCountUpdates &updates) {
+void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates) {
     // TODO: these are copy constructors, can we safely get rid of them?
     updates.proposal_row = blockmodel.getrow_sparse(proposed_block);
     updates.proposal_col = blockmodel.getcol_sparse(proposed_block);
@@ -283,4 +266,4 @@ void block_merge::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int
     updates.proposal_col[proposed_block] += count_out;
 }
 
-
+}  // namespace block_merge

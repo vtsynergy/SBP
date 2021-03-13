@@ -4,7 +4,7 @@ INCLUDES=-I./include -I./include/blockmodel -I./include/blockmodel/sparse -I./hu
 CC=g++ -std=c++17 -O3 -no-pie
 MPICC=mpic++ -std=c++17 -O3 -no-pie
 DEBUG=-g3 -fsanitize=address
-FILES=main.cpp graph.cpp utils.cpp sbp.cpp block_merge.cpp common.cpp finetune.cpp partition.cpp
+FILES=main.cpp graph.cpp utils.cpp sbp.cpp block_merge.cpp common.cpp finetune.cpp partition.cpp entropy.cpp
 FILES+=blockmodel/blockmodel.cpp blockmodel/blockmodel_triplet.cpp blockmodel/sparse/boost_mapped_matrix.cpp
 FILES+=blockmodel/sparse/dict_matrix.cpp blockmodel/sparse/dict_transpose_matrix.cpp evaluate.cpp
 FILES+=hung.o

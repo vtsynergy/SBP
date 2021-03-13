@@ -17,8 +17,10 @@
 
 namespace common {
 
-static std::random_device seeder;
-static std::default_random_engine generator(seeder());
+// static std::random_device seeder;
+// static std::mt19937_64 generator(seeder());
+const int seed = 1;
+static std::mt19937_64 generator(seed);
 
 typedef struct new_block_degrees_t {
     std::vector<int> block_degrees_out;
@@ -36,9 +38,13 @@ typedef struct proposal_and_edge_counts_t {
 /// TODO
 int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights);
 
+int choose_neighbor_uniform(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights);
+
 /// Chooses a neighboring block using a multinomial distribution based on the number of edges connecting the current
 /// block to the neighboring blocks.
 int choose_neighbor(const SparseVector<double> &multinomial_distribution);
+
+int choose_neighbor_uniform(const SparseVector<double> &multinomial_distribution);
 
 /// Computes the block degrees under a proposed move
 NewBlockDegrees compute_new_block_degrees(int current_block, Blockmodel &blockmodel,
@@ -75,6 +81,11 @@ std::vector<int> nonzeros(MapVector<int> &in);
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                         std::vector<int> &block_blockmodel, Blockmodel &blockmodel, bool block_merge = false);
+
+/// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
+ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                             std::vector<int> &block_blockmodel, Blockmodel &blockmodel,
+                                             bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
 

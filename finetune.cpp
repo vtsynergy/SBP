@@ -1,26 +1,28 @@
 #include "finetune.hpp"
+#include "entropy.hpp"
 
 #include <random>
 
+namespace finetune {
 // Reads: NA
 // Writes: NA
-bool finetune::accept(double delta_entropy, double hastings_correction) {
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    double random_probability = distribution(common::generator);
-    double accept_probability = exp(-3.0 * delta_entropy) * hastings_correction;
-    accept_probability = (accept_probability >= 1.0) ? 1.0 : accept_probability;
-    return random_probability <= accept_probability;
+bool accept(double delta_entropy, double hastings_correction) {
+    return delta_entropy < 0.0;
+    // std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    // double random_probability = distribution(common::generator);
+    // double accept_probability = exp(-3.0 * delta_entropy) * hastings_correction;
+    // accept_probability = (accept_probability >= 1.0) ? 1.0 : accept_probability;
+    // return random_probability <= accept_probability;
 }
 
 /// TODO
-Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels,
-                                         Args &args) {
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels, Args &args) {
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     double initial_entropy = blockmodel.getOverall_entropy();
     std::uniform_int_distribution<int> distribution(0, graph.num_vertices - 1);
     auto generator_function = [&distribution](){ return distribution(common::generator); };
@@ -32,10 +34,8 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
         std::vector<int> vertices = utils::range<int>(0, graph.num_vertices);
         if (!args.sequential)
             std::generate(vertices.begin(), vertices.end(), generator_function);
-        if (args.sequential && !(args.deterministic)) {
-            std::cout << "everyday I'm shuffling" << std::endl;
+        if (args.sequential && !(args.deterministic))
             std::shuffle(vertices.begin(), vertices.end(), common::generator);
-        }
         for (int batch = 0; batch < graph.num_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices, (batch + 1) * batch_size);
@@ -45,16 +45,15 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
             #pragma omp parallel for schedule(dynamic)
             for (int i = start; i < end; ++i) {
                 int vertex = vertices[i];
-                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph.out_neighbors,
-                                                         graph.in_neighbors);
+                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     vertex_moves++;
                     delta_entropy += proposal.delta_entropy;
                     block_assignment[vertex] = proposal.proposed_block;
                 }
             }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors,
-                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(),
+                                    block_assignment);
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
@@ -65,7 +64,7 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -73,7 +72,7 @@ Blockmodel &finetune::asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, B
 
 // Reads: NA
 // Writes: NA
-EdgeWeights finetune::block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights) {
+EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights) {
     std::map<int, int> block_counts;
     for (uint i = 0; i < neighbor_weights.indices.size(); ++i) {
         int neighbor = neighbor_weights.indices[i];
@@ -98,8 +97,8 @@ EdgeWeights finetune::block_edge_weights(std::vector<int> &block_assignment, Edg
 //   - blockmodel.block_degrees_out
 //   - blockmodel.block_degrees_in
 // Writes: NA
-double finetune::compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
-                                       common::NewBlockDegrees &block_degrees) {
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
+                             common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
     std::vector<int> old_block_row = blockmodel.getBlockmodel().getrow(current_block); // M_r_t1
     std::vector<int> old_proposal_row = blockmodel.getBlockmodel().getrow(proposal);   // M_s_t1
@@ -153,8 +152,8 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Blockmod
     return delta_entropy;
 }
 
-double finetune::compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel,
-                                       SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel,
+                             SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
     const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
     const MapVector<int> &old_block_row = matrix.getrow_sparse(current_block); // M_r_t1
@@ -185,8 +184,8 @@ double finetune::compute_delta_entropy(int current_block, int proposal, Blockmod
 // Reads:
 //   - blockmodel.overall_entropy
 // Writes: NA
-bool finetune::early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
-                          std::vector<double> &delta_entropies) {
+bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
+                std::vector<double> &delta_entropies) {
     if (iteration < 3) {
         return false;
     }
@@ -205,7 +204,7 @@ bool finetune::early_stop(int iteration, BlockmodelTriplet &blockmodels, double 
 // Reads:
 //   - blockmodel.overall_entropy
 // Writes: NA
-bool finetune::early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies) {
+bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies) {
     if (iteration < 3) {
         return false;
     }
@@ -222,8 +221,8 @@ bool finetune::early_stop(int iteration, double initial_entropy, std::vector<dou
 //   - blockmodel proposed_block row
 //   - blockmodel proposed_block col
 // Writes: NA
-EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
-                                              EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
+EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                                    EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
     std::vector<int> block_row = blockmodel.getrow(current_block);
     std::vector<int> block_col = blockmodel.getcol(current_block);
     std::vector<int> proposal_row = blockmodel.getrow(proposed_block);
@@ -270,9 +269,66 @@ EdgeCountUpdates finetune::edge_count_updates(DictTransposeMatrix &blockmodel, i
     return EdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
 }
 
-void finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
-                                         EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
-                                         SparseEdgeCountUpdates &updates) {
+// TODO: get rid of the blockmodel parameter
+void edge_count_delta_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                             EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
+                             SparseEdgeCountUpdates &delta) {
+    // out_blocks & in_blocks = out_edges_to_blocks && in_edges_from_blocks
+    delta.block_row = MapVector<int>();   // block_row = current_block_out_edges
+    delta.block_col = MapVector<int>();   // block_col = current_block_in_edges
+    delta.proposal_row = MapVector<int>();   // proposal_row = proposed_block_out_edges
+    delta.proposal_col = MapVector<int>();   // proposal_col = proposed_block_in_edges
+
+    // int count_in_current = 0, count_out_current = 0;
+    // int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
+
+    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
+        // vertex `v` has an edge from `block` with `weight` edges
+        int block = in_blocks.indices[i];
+        int weight = in_blocks.values[i];
+        if (block == current_block || block == proposed_block)
+            weight -= self_edge_weight;
+        // if (block == current_block) {
+        //     count_in_current += weight;
+        // }
+        // if (block == proposed_block) {
+        //     count_in_proposal += weight;
+        // }
+        delta.block_col[block] -= weight;
+        delta.proposal_col[block] += weight;
+    }
+    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
+        // vertex `v` has an edge to `block` with `weight` edges
+        int block = out_blocks.indices[i];
+        int weight = out_blocks.values[i];
+        if (block == current_block || block == proposed_block)
+            weight -= self_edge_weight;
+        // if (block == current_block) {
+        //     count_out_current += weight;
+        // }
+        // if (block == proposed_block) {
+        //     count_out_proposal += weight;
+        // }
+        delta.block_row[block] -= weight;
+        delta.proposal_row[block] += weight;
+    }
+    delta.block_row[current_block] -= self_edge_weight;
+    delta.proposal_row[proposed_block] += self_edge_weight;
+    // Looks like there's some double counting in here - [current_block,current_block] (and probably [proposal_block,proposal_block])
+    // delta.proposal_row[current_block] -= count_in_proposal;
+    // delta.proposal_row[proposed_block] += count_in_proposal;
+    // delta.proposal_col[current_block] -= count_out_proposal;
+    // delta.proposal_col[proposed_block] += count_out_proposal;
+
+    // delta.block_row[current_block] -= count_in_current;
+    // delta.block_row[proposed_block] += count_in_current;
+    // delta.block_col[current_block] -= count_out_current;
+    // delta.block_col[proposed_block] += count_out_current;
+}
+
+void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
+                               SparseEdgeCountUpdates &updates) {
     updates.block_row = blockmodel.getrow_sparse(current_block);
     updates.block_col = blockmodel.getcol_sparse(current_block);
     updates.proposal_row = blockmodel.getrow_sparse(proposed_block);
@@ -321,11 +377,11 @@ void finetune::edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int cu
 // Writes: NA
 /// Returns the edge weights for the neighbors of a given vertex.
 /// Assumes the graph is unweighted, so all edge weights are 1.
-EdgeWeights finetune::edge_weights(NeighborList &neighbors, int vertex) {
+EdgeWeights edge_weights(const NeighborList &neighbors, int vertex) {
     std::vector<int> indices;
     std::vector<int> values;
-    // Assumes graph is undirected
-    std::vector<int> &neighbor_vector = neighbors[vertex];
+    // Assumes graph is unweighted
+    const std::vector<int> &neighbor_vector = neighbors[vertex];
     for (int row = 0; row < neighbor_vector.size(); ++row) {
         indices.push_back(neighbor_vector[row]);
         values.push_back(1);
@@ -340,9 +396,9 @@ EdgeWeights finetune::edge_weights(NeighborList &neighbors, int vertex) {
 //   - blockmodel.block_degrees
 // Writes: NA
 /// TODO
-double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                     common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
-                                     common::NewBlockDegrees &new_block_degrees) {
+double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                           common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
+                           common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
         return 1.0;
     }
@@ -386,9 +442,9 @@ double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_bl
     return p_backward / p_forward;
 }
 
-double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                     common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
-                                     common::NewBlockDegrees &new_block_degrees) {
+double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                           common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
+                           common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
         return 1.0;
     }
@@ -440,11 +496,12 @@ double finetune::hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_bl
 //   - blockmodel.num_blocks
 // Writes: NA
 /// TODO
-double finetune::overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges) {
-    double log_posterior_p = blockmodel.log_posterior_probability();
-    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
-    double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+double overall_entropy(Blockmodel &blockmodel, const Graph &graph) {
+    return entropy::blockmodel_entropy(blockmodel, graph);
+    // double log_posterior_p = blockmodel.log_posterior_probability();
+    // double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
+    // double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    // return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
 }
 
 // Reads:
@@ -469,14 +526,13 @@ double finetune::overall_entropy(Blockmodel &blockmodel, int num_vertices, int n
 //   - blockmodel.blockmodel proposed_block row
 //   - blockmodel.blockmodel proposed_block col
 /// TODO
-finetune::ProposalEvaluation finetune::propose_move(Blockmodel &blockmodel, int vertex,
-                                                    NeighborList &out_neighbors, NeighborList &in_neighbors) {
+ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
     int current_block = blockmodel.getBlock_assignment()[vertex];
-    EdgeWeights vertex_out_neighbors = edge_weights(out_neighbors, vertex);
-    EdgeWeights vertex_in_neighbors = edge_weights(in_neighbors, vertex);
+    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors, vertex);
+    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors, vertex);
 
-    common::ProposalAndEdgeCounts proposal = common::propose_new_block(
+    common::ProposalAndEdgeCounts proposal = common::propose_new_block_mcmc(
         current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
         return ProposalEvaluation{0.0, did_move};
@@ -488,34 +544,40 @@ finetune::ProposalEvaluation finetune::propose_move(Blockmodel &blockmodel, int 
     for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
         if (vertex_out_neighbors.indices[i] == vertex) {
             self_edge_weight = vertex_out_neighbors.values[i];
+            std::cout << "vertex " << vertex << " has a self edge!" << std::endl;
             break;
         }
     }
 
-    EdgeCountUpdates updates = edge_count_updates(blockmodel.getBlockmodel(), current_block, proposal.proposal,
-                                                  blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
+    // EdgeCountUpdates updates = edge_count_updates(blockmodel.getBlockmodel(), current_block, proposal.proposal,
+    //                                               blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
+    SparseEdgeCountUpdates delta;
+    edge_count_delta_sparse(blockmodel.getBlockmodel(), current_block, proposal.proposal, blocks_out_neighbors,
+                            blocks_in_neighbors, self_edge_weight, delta);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
-    double hastings =
-        hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
-    double delta_entropy =
-        compute_delta_entropy(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
+    double hastings = 0.0;
+    double delta_entropy = entropy::delta_entropy(vertex, current_block, proposal.proposal, blockmodel, graph, delta);
+    // double hastings =
+    //     hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+    // double delta_entropy =
+    //     compute_delta_entropy(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     if (accept(delta_entropy, hastings)) {
-        blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
-                              new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+        blockmodel.move_vertex_delta(vertex, current_block, proposal.proposal, delta,
+                                     new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
+                                     new_block_degrees.block_degrees, graph);
         did_move = true;
     }
     return ProposalEvaluation{delta_entropy, did_move};
 }
 
 /// TODO
-finetune::VertexMove finetune::propose_gibbs_move(Blockmodel &blockmodel, int vertex,
-                                                  NeighborList &out_neighbors, NeighborList &in_neighbors) {
+VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
     int current_block = blockmodel.getBlock_assignment()[vertex];
-    EdgeWeights vertex_out_neighbors = edge_weights(out_neighbors, vertex);
-    EdgeWeights vertex_in_neighbors = edge_weights(in_neighbors, vertex);
+    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors, vertex);
+    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors, vertex);
 
-    common::ProposalAndEdgeCounts proposal = common::propose_new_block(
+    common::ProposalAndEdgeCounts proposal = common::propose_new_block_mcmc(
         current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
         return VertexMove{0.0, did_move, -1, -1};
@@ -569,13 +631,14 @@ finetune::VertexMove finetune::propose_gibbs_move(Blockmodel &blockmodel, int ve
 //   - blockmodel.blockmodel proposed_block col
 //   - blockmodel.overall_entropy
 /// TODO
-Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args) {
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels,
+                                Args &args) {
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     std::uniform_int_distribution<int> distribution(0, graph.num_vertices - 1);
     auto generator_function = [&distribution](){ return distribution(common::generator); };
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -591,8 +654,7 @@ Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, 
         }
         for (int i = 0; i < graph.num_vertices; ++i) {
             int vertex = vertices[i];
-            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors,
-                                                       graph.in_neighbors);
+            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
@@ -607,24 +669,23 @@ Blockmodel &finetune::metropolis_hastings(Blockmodel &blockmodel, Graph &graph, 
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
 }
 
 /// TODO
-Blockmodel &finetune::finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
+Blockmodel &finetune_assignment(Blockmodel &blockmodel, const Graph &graph) {
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices; ++vertex) {
-            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors,
-                                                       graph.in_neighbors);
+            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
@@ -639,8 +700,10 @@ Blockmodel &finetune::finetune_assignment(Blockmodel &blockmodel, Graph &graph) 
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices, graph.num_edges));
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
 }
+
+} // finetune

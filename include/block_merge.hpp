@@ -30,17 +30,15 @@ typedef struct proposal_evaluation_t {
 /// Performs the block merges with the highest change in entropy/MDL, recalculating change in entropy before each
 /// merge to account for dependencies between merges. This function modified the blockmodel.
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
-                                    const std::vector<int> &best_merge_for_each_block);
+                                    const std::vector<int> &best_merge_for_each_block, const Graph &graph);
 
-/// Merges entire blocks (communities) in blockmodel together
-Blockmodel &merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Args &args);
+/// Computes the change in entropy under a proposed block merge
+double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
+                             common::NewBlockDegrees &block_degrees);
 
-/// Proposes a merge for current_block based on the current blockmodel state
-ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
-
-/// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
-                                        std::unordered_map<int, bool> &past_proposals);
+/// Computes the change in entropy under a proposed block merge using sparse intermediate structures
+double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
+                                    SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the new edge counts for the affected blocks (communities) 
 /// under a proposed block merge
@@ -52,13 +50,15 @@ EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current
 void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
 
-/// Computes the change in entropy under a proposed block merge
-double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
-                             common::NewBlockDegrees &block_degrees);
+/// Merges entire blocks (communities) in blockmodel together
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args);
 
-/// Computes the change in entropy under a proposed block merge using sparse intermediate structures
-double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
-                                    SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+/// Proposes a merge for current_block based on the current blockmodel state
+ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
+
+/// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+                                        std::unordered_map<int, bool> &past_proposals);
 
 } // block_merge
 

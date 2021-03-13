@@ -27,7 +27,7 @@ std::vector<int> Blockmodel::sort_indices(const std::vector<double> &unsorted) {
 
 // TODO: move to block_merge.cpp
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
-                                       const std::vector<int> &best_merge_for_each_block) {
+                                       const std::vector<int> &best_merge_for_each_block, const Graph &graph) {
     std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
     int num_merged = 0;
@@ -43,7 +43,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
                     block_map[i] = merge_to;
                 }
             }
-            this->merge_blocks(merge_from, merge_to);
+            this->merge_blocks(merge_from, merge_to, graph);
             num_merged++;
         }
     }
@@ -56,8 +56,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
     this->num_blocks -= this->num_blocks_to_merge;
 }
 
-Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
-                                                      std::vector<int> &true_block_membership) {
+Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std::vector<int> &true_block_membership) {
     int num_blocks = 0;
     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
     for (uint i = 0; i < true_block_membership.size(); ++i) {
@@ -69,7 +68,7 @@ Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
             num_blocks++;
         }
     }
-    return Blockmodel(num_blocks, neighbors, this->block_reduction_rate, true_block_membership);
+    return Blockmodel(num_blocks, graph, this->block_reduction_rate, true_block_membership);
 }
 
 Blockmodel Blockmodel::copy() {
@@ -80,22 +79,23 @@ Blockmodel Blockmodel::copy() {
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._block_degree_histograms = std::vector<DegreeHistogram>(this->_block_degree_histograms);
     blockmodel_copy._block_sizes = std::vector<int>(this->_block_sizes);
     // Create a Sampler as well?
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
 }
 
-Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
-                                 std::map<int, int> &mapping, float block_reduction_rate) {
+Blockmodel Blockmodel::from_sample(int num_blocks, const Graph &graph, std::vector<int> &sample_block_membership,
+                                   std::map<int, int> &mapping, float block_reduction_rate) {
     // Fill in initial block assignment
-    std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
+    std::vector<int> block_assignment = utils::constant<int>(graph.num_vertices, -1);
     for (const auto &item : mapping) {
         block_assignment[item.first] = sample_block_membership[item.second];
     }
     // Every unassigned block gets assigned to the next block number
     int next_block = num_blocks;
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+    for (uint vertex = 0; vertex < graph.num_vertices; ++vertex) {
         if (block_assignment[vertex] >= 0) {
             continue;
         }
@@ -103,13 +103,13 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
         next_block++;
     }
     // Every previously unassigned block gets assigned to the block it's most connected to
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+    for (uint vertex = 0; vertex < graph.num_vertices; ++vertex) {
         if (block_assignment[vertex] < num_blocks) {
             continue;
         }
         std::vector<int> block_counts = utils::constant<int>(num_blocks, 0);
         // TODO: this can only handle unweighted graphs
-        std::vector<int> vertex_neighbors = neighbors[vertex];
+        std::vector<int> vertex_neighbors = graph.out_neighbors[vertex];
         for (uint i = 0; i < vertex_neighbors.size(); ++i) {
             int neighbor = vertex_neighbors[i];
             int neighbor_block = block_assignment[neighbor];
@@ -121,31 +121,37 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
         // block_counts.maxCoeff(&new_block);
         block_assignment[vertex] = new_block;
     }
-    return Blockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
+    return Blockmodel(num_blocks, graph, block_reduction_rate, block_assignment);
 }
 
-void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
+void Blockmodel::initialize_edge_counts(const Graph &graph) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
     this->sampler = Sampler(this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
+    this->_block_degree_histograms = std::vector<DegreeHistogram>(this->num_blocks, DegreeHistogram());
+    this->_block_sizes = std::vector<int>(this->num_blocks, 0);
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.size() == 0) {
+    for (uint vertex = 0; vertex < graph.out_neighbors.size(); ++vertex) {
+        std::vector<int> vertex_out_neighbors = graph.out_neighbors[vertex];
+        int block = this->block_assignment[vertex];
+        auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+        this->_block_degree_histograms[block][degree_pair]++;
+        this->_block_sizes[block]++;
+        if (vertex_out_neighbors.size() == 0) {
             continue;
         }
-        int block = this->block_assignment[vertex];
-        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+        // int block = this->block_assignment[vertex];
+        for (int i = 0; i < vertex_out_neighbors.size(); ++i) {
             // Get count
-            int neighbor = vertex_neighbors[i];
+            int neighbor = vertex_out_neighbors[i];
             int neighbor_block = this->block_assignment[neighbor];
             // TODO: change this once code is updated to support weighted graphs
             int weight = 1;
-            // int weight = vertex_neighbors[i];
+            // int weight = vertex_out_neighbors[i];
             // Update blockmodel
             this->blockmodel.add(block, neighbor_block, weight);
             // Update degrees
@@ -153,7 +159,6 @@ void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
             this->block_degrees_in[neighbor_block] += weight;
             this->sampler.insert(block, neighbor_block);
         }
-        this->_block_sizes[block]++;
     }
     // Count block degrees
     this->block_degrees = this->block_degrees_out + this->block_degrees_in;
@@ -173,24 +178,76 @@ double Blockmodel::log_posterior_probability() {
     return utils::sum<double>(temp);
 }
 
-void Blockmodel::merge_blocks(int from_block, int to_block) {
-    for (int index = 0; index < this->block_assignment.size(); ++index) {
-        if (this->block_assignment[index] == from_block) {
-            this->block_assignment[index] = to_block;
-            this->_block_sizes[index]--;
-            this->_block_sizes[to_block]++;
+void Blockmodel::merge_blocks(int from_block, int to_block, const Graph &graph) {
+    for (int vertex = 0; vertex < graph.num_vertices; ++vertex) {
+        if (this->block_assignment[vertex] == from_block) {
+            this->block_assignment[vertex] = to_block;
+            auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+            this->_block_degree_histograms[from_block][degree_pair]--;
+            this->_block_degree_histograms[to_block][degree_pair]++;
         }
     }
+    this->_block_sizes[to_block] += this->_block_sizes[from_block];
+    this->_block_sizes[from_block] = 0;
 }
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
-                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
-                            std::vector<int> &new_block_degrees) {
+                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                             std::vector<int> &new_block_degrees, const Graph &graph) {
     this->block_assignment[vertex] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
     this->block_degrees_out = new_block_degrees_out;
     this->block_degrees_in = new_block_degrees_in;
     this->block_degrees = new_block_degrees;
+    auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+    this->_block_degree_histograms[current_block][degree_pair]--;
+    this->_block_degree_histograms[new_block][degree_pair]++;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+}
+
+void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &delta,
+                                   std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                                   std::vector<int> &new_block_degrees, const Graph &graph) {
+    this->block_assignment[vertex] = new_block;
+    for (const std::pair<int, int> &delta : delta.block_row) {
+        this->blockmodel.add(current_block, delta.first, delta.second);
+        if (this->blockmodel.get(current_block, delta.first) < 0) {
+            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
+            exit(-10);
+        }
+    }
+    for (const std::pair<int, int> &delta : delta.block_col) {
+        this->blockmodel.add(delta.first, current_block, delta.second);
+        if (this->blockmodel.get(delta.first, current_block) < 0) {
+            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
+            exit(-10);
+        }
+    }
+    for (const std::pair<int, int> &delta : delta.proposal_row) {
+        this->blockmodel.add(new_block, delta.first, delta.second);
+        if (this->blockmodel.get(new_block, delta.first) < 0) {
+            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
+            exit(-10);
+        }
+    }
+    for (const std::pair<int, int> &delta : delta.proposal_col) {
+        this->blockmodel.add(delta.first, new_block, delta.second);
+        if (this->blockmodel.get(delta.first, new_block) < 0) {
+            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
+            exit(-10);
+        }
+    }
+    this->block_degrees_out = new_block_degrees_out;
+    this->block_degrees_in = new_block_degrees_in;
+    this->block_degrees = new_block_degrees;
+    auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+    this->_block_degree_histograms[current_block][degree_pair]--;
+    this->_block_degree_histograms[new_block][degree_pair]++;
     this->_block_sizes[current_block]--;
     this->_block_sizes[new_block]++;
 }
@@ -199,17 +256,40 @@ int Blockmodel::sample(int block) {
     return this->sampler.sample(block);
 }
 
-void Blockmodel::set_block_membership(int vertex, int block) {
+void Blockmodel::set_block_membership(int vertex, int block, const Graph &graph) {
     int current_block = this->block_assignment[vertex];
     this->block_assignment[vertex] = block;
-    if (current_block >= 0)
+    auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+    if (current_block >= 0) {
+        this->_block_degree_histograms[current_block][degree_pair]--;
         this->_block_sizes[current_block]--;
+    }
+    this->_block_degree_histograms[block][degree_pair]++;
     this->_block_sizes[block]++;
 }
 
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
     this->blockmodel.update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                         updates.block_col, updates.proposal_col);
+}
+
+void Blockmodel::assert_stats() {
+    std::cout << "asserting stats!" << std::endl;
+    std::cout << "checking _block_sizes" << std::endl;
+    int total = 0;
+    for (int s : this->_block_sizes) {
+        total += s;
+    }
+    assert (total == this->block_assignment.size());
+    std::cout << "checking _block_degree_histograms" << std::endl;
+    total = 0;
+    for (int b = 0; b < this->num_blocks; ++b) {
+        for (auto pair : this->_block_degree_histograms[b]) {
+            total += pair.second;
+        }
+    }
+    assert (total == this->block_assignment.size());
+    std::cout << "ALL GOOD!!!! WOOOO!!!!" << std::endl;
 }
 
 void Sampler::insert(int from, int to) {

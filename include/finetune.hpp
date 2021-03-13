@@ -45,6 +45,8 @@ static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is 
 static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning iterations
 
 bool accept(double delta_entropy, double hastings_correction);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
+/// The number of edges from the moving vertex to all blocks
 EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
 double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees);
@@ -58,21 +60,18 @@ EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current
 void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
-EdgeWeights edge_weights(NeighborList &neighbors, int vertex);
+EdgeWeights edge_weights(const NeighborList &neighbors, int vertex);
+Blockmodel &finetune_assignment(Blockmodel &blockmodel, const Graph &graph);
 double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
-double overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges);
-ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
-                                NeighborList &in_neighbors);
-VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
-                            NeighborList &in_neighbors);
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
-Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+double overall_entropy(Blockmodel &blockmodel, const Graph &graph);
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
+ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
+VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
 
 } // namespace finetune
 
