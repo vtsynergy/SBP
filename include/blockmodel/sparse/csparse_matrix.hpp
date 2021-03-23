@@ -8,21 +8,18 @@
 #include <sstream>
 #include <iostream>
 
-// #include <Eigen/Core>
-
 #include <boost/numeric/ublas/matrix_sparse.hpp>
-
-// typedef Eigen::VectorXi Vector;
 
 typedef struct edge_weights_t {
     std::vector<int> indices;
     std::vector<int> values;
-    // void print() {
-    //     std::cout << "indices: " << Eigen::Map<Vector>(this->indices.data(), this->indices.size()).transpose();
-    //     std::cout << " with size: " << this->indices.size() << std::endl;
-    //     std::cout << "values: " << Eigen::Map<Vector>(this->values.data(), this->values.size()).transpose();
-    //     std::cout << " with size: " << this->values.size() << std::endl;
-    // }
+    void print(std::string prefix) {
+        std::cout << prefix << "[";
+        for (int i = 0; i < indices.size(); ++i) {
+            std::cout << "{" << indices[i] << "," << values[i] << "}, ";
+        }
+        std::cout << "]" << std::endl;
+    }
 } EdgeWeights;
 
 typedef struct indices_t {
