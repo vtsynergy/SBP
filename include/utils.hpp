@@ -153,6 +153,19 @@ template <typename T> inline void print(const std::vector<T> &vector) {
     std::cout << vector[vector.size() - 1] << "]" << std::endl;
 }
 
+/// Prints a MapVector
+template <typename T> inline void print(const MapVector<T> &vector) {
+    if (vector.size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    std::cout << "[";
+    for (const std::pair<int, T> &entry : vector) {
+        std::cout << "{" << entry.first << ": " << entry.second << "}, ";
+    }
+    std::cout << "]" << std::endl;
+}
+
 }
 
 /// Allows elementwise multiplication of two std::vector<double> objects.
