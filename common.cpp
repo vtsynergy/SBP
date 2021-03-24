@@ -207,6 +207,23 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 
+ProposalAndEdgeCounts propose_new_block(int current_block, Blockmodel &blockmodel, bool random) {
+    int proposal;
+    if (random)
+        proposal = propose_random_block(current_block, blockmodel.getNum_blocks());
+    else {
+        int neighbor = blockmodel.sample(current_block, generator);
+        if (neighbor == NULL_BLOCK)
+            proposal = neighbor;
+        else
+            proposal = blockmodel.sample(neighbor, generator);
+    }
+    int kout = blockmodel.getBlock_degrees_out()[current_block];
+    int kin = blockmodel.getBlock_degrees_in()[current_block];
+    int k = kout + kin;
+    return ProposalAndEdgeCounts{proposal, kout, kin, k};
+}
+
 ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                              std::vector<int> &assignment, Blockmodel &blockmodel, bool block_merge) {
     // TODO: this results in neighbor_indices and neighbor_weights with repeats

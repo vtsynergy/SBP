@@ -135,12 +135,17 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
+    std::cout << "graph.out_neighbors size: " << graph.out_neighbors.size() << std::endl;
+    assert(graph.out_neighbors.size() == graph.num_vertices);
     for (uint vertex = 0; vertex < graph.out_neighbors.size(); ++vertex) {
         std::vector<int> vertex_out_neighbors = graph.out_neighbors[vertex];
         int block = this->block_assignment[vertex];
         auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
         this->_block_degree_histograms[block][degree_pair]++;
         this->_block_sizes[block]++;
+        if (vertex == 24) {
+            std::cout << "vertex 24 is in block " << block << std::endl;
+        }
         if (vertex_out_neighbors.size() == 0) {
             continue;
         }
@@ -206,6 +211,30 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
     this->_block_sizes[new_block]++;
 }
 
+void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block, EntryMap &deltas,
+                                   std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                                   std::vector<int> &new_block_degrees, const Graph &graph) {
+    this->block_assignment[vertex] = new_block;
+    for (const std::pair<std::pair<int, int>, int> &delta: deltas) {
+        int row = delta.first.first;
+        int col = delta.first.second;
+        this->blockmodel.add(row, col, delta.second);
+        if (this->blockmodel.get(row, col) < 0) {
+            std::cout << "ERROR!! A! vertex: " << vertex << " (" << current_block << " --> " << new_block << ") [";
+            std::cout << row << "," << col << "] delta = " << delta.second << std::endl;;
+            exit(-10);
+        }
+    }
+    this->block_degrees_out = new_block_degrees_out;
+    this->block_degrees_in = new_block_degrees_in;
+    this->block_degrees = new_block_degrees;
+    auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
+    this->_block_degree_histograms[current_block][degree_pair]--;
+    this->_block_degree_histograms[new_block][degree_pair]++;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+}
+
 void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &delta,
                                    std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                                    std::vector<int> &new_block_degrees, const Graph &graph) {
@@ -221,7 +250,7 @@ void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block,
     for (const std::pair<int, int> &delta : delta.block_col) {
         this->blockmodel.add(delta.first, current_block, delta.second);
         if (this->blockmodel.get(delta.first, current_block) < 0) {
-            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << "ERROR!! B! vertex: " << vertex << " current_block: " << current_block;
             std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
             exit(-10);
         }
@@ -229,7 +258,7 @@ void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block,
     for (const std::pair<int, int> &delta : delta.proposal_row) {
         this->blockmodel.add(new_block, delta.first, delta.second);
         if (this->blockmodel.get(new_block, delta.first) < 0) {
-            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << "ERROR!! C! vertex: " << vertex << " current_block: " << current_block;
             std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
             exit(-10);
         }
@@ -237,7 +266,7 @@ void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block,
     for (const std::pair<int, int> &delta : delta.proposal_col) {
         this->blockmodel.add(delta.first, new_block, delta.second);
         if (this->blockmodel.get(delta.first, new_block) < 0) {
-            std::cout << "ERROR!! A! vertex: " << vertex << " current_block: " << current_block;
+            std::cout << "ERROR!! D! vertex: " << vertex << " current_block: " << current_block;
             std::cout << " new_block: " << new_block << " delta.first: " << delta.first << " delta.second: " << delta.second;
             exit(-10);
         }
@@ -252,8 +281,77 @@ void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block,
     this->_block_sizes[new_block]++;
 }
 
-int Blockmodel::sample(int block) {
-    return this->sampler.sample(block);
+// TODO: computing the entries first would be inefficient
+EntryMap Blockmodel::deltas(int current_block, int proposed_block, const EntryMap &entries) {
+    EntryMap result;
+    for (const std::pair<std::pair<int, int>, int> &entry : entries) {
+        int row = entry.first.first;
+        int col = entry.first.second;
+        int weight = entry.second;
+            result[entry.first] -= weight;
+        if (row == current_block && col == current_block)  // entry = M[current_block, proposed_block]
+            result[std::make_pair(proposed_block, proposed_block)] += weight;
+        else if (row == proposed_block || col == proposed_block)  // entry = M[proposed_block, X] | M[X, proposed_block]
+            result[std::make_pair(proposed_block, proposed_block)] += weight;
+        else if (row == current_block)  // entry = M[current_block, X]
+            result[std::make_pair(proposed_block, col)] += weight;
+        else if (col == current_block)  // entry = M[X, current_block]
+            result[std::make_pair(row, proposed_block)] += weight;
+    }
+    return result;
+}
+
+EntryMap Blockmodel::entries1(int block, int exclude) {
+    EntryMap result;
+    // const MapVector<int> &rowA = this->blockmodel.getrow_sparse(blockA);
+    for (const std::pair<int,int> &entry : this->blockmodel.getrow_sparse(block)) {
+        if (entry.first == exclude) continue;
+        result[std::make_pair(block, entry.first)] = entry.second;
+    }
+    for (const std::pair<int,int> &entry : this->blockmodel.getcol_sparse(block)) {
+        if (entry.first == block || entry.first == exclude) continue;
+        result[std::make_pair(entry.first, block)] = entry.second;
+    }
+    return result;
+}
+
+EntryMap Blockmodel::entries2(int blockA, int blockB) {
+    EntryMap result;
+    // const MapVector<int> &rowA = this->blockmodel.getrow_sparse(blockA);
+    for (const std::pair<int,int> &entry : this->blockmodel.getrow_sparse(blockA))
+        result[std::make_pair(blockA, entry.first)] = entry.second;
+    for (const std::pair<int,int> &entry : this->blockmodel.getcol_sparse(blockA)) {
+        if (entry.first == blockA) continue;
+        result[std::make_pair(entry.first, blockA)] = entry.second;
+    }
+    for (const std::pair<int,int> &entry : this->blockmodel.getrow_sparse(blockB)) {
+        if (entry.first == blockA) continue;
+        result[std::make_pair(blockB, entry.first)] = entry.second;
+    }
+    for (const std::pair<int,int> &entry : this->blockmodel.getcol_sparse(blockB)) {
+        if (entry.first == blockA || entry.first == blockB) continue;
+        result[std::make_pair(entry.first, blockB)] = entry.second;
+    }
+    return result;
+}
+
+void Blockmodel::print() {
+    std::cout << "blockmodel: " << std::endl;
+    for (int row = 0; row < this->num_blocks; ++row) {
+        if (row < 10) {
+            std::cout << " " << row << " | ";
+        } else {
+            std::cout << row << " | ";
+        }
+        for (int val : this->blockmodel.getrow(row)) {
+            std::cout << val << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+int Blockmodel::sample(int block, std::mt19937_64 &generator) {
+    return this->sampler.sample(block, generator);
 }
 
 void Blockmodel::set_block_membership(int vertex, int block, const Graph &graph) {
@@ -293,21 +391,23 @@ void Blockmodel::assert_stats() {
 }
 
 void Sampler::insert(int from, int to) {
-    if (from == to) return;
+    // if (from == to) return;
     this->neighbors[from].insert(to);
     this->neighbors[to].insert(from);
 }
 
-int Sampler::sample(int block) {
+int Sampler::sample(int block, std::mt19937_64 &generator) {
     const std::set<int> &neighborhood = this->neighbors[block];
-    if (neighborhood.empty()) {  // sample a random block
-        std::uniform_int_distribution<int> distribution(0, this->num_blocks - 2);
-        int sampled = distribution(generator);
-        if (sampled >= block) {
-            sampled++;
-        }
-        return sampled;
-    }
+    // if (neighborhood.empty()) {  // sample a random block
+    //     std::uniform_int_distribution<int> distribution(0, this->num_blocks - 2);
+    //     int sampled = distribution(generator);
+    //     if (sampled >= block) {
+    //         sampled++;
+    //     }
+    //     return sampled;
+    // }
+    if (neighborhood.size() == 0)
+        return NULL_BLOCK;
     std::uniform_int_distribution<int> distribution(0, neighborhood.size() - 1);
     int index = distribution(generator);
     // std::set doesn't have access by index - use iterator instead.

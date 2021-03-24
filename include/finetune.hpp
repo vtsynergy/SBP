@@ -52,6 +52,10 @@ double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockm
                              common::NewBlockDegrees &block_degrees);
 double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, SparseEdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees);
+/// Computes the changes to the blockmodel matrix when `vertex` moves from `current_block` to `proposed_block`,
+/// without double-counting.
+EntryMap deltas(int vertex, int current_block, int proposed_block, EdgeWeights &out_edges, EdgeWeights &in_edges,
+                std::vector<int> &block_assignment);
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
@@ -72,6 +76,10 @@ double overall_entropy(Blockmodel &blockmodel, const Graph &graph);
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
 ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
 VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
+/// Returns a one-dimensional vector containing the portion of the blockmodel matrix entries for which the moving
+/// vertex is responsible, without double-counting.
+EntryMap relevant_entries(int vertex, int current_block, EdgeWeights &out_edges, EdgeWeights &in_edges,
+                          std::vector<int> &block_assignment);
 
 } // namespace finetune
 

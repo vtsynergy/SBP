@@ -14,7 +14,16 @@ namespace entropy {
 double blockmodel_entropy(Blockmodel &blockmodel, const Graph &graph);
 
 double delta_entropy(int vertex, int current_block, int proposed_block, Blockmodel &blockmodel, const Graph &graph,
+                     EntryMap &deltas);
+
+double delta_entropy(int vertex, int current_block, int proposed_block, Blockmodel &blockmodel, const Graph &graph,
                      SparseEdgeCountUpdates &edge_count_delta);
+
+double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmodel, const Graph &graph,
+                     SparseEdgeCountUpdates &edge_count_delta);
+
+double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmodel, const Graph &graph,
+                     EntryMap &deltas);
 
 // TODO: declare as [[gnu::const]] or [[gnu::always_inline]]
 inline double lbinom(double N, double k) {
@@ -81,7 +90,7 @@ inline double get_Sk(const std::pair<int, int> &degrees, int delta, int block, B
     return std::lgamma(nd + delta + 1);
 }
 
-inline double get_delta_deg_dl_dist_change(int kin, int kout, int block, int diff, Blockmodel &blockmodel) {
+inline double get_delta_deg_dl_dist_change(int kin, int kout, int block_weight, int block, int diff, Blockmodel &blockmodel) {
     /* get_delta_deg_dl_dist_change(r, dop, -1) */
 
     // double S_b = 0, S_a = 0;
@@ -96,10 +105,17 @@ inline double get_delta_deg_dl_dist_change(int kin, int kout, int block, int dif
     //         S_b += get_Sk(deg,         0);
     //         S_a += get_Sk(deg, diff * nk);
     //     });
-    const auto degrees = std::make_pair(kin, kout);
     double S_b = 0.0, S_a = 0.0;
-    S_b += get_Sk(degrees, 0, block, blockmodel);
-    S_a += get_Sk(degrees, diff, block, blockmodel);
+    if (block_weight == 1) {  // vertex move
+        const auto degrees = std::make_pair(kin, kout);
+        S_b += get_Sk(degrees, 0, block, blockmodel);
+        S_a += get_Sk(degrees, diff, block, blockmodel);
+    } else {  // block merge
+        for (const std::pair<std::pair<int, int>, int> &degrees : blockmodel.degree_histogram(block)) {
+            S_b += get_Sk(degrees.first, 0, block, blockmodel);
+            S_a += get_Sk(degrees.first, diff, block, blockmodel);
+        }
+    }
 
     S_b += get_Se(0, 0, 0, block, blockmodel);
     S_a += get_Se(diff, diff * kin, diff * kout, block, blockmodel);

@@ -22,6 +22,13 @@
 #include "../utils.hpp"
 
 // typedef py::EigenDRef<Eigen::Matrix<int, Eigen::Dynamic, 2>> Matrix2Column;
+// /// A struct that emulates a pair, but with 3 elements of type int.
+// typedef struct triplet_t {
+//     int first;
+//     int second;
+//     int third;
+// } Triplet;
+const int NULL_BLOCK = -1;
 
 typedef struct edge_count_updates_t {
     std::vector<int> block_row;
@@ -38,8 +45,8 @@ typedef struct sparse_edge_count_updates_t {
 } SparseEdgeCountUpdates;
 
 // If/when sampler gets it's own .hpp file, this should move there too.
-static std::random_device seeder;
-static std::default_random_engine generator(seeder());
+// static std::random_device seeder;
+// static std::default_random_engine generator(seeder());
 
 class Sampler {
 public:
@@ -50,11 +57,11 @@ public:
     }
     // const std::set<int> &get_neighbors(int block) { return this->neighbors[block]; };
     void insert(int from, int to);
-    int sample(int block);
+    int sample(int block, std::mt19937_64 &generator);
 private:
     std::vector<std::set<int>> neighbors;
     int num_blocks;
-};
+};  // class Sampler
 
 // See https://www.techiedelight.com/use-std-pair-key-std-unordered_map-cpp/
 struct pair_hash {
@@ -62,8 +69,22 @@ struct pair_hash {
     std::size_t operator() (const std::pair<T1, T2> &pair) const {
         return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
     }
-};
+};  // struct pair_hash
 typedef std::unordered_map<std::pair<int, int>, int, pair_hash> DegreeHistogram;
+typedef std::unordered_map<std::pair<int, int>, int, pair_hash> EntryMap;
+
+/// Prints an EntryMap
+inline void print(const EntryMap &map) {
+    if (map.size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    std::cout << "[";
+    for (const std::pair<std::pair<int, int>, int> &entry : map) {
+        std::cout << "(" << entry.first.first << "," << entry.first.second << "): " << entry.second << ", ";
+    }
+    std::cout << "]" << std::endl;
+}
 
 class Blockmodel {
   public:
@@ -111,17 +132,31 @@ class Blockmodel {
     double log_posterior_probability();
     /// TODO
     void merge_blocks(int from_block, int to_block, const Graph &graph);
-    /// TODO
+    /// Move `vertex` from `current_block` to `new_block`, updating the blockmodel matrix by replacing the
+    /// relevant rows and columns with `updates`.
     void move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                      std::vector<int> &new_block_degrees, const Graph &graph);
-    /// TODO
+    /// Move `vertex` from `current_block` to `new_block`, updating the blockmodel matrix using `delta`.
+    void move_vertex_delta(int vertex, int current_block, int new_block, EntryMap &deltas,
+                           std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                           std::vector<int> &new_block_degrees, const Graph &graph);
+    /// Move `vertex` from `current_block` to `new_block`, updating the blockmodel matrix using `delta`.
     void move_vertex_delta(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &delta,
                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                            std::vector<int> &new_block_degrees, const Graph &graph);
+    /// Returns a one-dimensional list of the changes to the blockmodel matrix entries if a move/merge were to occur.
+    EntryMap deltas(int current_block, int proposed_block, const EntryMap &entries);
+    /// Returns a one-dimensional list of matrix entries corresponding to the requested block, without double counting.
+    EntryMap entries1(int block, int exclude = -1);
+    /// Returns a one-dimensional list of matrix entries corresponding to the two requested blocks, without double
+    /// counting.
+    EntryMap entries2(int blockA, int blockB);
+    /// Prints this blockmodel to stdout.
+    void print();
     /// Samples a community for the current block's neighbors. If the current block has no neighbors, returns a random
     /// community.
-    int sample(int block);
+    int sample(int block, std::mt19937_64 &generator);
     /// Sets the block membership of `vertex` to `block`.
     void set_block_membership(int vertex, int block, const Graph &graph);
     /// Updates the blockmodel matrix by replacing the appropriate rows and columns with those in `updates`.

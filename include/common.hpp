@@ -82,6 +82,10 @@ std::vector<int> nonzeros(MapVector<int> &in);
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                         std::vector<int> &block_blockmodel, Blockmodel &blockmodel, bool block_merge = false);
 
+/// Proposes a new block for either the block merge or finetune step based on `bool block_merge`. If random == true,
+/// a random block is proposed.
+ProposalAndEdgeCounts propose_new_block(int current_block, Blockmodel &blockmodel, bool random);
+
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                              std::vector<int> &block_blockmodel, Blockmodel &blockmodel,
