@@ -56,9 +56,16 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args)
 /// Proposes a merge for current_block based on the current blockmodel state
 ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
 
+/// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures.
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, const Graph &graph, bool random,
+                                         std::unordered_map<int, bool> &past_proposals);
+
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &assignment,
                                         std::unordered_map<int, bool> &past_proposals);
+
+/// Finds the (approximately) best merge (out of 10 attempts) for the current block.
+ProposalEvaluation best_merge(int current_block, Blockmodel &blockmodel, const Graph &graph);
 
 } // block_merge
 

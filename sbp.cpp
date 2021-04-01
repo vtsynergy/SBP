@@ -28,7 +28,7 @@ Blockmodel hierarchical_iteration(Blockmodel &blockmodel, const Graph &graph, Bl
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::merge_blocks(blockmodel, graph, args);
-        blockmodel.assert_stats();
+        // blockmodel.assert_stats();
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);
@@ -78,7 +78,11 @@ Blockmodel stochastic_block_partition(const Graph &graph, Args &args) {
             blockmodel = flat_iteration(blockmodel, graph, blockmodel_triplet, args);
         else
             blockmodel = hierarchical_iteration(blockmodel, graph, blockmodel_triplet, args);
+        // std::cout << " getting next blockmodel " << std::endl;
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        // Blockmodel test = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(), blockmodel.getBlock_assignment());
+        // std::cout << "test after accessing blockmodel triplet" << std::endl;
+        // assert(test == blockmodel);
     }
     return blockmodel;
 }
