@@ -82,9 +82,13 @@ std::vector<int> nonzeros(MapVector<int> &in);
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                         std::vector<int> &block_blockmodel, Blockmodel &blockmodel, bool block_merge = false);
 
-/// Proposes a new block for either the block merge or finetune step based on `bool block_merge`. If random == true,
-/// a random block is proposed.
+/// Proposes a new block for the block merge phase based on `bool block_merge`. Selects a neighboring block of a
+/// neighboring block. If random == true, a random block is proposed.
 ProposalAndEdgeCounts propose_new_block(int current_block, Blockmodel &blockmodel, bool random);
+
+/// Proposes a new block for the mcmc phase. Selects a neighboring block of a neighboring vertex.
+ProposalAndEdgeCounts propose_new_block(int vertex, EdgeWeights &out_vertices, EdgeWeights &in_vertices,
+                                        Blockmodel &blockmodel);
 
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
@@ -92,6 +96,9 @@ ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out
                                              bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
+
+/// Samples a random neighbor of a vertex, using its out_edges and in_edges.
+int random_neighbor(EdgeWeights &out_edges, EdgeWeights &in_edges);
 
 } // namespace common
 

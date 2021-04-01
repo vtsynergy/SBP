@@ -224,6 +224,51 @@ ProposalAndEdgeCounts propose_new_block(int current_block, Blockmodel &blockmode
     return ProposalAndEdgeCounts{proposal, kout, kin, k};
 }
 
+ProposalAndEdgeCounts propose_new_block(int vertex, EdgeWeights &out_vertices, EdgeWeights &in_vertices, Blockmodel &blockmodel) {
+    int current_block = blockmodel.getBlock_assignment()[vertex];
+    int proposal;
+    int k_out = std::accumulate(out_vertices.values.begin(), out_vertices.values.end(), 0);
+    int k_in = std::accumulate(in_vertices.values.begin(), in_vertices.values.end(), 0);
+    int k = k_out + k_in;
+    if (out_vertices.indices.size() == 0 && in_vertices.indices.size() == 0) {
+        proposal = propose_random_block(current_block, blockmodel.getNum_blocks());
+        return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+    }
+    int neighbor_vertex = random_neighbor(out_vertices, in_vertices);
+    int neighbor_block = blockmodel.getBlock_assignment()[neighbor_vertex];
+    EntryMap neighbor_blocks = blockmodel.entries1(current_block);
+    SparseVector<double> multinomial_distribution;
+    // std::vector<int> neighbors;
+    // std::vector<int> weights;
+    for (const std::pair<std::pair<int, int>, int> &entry : neighbor_blocks) {
+        const std::pair<int, int> &edge = entry.first;
+        int weight = entry.second;
+        if (edge.first == neighbor_block)
+            multinomial_distribution.idx.push_back(edge.second);
+        else
+            multinomial_distribution.idx.push_back(edge.first);
+        multinomial_distribution.data.push_back(weight);
+    }
+    // proposal = choose_neighbor(neighbors, weights);
+    proposal = choose_neighbor(multinomial_distribution);
+    return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+    // if (_neighbor_sampler.empty(v)) {
+    //     s = uniform_sample(_candidate_blocks.begin() + 1, _candidate_blocks.end(), rng);
+    // } else {
+    //     auto u = _neighbor_sampler.sample(v, rng);
+    //     size_t t = _b[u];
+    //     if (_egroups.empty())
+    //         _egroups.init(_b, _eweight, _g, _bg);
+    //     const auto& e = _egroups.sample_edge(t, rng);
+    //     s = _b[target(e, _g)];
+    //     if (s == t)
+    //         s = _b[source(e, _g)];
+    //     else
+    //         assert(size_t(_b[source(e, _g)]) == t);
+    // }
+    // return s;
+}
+
 ProposalAndEdgeCounts propose_new_block_mcmc(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                              std::vector<int> &assignment, Blockmodel &blockmodel, bool block_merge) {
     // TODO: this results in neighbor_indices and neighbor_weights with repeats
@@ -278,6 +323,16 @@ int propose_random_block(int current_block, int num_blocks) {
         proposed++;
     }
     return proposed;
+}
+
+int random_neighbor(EdgeWeights &out_edges, EdgeWeights &in_edges) {
+    int num_neighbors = out_edges.indices.size() + in_edges.indices.size();
+    std::uniform_int_distribution<int> distribution(0, num_neighbors - 1);
+    int index = distribution(common::generator);
+    if (index < out_edges.indices.size())
+        return out_edges.indices[index];
+    index -= out_edges.indices.size();
+    return in_edges.indices[index];
 }
 
 } // common
