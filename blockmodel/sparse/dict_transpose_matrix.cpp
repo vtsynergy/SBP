@@ -66,6 +66,16 @@ int DictTransposeMatrix::get(int row, int col) {
     return matrix[row][col];
 }
 
+int DictTransposeMatrix::get(int row, int col) const {
+    check_row_bounds(row);
+    check_col_bounds(col);
+    const MapVector<int> &matrix_row = this->matrix[row];
+    auto value = matrix_row.find(col);
+    if (value == matrix_row.end())
+        return 0;
+    return value->second;
+}
+
 std::vector<int> DictTransposeMatrix::getcol(int col) {
     check_col_bounds(col);
     std::vector<int> col_values(this->nrows, 0);

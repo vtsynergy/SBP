@@ -34,7 +34,10 @@ class DictTransposeMatrix {
     void clearcol(int col);
     /// Returns a copy of the current matrix.
     DictTransposeMatrix copy();
+    /// Returns the value held in the matrix cell in row `row` and column `col`.
     int get(int row, int col);
+    /// Returns the value held in the matrix cell in row `row` and column `col` without modifying any matrix entries.
+    int get(int row, int col) const;
     /// Returns all values in the requested column as a dense vector.
     std::vector<int> getcol(int col);
     /// Returns all values in the requested row as a dense vector.

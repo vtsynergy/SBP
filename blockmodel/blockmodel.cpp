@@ -81,6 +81,7 @@ Blockmodel Blockmodel::copy() {
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
     blockmodel_copy._block_degree_histograms = std::vector<DegreeHistogram>(this->_block_degree_histograms);
     blockmodel_copy._block_sizes = std::vector<int>(this->_block_sizes);
+    blockmodel_copy.sampler = this->sampler.copy();
     // Create a Sampler as well?
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
@@ -135,7 +136,6 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
-    std::cout << "graph.out_neighbors size: " << graph.out_neighbors.size() << std::endl;
     assert(graph.out_neighbors.size() == graph.num_vertices);
     for (uint vertex = 0; vertex < graph.out_neighbors.size(); ++vertex) {
         std::vector<int> vertex_out_neighbors = graph.out_neighbors[vertex];
@@ -143,9 +143,6 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {
         auto degree_pair = std::make_pair(graph.in_neighbors[vertex].size(), graph.out_neighbors[vertex].size());
         this->_block_degree_histograms[block][degree_pair]++;
         this->_block_sizes[block]++;
-        if (vertex == 24) {
-            std::cout << "vertex 24 is in block " << block << std::endl;
-        }
         if (vertex_out_neighbors.size() == 0) {
             continue;
         }
@@ -194,6 +191,16 @@ void Blockmodel::merge_blocks(int from_block, int to_block, const Graph &graph) 
     }
     this->_block_sizes[to_block] += this->_block_sizes[from_block];
     this->_block_sizes[from_block] = 0;
+    MapVector<int> neighbors = this->sampler.neighbors(from_block);
+    for (std::pair<int, int> neighbor : neighbors) {
+        if (neighbor.first == from_block) {
+            this->sampler.insert(to_block, to_block, neighbor.second);
+            this->sampler.remove(from_block, from_block, neighbor.second);
+            continue;
+        }
+        this->sampler.insert(neighbor.first, to_block, neighbor.second);
+        this->sampler.remove(neighbor.first, from_block, neighbor.second);
+    }
 }
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
@@ -233,6 +240,27 @@ void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block,
     this->_block_degree_histograms[new_block][degree_pair]++;
     this->_block_sizes[current_block]--;
     this->_block_sizes[new_block]++;
+    for (int out_neighbor : graph.out_neighbors[vertex]) {
+        if (out_neighbor == vertex) {
+            this->sampler.insert(new_block, new_block, 1);
+            this->sampler.remove(current_block, current_block, 1);
+            continue;
+        }
+        int block = this->block_assignment[out_neighbor];
+        this->sampler.insert(new_block, block, 1);
+        this->sampler.remove(current_block, block, 1);
+    }
+    for (int in_neighbor : graph.in_neighbors[vertex]) {
+        if (in_neighbor == vertex) continue;  // already handled above
+        int block = this->block_assignment[in_neighbor];
+        // if (block == current_block) {
+        //     this->sampler.insert(new_block, new_block, 1);
+        //     this->sampler.remove(current_block, current_block, 1);
+        //     continue;
+        // }
+        this->sampler.insert(new_block, block, 1);
+        this->sampler.remove(current_block, block, 1);
+    }
 }
 
 void Blockmodel::move_vertex_delta(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &delta,
@@ -288,7 +316,7 @@ EntryMap Blockmodel::deltas(int current_block, int proposed_block, const EntryMa
         int row = entry.first.first;
         int col = entry.first.second;
         int weight = entry.second;
-            result[entry.first] -= weight;
+        result[entry.first] -= weight;
         if (row == current_block && col == current_block)  // entry = M[current_block, proposed_block]
             result[std::make_pair(proposed_block, proposed_block)] += weight;
         else if (row == proposed_block || col == proposed_block)  // entry = M[proposed_block, X] | M[X, proposed_block]
@@ -371,6 +399,61 @@ void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeC
                                         updates.block_col, updates.proposal_col);
 }
 
+bool Blockmodel::operator==(const Blockmodel &other) {
+    if (this->num_blocks != other.num_blocks) return false;
+    for (int block = 0; block < this->num_blocks; ++block) {
+        if (this->block_assignment[block] != other.block_assignment[block]) return false;
+        if (this->block_degrees[block] != other.block_degrees[block]) return false;
+        if (this->block_degrees_in[block] != other.block_degrees_in[block]) return false;
+        if (this->block_degrees_out[block] != other.block_degrees_out[block]) return false;
+        if (this->_block_sizes[block] != other._block_sizes[block]) return false;
+        // degree histogram
+        for (const std::pair<std::pair<int, int>, int> &degree : this->_block_degree_histograms[block]) {
+            auto count = other._block_degree_histograms[block].find(degree.first);
+            if (count == other._block_degree_histograms[block].end() && degree.second != 0) {
+                assert(false);
+                return false;
+            }
+            if (degree.second != count->second) return false;
+        }
+        for (const std::pair<std::pair<int, int>, int> &degree : other._block_degree_histograms[block]) {
+            if (degree.second != this->_block_degree_histograms[block][degree.first]) {
+                assert(false);
+                return false;
+            }
+        }
+        // sampler
+        for (const std::pair<int, int> &neighbor : this->sampler.neighbors(block)) {
+            auto count = other.sampler.neighbors(block).find(neighbor.first);
+            if (count == other.sampler.neighbors(block).end()) {
+                std::cout << this << " sampler doesn't have " << neighbor.first << " : " << neighbor.second << std::endl;
+                assert(false);
+                return false;
+            }
+            if (neighbor.second != count->second) return false;
+        }
+        for (const std::pair<int, int> &neighbor : other.sampler.neighbors(block)) {
+            auto count = this->sampler.neighbors(block).find(neighbor.first);
+            if (count == this->sampler.neighbors(block).end()) {
+                std::cout << this << " sampler doesn't have " << neighbor.first << " : " << neighbor.second << std::endl;
+                assert(false);
+                return false;
+            }
+            if (neighbor.second != count->second) return false;
+        }
+        // if (this->sampler.neighbors(block) != other.sampler.neighbors(block)) {
+        //     assert(false);
+        //     return false;
+        // }
+    }
+    for (int row = 0; row < this->num_blocks; ++row) {
+        for (int col = 0; col < this->num_blocks; ++col) {
+            if (this->blockmodel.get(row, col) != other.blockmodel.get(row, col)) return false;
+        }
+    }
+    return true;
+}
+
 void Blockmodel::assert_stats() {
     std::cout << "asserting stats!" << std::endl;
     std::cout << "checking _block_sizes" << std::endl;
@@ -390,14 +473,52 @@ void Blockmodel::assert_stats() {
     std::cout << "ALL GOOD!!!! WOOOO!!!!" << std::endl;
 }
 
-void Sampler::insert(int from, int to) {
+Sampler Sampler::copy() {
+    // Sampler sampler_copy = Sampler(0);
+    // for (int i = 0; i < this->_num_blocks; ++i) {
+    //     const MapVector<int> &neighborhood = this->_neighbors[i];
+    //     MapVector<int> new_neighborhood;
+    //     for (const std::pair<int, int> &entry : neighborhood) {
+    //         new_neighborhood[entry.first] = entry.second;
+    //     }
+    //     sampler_copy._neighbors.push_back(new_neighborhood);
+    // }
+    // sampler_copy._num_blocks = this->_num_blocks;
+    Sampler sampler_copy = Sampler(this->_num_blocks);
+    for (int i = 0; i < this->_num_blocks; ++i) {
+        const MapVector<int> &neighborhood = this->_neighbors[i];
+        sampler_copy._neighbors[i] = MapVector<int>(neighborhood);
+    }
+    return sampler_copy;
+}
+
+void Sampler::insert(int from, int to, int count) {
     // if (from == to) return;
-    this->neighbors[from].insert(to);
-    this->neighbors[to].insert(from);
+    this->_neighbors[from][to] += count;
+    if (from == to) return;
+    this->_neighbors[to][from] += count;
+    // this->_neighbors[from].insert(to);
+    // this->_neighbors[to].insert(from);
+}
+
+void Sampler::remove(int from, int to, int count) {
+    // std::cout << "from: " << from << "to: " << to << " count: " << count << " actual: " << this->_neighbors[from][to] << std::endl;
+    if (this->_neighbors[from][to] == count)
+        this->_neighbors[from].erase(to);
+    else
+        this->_neighbors[from][to] -= count;
+    if (from == to) return;
+    if (this->_neighbors[to][from] == count)
+        this->_neighbors[to].erase(from);
+    else
+        this->_neighbors[to][from] -= count;
+    // this->_neighbors[from].erase(to);
+    // this->_neighbors[to].erase(from);
 }
 
 int Sampler::sample(int block, std::mt19937_64 &generator) {
-    const std::set<int> &neighborhood = this->neighbors[block];
+    const MapVector<int> &neighborhood = this->_neighbors[block];
+    // const std::set<int> &neighborhood = this->_neighbors[block];
     // if (neighborhood.empty()) {  // sample a random block
     //     std::uniform_int_distribution<int> distribution(0, this->num_blocks - 2);
     //     int sampled = distribution(generator);
@@ -411,8 +532,13 @@ int Sampler::sample(int block, std::mt19937_64 &generator) {
     std::uniform_int_distribution<int> distribution(0, neighborhood.size() - 1);
     int index = distribution(generator);
     // std::set doesn't have access by index - use iterator instead.
-    std::set<int>::iterator it = neighborhood.begin();
+    auto it = neighborhood.begin();
+    // auto it = this->_neighbors[block].begin();
+    // MapVector<int>::const_iterator it = neighborhood.begin();
+    // std::set<int>::iterator it = neighborhood.begin();
+    // std::cout << "sampling for block: " << block << " index: " << index << " iterator: it[" << it->first << " " << it->second << "] neighborhood: (" << neighborhood.size() << ") ";
     std::advance(it, index);
-    int sampled = *it;
+    // utils::print<int>(neighborhood);
+    int sampled = it->first;
     return sampled;
 }
