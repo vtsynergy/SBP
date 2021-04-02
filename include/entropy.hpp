@@ -90,7 +90,8 @@ inline double get_Sk(const std::pair<int, int> &degrees, int delta, int block, B
     return std::lgamma(nd + delta + 1);
 }
 
-inline double get_delta_deg_dl_dist_change(int kin, int kout, int block_weight, int block, int diff, Blockmodel &blockmodel) {
+/// change in minimum description length due to change in degree distribution for vertex moves 
+inline double get_delta_deg_dl_dist_change(int kin, int kout, int block, int diff, Blockmodel &blockmodel) {
     /* get_delta_deg_dl_dist_change(r, dop, -1) */
 
     // double S_b = 0, S_a = 0;
@@ -106,22 +107,57 @@ inline double get_delta_deg_dl_dist_change(int kin, int kout, int block_weight, 
     //         S_a += get_Sk(deg, diff * nk);
     //     });
     double S_b = 0.0, S_a = 0.0;
-    if (block_weight == 1) {  // vertex move
-        const auto degrees = std::make_pair(kin, kout);
-        S_b += get_Sk(degrees, 0, block, blockmodel);
-        S_a += get_Sk(degrees, diff, block, blockmodel);
-    } else {  // block merge
-        for (const std::pair<std::pair<int, int>, int> &degrees : blockmodel.degree_histogram(block)) {
-            S_b += get_Sk(degrees.first, 0, block, blockmodel);
-            S_a += get_Sk(degrees.first, diff, block, blockmodel);
-        }
-    }
+    const auto degrees = std::make_pair(kin, kout);
+    S_b += get_Sk(degrees, 0, block, blockmodel);
+    S_a += get_Sk(degrees, diff, block, blockmodel);
 
     S_b += get_Se(0, 0, 0, block, blockmodel);
     S_a += get_Se(diff, diff * kin, diff * kout, block, blockmodel);
 
     S_b += get_Sr(0, block, blockmodel);
     S_a += get_Sr(diff, block, blockmodel);
+
+    return S_a - S_b;
+    /* get_delta_deg_dl_dist_change() */
+}
+
+inline double get_delta_deg_dl_dist_change(int kin, int kout, int block_weight, int block, int diff, const DegreeHistogram &histogram, Blockmodel &blockmodel) {
+    /* get_delta_deg_dl_dist_change(r, dop, -1) */
+
+    // double S_b = 0, S_a = 0;
+    // int tkin = 0, tkout = 0, n = 0;
+    // dop([&](size_t kin, size_t kout, int nk)
+    //     {
+    //         tkin += kin * nk;
+    //         tkout += kout * nk;
+    //         n += nk;
+
+    //         auto deg = make_pair(kin, kout);
+    //         S_b += get_Sk(deg,         0);
+    //         S_a += get_Sk(deg, diff * nk);
+    //     });
+    double S_b = 0.0, S_a = 0.0;
+    // for (const std::pair<std::pair<int, int>, int> &degrees : blockmodel.degree_histogram(block)) {
+    for (const std::pair<std::pair<int, int>, int> &degrees : histogram) {
+        S_b += get_Sk(degrees.first, 0, block, blockmodel);
+        S_a += get_Sk(degrees.first, diff * degrees.second, block, blockmodel);
+        // S_a += get_Sk(degrees.first, diff, block, blockmodel);
+    }
+    if (std::isinf(S_b) || std::isinf(S_a)) {
+        std::cout << "part 1) S_b: " << S_b << " S_a: " << S_a << std::endl;
+    }
+
+    S_b += get_Se(0, 0, 0, block, blockmodel);
+    S_a += get_Se(diff, diff * kin, diff * kout, block, blockmodel);
+    if (std::isinf(S_b) || std::isinf(S_a)) {
+        std::cout << "part 2) S_b: " << S_b << " S_a: " << S_a << std::endl;
+    }
+
+    S_b += get_Sr(0, block, blockmodel);
+    S_a += get_Sr(diff, block, blockmodel);
+    if (std::isinf(S_b) || std::isinf(S_a)) {
+        std::cout << "part 3) S_b: " << S_b << " S_a: " << S_a << std::endl;
+    }
 
     return S_a - S_b;
     /* get_delta_deg_dl_dist_change() */

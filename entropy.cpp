@@ -139,8 +139,8 @@ double delta_entropy(int vertex, int current_block, int proposed_block, Blockmod
     S_a += -std::lgamma(blockmodel.block_size(proposed_block) + 2);  // +1 + 1
     delta_entropy_dl += S_a - S_b;
 
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, 1, current_block, -1, blockmodel);
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, 1, proposed_block, +1, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, current_block, -1, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, proposed_block, +1, blockmodel);
 
     return delta_entropy + 1.0 * delta_entropy_dl;
 }
@@ -292,8 +292,8 @@ double delta_entropy(int vertex, int current_block, int proposed_block, Blockmod
     // double dS = 0;
     // dS += get_delta_deg_dl_dist_change(r, -1);
     // dS += get_delta_deg_dl_dist_change(ne, +1);
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, 1, current_block, -1, blockmodel);
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, 1, proposed_block, +1, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, current_block, -1, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, proposed_block, +1, blockmodel);
     // std::cout << "delta_entropy_dl: " << delta_entropy_dl << std::endl;
     /* get_delta_partition_dl */
 
@@ -347,9 +347,12 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
     S_b += lbinom(graph.num_vertices - 1, blockmodel.getNum_blocks() - 1);
     S_a += lbinom(graph.num_vertices - 1, blockmodel.getNum_blocks() + change_in_num_blocks - 1);
     delta_entropy_dl += S_a - S_b;
+    // std::cout << "dS_dl a) " << delta_entropy_dl;
 
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, current_block, -1, blockmodel);
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, proposed_block, +1, blockmodel);
+    const DegreeHistogram &histogram = blockmodel.degree_histogram(current_block);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, current_block, -1, histogram, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, proposed_block, +1, histogram, blockmodel);
+    // std::cout << " | dS_dl b) " << delta_entropy_dl;
 
     /* get_delta_edges_dl */
     S_b = 0.0, S_a = 0.0;
@@ -357,9 +360,10 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
     S_b += lbinom((B * B) + graph.num_edges - 1, graph.num_edges);
     S_a += lbinom(((B - 1) * (B - 1)) + graph.num_edges - 1, graph.num_edges);
     delta_entropy_dl += S_a - S_b;
+    // std::cout << " | dS_dl c) " << delta_entropy_dl << std::endl;
 
-    std::cout << "delta_entropy: " << delta_entropy << " delta_entropy_dl: " << delta_entropy_dl << std::endl;
     if (std::isnan(delta_entropy) || std::isinf(delta_entropy) || std::isnan(delta_entropy_dl) || std::isinf(delta_entropy_dl)) {
+        std::cout << "delta_entropy: " << delta_entropy << " delta_entropy_dl: " << delta_entropy_dl << std::endl;
         exit(-15);
     }
     return delta_entropy + 1.0 * delta_entropy_dl;
@@ -484,7 +488,7 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
     S_a += lbinom(graph.num_vertices - 1, blockmodel.getNum_blocks() + change_in_num_blocks - 1);
 
     delta_entropy_dl += S_a - S_b;
-    // std::cout << "dS_dl a) " << delta_entropy_dl;
+    std::cout << "dS_dl a) " << delta_entropy_dl;
     // std::cout << "delta_entropy_dl: " << delta_entropy_dl << " ";
     // return S_a - S_b;
 
@@ -492,11 +496,12 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
     // double dS = 0;
     // dS += get_delta_deg_dl_dist_change(r, -1);
     // dS += get_delta_deg_dl_dist_change(ne, +1);
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, current_block, -1, blockmodel);
+    const DegreeHistogram &histogram = blockmodel.degree_histogram(current_block);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, current_block, -1, histogram, blockmodel);
     // std::cout << "\n A: " << delta_entropy_dl;
-    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, proposed_block, +1, blockmodel);
+    delta_entropy_dl += get_delta_deg_dl_dist_change(kin, kout, block_weight, proposed_block, +1, histogram, blockmodel);
     // std::cout << " B: " << delta_entropy_dl << std::endl;
-    // std::cout << " | dS_dl b) " << delta_entropy_dl;
+    std::cout << " | dS_dl b) " << delta_entropy_dl;
     // std::cout << "delta_entropy_dl: " << delta_entropy_dl << std::endl;
     /* get_delta_deg_dl */
 
@@ -507,7 +512,7 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
     B--;
     S_a += lbinom((B * B) + graph.num_edges - 1, graph.num_edges);
     delta_entropy_dl += S_a - S_b;
-    // std::cout << " | dS_dl c) " << delta_entropy_dl << std::endl;;
+    std::cout << " | dS_dl c) " << delta_entropy_dl << std::endl;;
     /* get_delta_edges_dl */
     std::cout << "delta_entropy: " << delta_entropy << " delta_entropy_dl: " << delta_entropy_dl << std::endl;
     if (std::isnan(delta_entropy) || std::isinf(delta_entropy) || std::isnan(delta_entropy_dl) || std::isinf(delta_entropy_dl)) {

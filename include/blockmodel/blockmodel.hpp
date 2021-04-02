@@ -50,17 +50,31 @@ typedef struct sparse_edge_count_updates_t {
 
 class Sampler {
 public:
-    Sampler(int num_blocks) : num_blocks(num_blocks) {
+    Sampler(int num_blocks) : _num_blocks(num_blocks) {
         for (int i = 0; i < num_blocks; ++i) {
-            this->neighbors.push_back(std::set<int>());
+            this->_neighbors.push_back(MapVector<int>());
+            // this->_neighbors.push_back(std::set<int>());
         }
     }
-    // const std::set<int> &get_neighbors(int block) { return this->neighbors[block]; };
-    void insert(int from, int to);
+    /// Creates a copy of this Sampler.
+    Sampler copy();
+    /// Inserts `to` as a neighbor of `from`, and vice versa.
+    void insert(int from, int to, int count = 1);
+    /// Removes `to` as a neighbor of `from`, and vice versa.
+    void remove(int from, int to, int count = 1);
+    /// Samples a neighbor of `block`, uniformly at random. If `block` has no neighbors, returns `block`.
     int sample(int block, std::mt19937_64 &generator);
+    /// Returns the list (map) of neighbors of `block`.
+    const MapVector<int> &neighbors(int block) { return this->_neighbors[block]; }
+    /// Returns the list (map) of neighbors of `block` without modifying the Sampler.
+    const MapVector<int> &neighbors(int block) const { return this->_neighbors[block]; }
+    // const std::set<int> &neighbors(int block) { return this->_neighbors[block]; }
+    // const std::set<int> &neighbors(int block) const { return this->_neighbors[block]; }
+    // TODO: print out the Sampler
 private:
-    std::vector<std::set<int>> neighbors;
-    int num_blocks;
+    // std::vector<std::set<int>> _neighbors;
+    std::vector<MapVector<int>> _neighbors;
+    int _num_blocks;
 };  // class Sampler
 
 // See https://www.techiedelight.com/use-std-pair-key-std-unordered_map-cpp/
@@ -161,6 +175,8 @@ class Blockmodel {
     void set_block_membership(int vertex, int block, const Graph &graph);
     /// Updates the blockmodel matrix by replacing the appropriate rows and columns with those in `updates`.
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
+    /// Returns true if the 2 blockmodels are equivalent
+    bool operator==(const Blockmodel &other);
     /// TODO: Get rid of getters and setters?
     DictTransposeMatrix &getBlockmodel() { return this->blockmodel; }
     void setBlockmodel(DictTransposeMatrix blockmodel) { this->blockmodel = blockmodel; }

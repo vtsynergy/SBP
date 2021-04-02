@@ -1,9 +1,45 @@
 #include "block_merge.hpp"
+#include "entropy.hpp"
 
 namespace block_merge {
 
+ProposalEvaluation best_merge(int current_block, Blockmodel &blockmodel, const Graph &graph) {
+    ProposalEvaluation best_proposal = ProposalEvaluation{NULL_BLOCK, std::numeric_limits<double>::max()};
+    int num_avoided;
+    std::unordered_map<int, bool> past_proposals;
+    for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
+        ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, graph, false, past_proposals);
+        if (proposal.delta_entropy == std::numeric_limits<double>::max()) 
+            continue;
+        if (proposal.proposed_block == current_block) 
+            continue;
+        if (proposal.delta_entropy < best_proposal.delta_entropy) {
+            best_proposal.proposed_block = proposal.proposed_block;
+            best_proposal.delta_entropy = proposal.delta_entropy;
+        }
+    }
+    if (best_proposal.proposed_block != NULL_BLOCK) {
+        return best_proposal;
+    }
+    for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
+        ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, graph, true, past_proposals);
+        if (proposal.delta_entropy == std::numeric_limits<double>::max()) 
+            continue;
+        if (proposal.proposed_block == current_block) 
+            continue;
+        if (proposal.delta_entropy < best_proposal.delta_entropy) {
+            best_proposal.proposed_block = proposal.proposed_block;
+            best_proposal.delta_entropy = proposal.delta_entropy;
+        }
+    }
+    return best_proposal;
+}
+
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
                                     const std::vector<int> &best_merge_for_each_block, const Graph &graph) {
+    // Blockmodel test = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(), blockmodel.getBlock_assignment());
+    // std::cout << "test at start of carry_out_best_merge" << std::endl;
+    // assert(test == blockmodel);
     // The following code is modeled after the `merge_sweep` function in
     // https://git.skewed.de/count0/graph-tool/-/blob/master/src/graph/inference/loops/merge_loop.hh
     typedef std::tuple<int, int, double> merge_t;
@@ -16,6 +52,8 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
     // Block map is here so that, if you move merge block A to block C, and then block B to block A, all three blocks
     // end up with the same block assignment (C)
     std::vector<int> block_map = utils::range<int>(0, blockmodel.getNum_blocks());
+    // std::cout << "num merged: " << std::endl;
+    int num_readded = 0;
     while (num_merged < blockmodel.getNum_blocks_to_merge() && !queue.empty()) {
         merge_t merge = queue.top();
         queue.pop();
@@ -23,26 +61,38 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
         int merge_to = block_map[std::get<1>(merge)];
         int delta_entropy_hint = std::get<2>(merge);
         if (merge_from != merge_to) {
-            // Calculate the delta entropy given the current block assignment
-            EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(merge_from);
-            EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(merge_from);
-            int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-            int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
+            int k_out = blockmodel.getBlock_degrees_out()[merge_from];
+            int k_in = blockmodel.getBlock_degrees_in()[merge_from];
             int k = k_out + k_in;
             common::ProposalAndEdgeCounts proposal { merge_to, k_out, k_in, k };
-            SparseEdgeCountUpdates updates;
-            edge_count_updates_sparse(blockmodel.getBlockmodel(), merge_from, proposal.proposal, out_blocks, in_blocks,
-                                      updates);
+            EntryMap block_edges = blockmodel.entries1(merge_from);
+            EntryMap deltas = blockmodel.deltas(merge_from, proposal.proposal, block_edges);
             common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(merge_from, blockmodel,
                                                                                           proposal);
-            double delta_entropy_actual =
-                compute_delta_entropy_sparse(merge_from, proposal.proposal, blockmodel, updates, new_block_degrees);
+            double delta_entropy_actual = entropy::delta_entropy(merge_from, proposal.proposal, blockmodel, graph, deltas);
+
+            // // Calculate the delta entropy given the current block assignment
+            // EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(merge_from);
+            // EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(merge_from);
+            // int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
+            // int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
+            // int k = k_out + k_in;
+            // common::ProposalAndEdgeCounts proposal { merge_to, k_out, k_in, k };
+            // SparseEdgeCountUpdates updates;
+            // edge_count_updates_sparse(blockmodel.getBlockmodel(), merge_from, proposal.proposal, out_blocks, in_blocks,
+            //                           updates);
+            // common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(merge_from, blockmodel,
+            //                                                                               proposal);
+            // double delta_entropy_actual =
+            //     compute_delta_entropy_sparse(merge_from, proposal.proposal, blockmodel, updates, new_block_degrees);
             // If the actual change in entropy is more positive (greater) than anticipated, put it back in queue
             if (!queue.empty() && delta_entropy_actual > std::get<2>(queue.top())) {
                 std::get<2>(merge) = delta_entropy_actual;
                 queue.push(merge);
+                num_readded++;
                 continue;
             }
+            // std::cout << "moving " << merge_from << " --> " << merge_to << std::endl;
             // Perform the merge
             // 1. Update the assignment
             for (int i = 0; i < block_map.size(); ++i) {
@@ -54,16 +104,67 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
             blockmodel.merge_blocks(merge_from, merge_to, graph);
             // 2. Update the matrix
             // NOTE: if getting funky results, try replacing the following with a matrix rebuild
-            blockmodel.getBlockmodel().clearrow(merge_from);
-            blockmodel.getBlockmodel().clearcol(merge_from);
-            blockmodel.getBlockmodel().setrow(merge_to, updates.proposal_row);
-            blockmodel.getBlockmodel().setcol(merge_to, updates.proposal_col);
+            // blockmodel.getBlockmodel().clearrow(merge_from);
+            // blockmodel.getBlockmodel().clearcol(merge_from);
+            for (const std::pair<std::pair<int, int>, int> &delta: deltas) {
+                int row = delta.first.first;
+                int col = delta.first.second;
+                blockmodel.getBlockmodel().add(row, col, delta.second);
+                if (blockmodel.getBlockmodel().get(row, col) < 0) {
+                    std::cout << "ERROR!! B! " << merge_from << " --> " << merge_to << " [";
+                    std::cout << row << "," << col << "] delta = " << delta.second << std::endl;;
+                    exit(-10);
+                }
+            }
+            // blockmodel.getBlockmodel().clearrow(merge_from);
+            // blockmodel.getBlockmodel().clearcol(merge_from);
+            // blockmodel.getBlockmodel().setrow(merge_to, updates.proposal_row);
+            // blockmodel.getBlockmodel().setcol(merge_to, updates.proposal_col);
             blockmodel.setBlock_degrees_out(new_block_degrees.block_degrees_out);
             blockmodel.setBlock_degrees_in(new_block_degrees.block_degrees_in);
             blockmodel.setBlock_degrees(new_block_degrees.block_degrees);
             num_merged++;
+            // Blockmodel test = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(), blockmodel.getBlock_assignment());
+            // Indices testrowcols = test.getBlockmodel().nonzero();
+            // for (int i = 0; i < testrowcols.rows.size(); ++i) {
+            //     int row = testrowcols.rows[i];
+            //     int col = testrowcols.cols[i];
+            //     int a = blockmodel.getBlockmodel().get(row, col);
+            //     int b = test.getBlockmodel().get(row, col);
+            //     if (a != b) {
+            //         std::cout << "M[" << row << "," << col << "] should be " << b << " but is " << a << std::endl;
+            //         assert(false);
+            //     }
+            // }
+            // std::cout << "num_merged: " << num_merged << " / " << blockmodel.getNum_blocks_to_merge() << std::endl;
+            // Blockmodel test = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(), blockmodel.getBlock_assignment());
+            // std::cout << "test: " << &test << " current: " << &blockmodel << std::endl;
+            // if (!(test == blockmodel)) {
+                // std::cout << "broken after " << merge_from << " --> " << merge_to << std::endl;
+                // assert(false);
+            // }
+            // blockmodel.assert_stats();
         }
     }
+    std::cout << "merges were readded to queue " << num_readded << " times!" << std::endl;
+    // std::cout << "testing the result" << std::endl;
+    // // Make sure all values are >= 0
+    // for (int val : blockmodel.getBlockmodel().values()) {
+    //     assert(val >= 0);
+    // }
+    // test = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(), blockmodel.getBlock_assignment());
+    // std::cout << "test: " << &test << " current: " << &blockmodel << std::endl;
+    // assert(test == blockmodel);
+    // for (int row = 0; row < blockmodel.getNum_blocks(); ++row) {
+    //     for (int col = 0; col < blockmodel.getNum_blocks(); ++ col) {
+    //         int a = blockmodel.getBlockmodel().get(row, col);
+    //         int b = test.getBlockmodel().get(row, col);
+    //         if (a != b) {
+    //             std::cout << "M[" << row << "," << col << "] should be " << b << " but is " << a << std::endl;
+    //             assert(false);
+    //         }
+    //     }
+    // }
     std::vector<int> mapping = blockmodel.build_mapping(blockmodel.getBlock_assignment());
     for (int i = 0; i < blockmodel.getBlock_assignment().size(); ++i) {
         int block = blockmodel.getBlock_assignment()[i];
@@ -79,23 +180,14 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args)
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block =
         utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
-    std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     // TODO: keep track of already proposed merges, do not re-process those
-    int num_avoided = 0;  // number of avoided/skipped calculations
-    #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
+    // int num_avoided = 0;  // number of avoided/skipped calculations
+    // #pragma omp parallel for schedule(dynamic)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
-        std::unordered_map<int, bool> past_proposals;
-        for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, block_assignment,
-                                                               past_proposals);
-            if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
-            if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
-                best_merge_for_each_block[current_block] = proposal.proposed_block;
-                delta_entropy_for_each_block[current_block] = proposal.delta_entropy;
-            }
-        }
+        ProposalEvaluation merge = best_merge(current_block, blockmodel, graph);
+        best_merge_for_each_block[current_block] = merge.proposed_block;
+        delta_entropy_for_each_block[current_block] = merge.delta_entropy;
     }
-    std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
     if (args.approximate)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block, graph);
     else
@@ -103,6 +195,37 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args)
     blockmodel.initialize_edge_counts(graph);
     return blockmodel;
 }
+
+// Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, Args &args) {
+//     // TODO: add block merge timings to evaluation
+//     int num_blocks = blockmodel.getNum_blocks();
+//     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
+//     std::vector<double> delta_entropy_for_each_block =
+//         utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
+//     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
+//     // TODO: keep track of already proposed merges, do not re-process those
+//     int num_avoided = 0;  // number of avoided/skipped calculations
+//     #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
+//     for (int current_block = 0; current_block < num_blocks; ++current_block) {
+//         std::unordered_map<int, bool> past_proposals;
+//         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
+//             ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, block_assignment,
+//                                                                past_proposals);
+//             if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
+//             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
+//                 best_merge_for_each_block[current_block] = proposal.proposed_block;
+//                 delta_entropy_for_each_block[current_block] = proposal.delta_entropy;
+//             }
+//         }
+//     }
+//     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
+//     if (args.approximate)
+//         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block, graph);
+//     else
+//         carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, graph);
+//     blockmodel.initialize_edge_counts(graph);
+//     return blockmodel;
+// }
 
 ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel) {
     EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(current_block);
@@ -118,12 +241,27 @@ ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std:
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, const Graph &graph, bool random,
+                                        std::unordered_map<int, bool> &past_proposals) {
+    // std::cout << std::boolalpha << "proposing a merge for: " << current_block << " random = " << random << " | num blocks = " << blockmodel.getNum_blocks() << std::endl;
+    common::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, blockmodel, random);
+    if (proposal.proposal == NULL_BLOCK || past_proposals[proposal.proposal] == true)
+        return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};
+    past_proposals[proposal.proposal] = true;
+    if (proposal.proposal == current_block)
+        return ProposalEvaluation{proposal.proposal, 0};
+    EntryMap block_edges = blockmodel.entries1(current_block);
+    EntryMap deltas = blockmodel.deltas(current_block, proposal.proposal, block_edges);
+    double delta_entropy = entropy::delta_entropy(current_block, proposal.proposal, blockmodel, graph, deltas);
+    return ProposalEvaluation{proposal.proposal, delta_entropy};
+}
+
+ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &assignment,
                                         std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.getBlockmodel().outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.getBlockmodel().incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
-        common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
+        common::propose_new_block(current_block, out_blocks, in_blocks, assignment, blockmodel, true);
     if (past_proposals[proposal.proposal] == true)
         return ProposalEvaluation{ proposal.proposal, std::numeric_limits<double>::max() };
     SparseEdgeCountUpdates updates;
