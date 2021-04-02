@@ -113,9 +113,8 @@ double delta_entropy(int vertex, int current_block, int proposed_block, Blockmod
 
     double delta_entropy = 0.0, delta_entropy_dl = 0.0;
 
-    EntryMap entries = blockmodel.entries2(current_block, proposed_block);
     for (const std::pair<std::pair<int, int>, int> &delta : deltas) {
-        int entry = entries[delta.first];  // If row,col isn't in entries, a 0 will be returned
+        int entry = blockmodel.getBlockmodel().get(delta.first.first, delta.first.second);
         delta_entropy += -std::lgamma(entry + delta.second + 1) - -std::lgamma(entry + 1);
     }
 
@@ -307,9 +306,8 @@ double delta_entropy(int current_block, int proposed_block, Blockmodel &blockmod
 
     double delta_entropy = 0.0, delta_entropy_dl = 0.0;
 
-    EntryMap entries = blockmodel.entries2(current_block, proposed_block);
     for (const std::pair<std::pair<int, int>, int> &delta : deltas) {
-        int entry = entries[delta.first];
+        int entry = blockmodel.getBlockmodel().get(delta.first.first, delta.first.second);
         delta_entropy += -std::lgamma(entry + delta.second + 1) - -std::lgamma(entry + 1);
         if (std::isinf(delta_entropy)) {
             std::cout << "INF! delta_entropy a! row: " << delta.first.first << " col: " << delta.first.second << " weight << " << delta.second << std::endl;
