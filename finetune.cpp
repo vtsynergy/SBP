@@ -558,10 +558,10 @@ ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph 
     EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors, vertex);
     EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors, vertex);
 
-    common::ProposalAndEdgeCounts proposal = common::propose_new_block(
-        vertex, vertex_out_neighbors, vertex_in_neighbors, blockmodel);
-    // common::ProposalAndEdgeCounts proposal = common::propose_new_block_mcmc(
-        // current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
+    // common::ProposalAndEdgeCounts proposal = common::propose_new_block(
+        // vertex, vertex_out_neighbors, vertex_in_neighbors, blockmodel);
+    common::ProposalAndEdgeCounts proposal = common::propose_new_block_mcmc(
+        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.getBlock_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
         return ProposalEvaluation{0.0, did_move};
     }
