@@ -137,11 +137,9 @@ inline double get_delta_deg_dl_dist_change(int kin, int kout, int block_weight, 
     //         S_a += get_Sk(deg, diff * nk);
     //     });
     double S_b = 0.0, S_a = 0.0;
-    // for (const std::pair<std::pair<int, int>, int> &degrees : blockmodel.degree_histogram(block)) {
     for (const std::pair<std::pair<int, int>, int> &degrees : histogram) {
-        S_b += get_Sk(degrees.first, 0, block, blockmodel);
-        S_a += get_Sk(degrees.first, diff * degrees.second, block, blockmodel);
-        // S_a += get_Sk(degrees.first, diff, block, blockmodel);
+        S_b += std::lgamma(degrees.second + 0 + 1);
+        S_a += std::lgamma(degrees.second + diff * degrees.second + 1);
     }
     if (std::isinf(S_b) || std::isinf(S_a)) {
         std::cout << "part 1) S_b: " << S_b << " S_a: " << S_a << std::endl;
