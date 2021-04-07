@@ -46,12 +46,12 @@ class Blockmodel {
         // Number of blocks to merge
         this->num_blocks_to_merge = (int)(this->num_blocks * this->block_reduction_rate);
     }
-    Blockmodel(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate)
+    Blockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate)
         : Blockmodel(num_blocks, block_reduction_rate) {
         this->initialize_edge_counts(out_neighbors);
     }
-    Blockmodel(int num_blocks, NeighborList &out_neighbors, float block_reduction_rate, std::vector<int> &block_assignment)
-        : Blockmodel(num_blocks, block_reduction_rate) {
+    Blockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate,
+               std::vector<int> &block_assignment) : Blockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->block_assignment = block_assignment;
         // Number of blocks to merge
@@ -71,7 +71,7 @@ class Blockmodel {
     static Blockmodel from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate);
     /// TODO
-    void initialize_edge_counts(NeighborList &neighbors);
+    void initialize_edge_counts(const NeighborList &neighbors);
     /// TODO
     double log_posterior_probability();
     /// TODO

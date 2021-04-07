@@ -83,7 +83,7 @@ void block_merge::carry_out_best_merges_advanced(Blockmodel &blockmodel,
     blockmodel.setNum_blocks(blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge());
 }
 
-Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Args &args) {
+Blockmodel &block_merge::merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, Args &args) {
     // TODO: add block merge timings to evaluation
     int num_blocks = blockmodel.getNum_blocks();
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);

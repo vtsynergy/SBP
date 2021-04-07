@@ -2,7 +2,7 @@
 
 double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &contingency_table) {
     // The number of vertex pairs = |V| choose 2 = |V|! / (2! * (|V| - 2)!) = (|V| * |V|-1) / 2
-    double num_pairs = (graph.num_vertices * (graph.num_vertices - 1)) / 2;
+    double num_pairs = (graph.num_vertices() * (graph.num_vertices() - 1)) / 2;
 
     const int nrows = contingency_table.size();
     const int ncols = contingency_table[0].size();
@@ -34,7 +34,7 @@ double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &conti
     }
     row_pairs /= 2;
     col_pairs /= 2;
-    double num_agreement_diff = (graph.num_vertices * graph.num_vertices) + cells_squared;
+    double num_agreement_diff = (graph.num_vertices() * graph.num_vertices()) + cells_squared;
     num_agreement_diff -= (rowsums_squared + colsums_squared);
     num_agreement_diff /= 2.0;
     double num_agreement = cell_pairs + num_agreement_diff;
@@ -61,19 +61,19 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
     int num_true_communities = 0;
     std::unordered_map<int, int> translator;  // TODO: add some kind of if statement for whether to use this or not
     translator[-1] = -1;
-    for (int community : graph.assignment) {
+    for (int community : graph.assignment()) {
         if (community > -1) {
             if (translator.insert(std::unordered_map<int, int>::value_type(community, num_true_communities)).second) {
                 num_true_communities++;
             };
         }
     }
-    std::vector<int> true_assignment(graph.assignment);
+    std::vector<int> true_assignment(graph.assignment());
     for (int i = 0; i < true_assignment.size(); ++i) {
         true_assignment[i] = translator[true_assignment[i]];
     }
     std::cout << "Blockmodel correctness evaluation" << std::endl;
-    std::cout << "Number of vertices: " << graph.num_vertices << std::endl;
+    std::cout << "Number of vertices: " << graph.num_vertices() << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
     std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
     std::vector<int> rows, cols;
@@ -90,7 +90,7 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
-    for (int i = 0; i < graph.num_vertices; ++i) {
+    for (int i = 0; i < graph.num_vertices(); ++i) {
         int row_block = rows[i];
         int col_block = cols[i];
         if (true_assignment[i] > -1) {

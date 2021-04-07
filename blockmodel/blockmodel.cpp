@@ -122,7 +122,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
     return Blockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
 }
 
-void Blockmodel::initialize_edge_counts(NeighborList &neighbors) {
+void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back

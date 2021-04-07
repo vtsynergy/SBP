@@ -32,7 +32,7 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
                                     const std::vector<int> &best_merge_for_each_block);
 
 /// Merges entire blocks (communities) in blockmodel together
-Blockmodel &merge_blocks(Blockmodel &blockmodel, NeighborList &out_neighbors, Args &args);
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, Args &args);
 
 /// Proposes a merge for current_block based on the current blockmodel state
 ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);

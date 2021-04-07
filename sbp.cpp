@@ -6,8 +6,8 @@ Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices, graph.out_neighbors, BLOCK_REDUCTION_RATE);
-    std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices << " vertices "
+    Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
+    std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
@@ -15,7 +15,7 @@ Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
-        blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors, args);
+        blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), args);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);

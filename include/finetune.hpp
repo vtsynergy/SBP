@@ -58,7 +58,7 @@ EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current
 void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
-EdgeWeights edge_weights(NeighborList &neighbors, int vertex);
+EdgeWeights edge_weights(const NeighborList &neighbors, int vertex);
 double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
@@ -66,10 +66,10 @@ double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, Edge
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 double overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges);
-ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
-                                NeighborList &in_neighbors);
-VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, NeighborList &out_neighbors,
-                            NeighborList &in_neighbors);
+ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const NeighborList &out_neighbors,
+                                const NeighborList &in_neighbors);
+VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, const NeighborList &out_neighbors,
+                              const NeighborList &in_neighbors);
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
 Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
