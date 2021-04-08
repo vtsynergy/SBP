@@ -46,7 +46,7 @@ void DictTransposeMatrix::clearrow(int row) {
     }
 }
 
-DictTransposeMatrix DictTransposeMatrix::copy() {
+ISparseMatrix* DictTransposeMatrix::copy() const {
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
     DictTransposeMatrix dict_matrix(this->nrows, this->ncols);
     for (int i = 0; i < this->nrows; ++i) {
@@ -57,16 +57,21 @@ DictTransposeMatrix DictTransposeMatrix::copy() {
         const std::unordered_map<int, int> col = this->matrix_transpose[i];
         dict_matrix.matrix_transpose[i] = col;
     }
-    return dict_matrix;
+    return new DictTransposeMatrix(dict_matrix);
 }
 
-int DictTransposeMatrix::get(int row, int col) {
+int DictTransposeMatrix::get(int row, int col) const {
     check_row_bounds(row);
     check_col_bounds(col);
-    return matrix[row][col];
+    const MapVector<int> &row_vector = this->matrix[row];
+    auto it = row_vector.find(col);
+    if (it == row_vector.end())
+        return 0;
+    return it->second;
+    // return this->matrix[row][col];
 }
 
-std::vector<int> DictTransposeMatrix::getcol(int col) {
+std::vector<int> DictTransposeMatrix::getcol(int col) const {
     check_col_bounds(col);
     std::vector<int> col_values(this->nrows, 0);
     const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
@@ -86,7 +91,7 @@ const MapVector<int>& DictTransposeMatrix::getcol_sparse(int col) const {
     return this->matrix_transpose[col];
 }
 
-std::vector<int> DictTransposeMatrix::getrow(int row) {
+std::vector<int> DictTransposeMatrix::getrow(int row) const {
     check_row_bounds(row);
     std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
     // int row_values [this->ncols];
@@ -110,7 +115,7 @@ const MapVector<int>& DictTransposeMatrix::getrow_sparse(int row) const {
     return this->matrix[row];
 }
 
-EdgeWeights DictTransposeMatrix::incoming_edges(int block) {
+EdgeWeights DictTransposeMatrix::incoming_edges(int block) const {
     check_col_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
@@ -122,7 +127,7 @@ EdgeWeights DictTransposeMatrix::incoming_edges(int block) {
     return EdgeWeights {indices, values};
 }
 
-Indices DictTransposeMatrix::nonzero() {
+Indices DictTransposeMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;
     for (int row = 0; row < nrows; ++row) {
@@ -165,7 +170,7 @@ void DictTransposeMatrix::sub(int row, int col, int val) {
     this->matrix_transpose[col][row] -= val;
 }
 
-int DictTransposeMatrix::sum() {
+int DictTransposeMatrix::sum() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
@@ -176,7 +181,7 @@ int DictTransposeMatrix::sum() {
     return total;
 }
 
-std::vector<int> DictTransposeMatrix::sum(int axis) {
+std::vector<int> DictTransposeMatrix::sum(int axis) const {
     if (axis < 0 || axis > 1) {
         throw IndexOutOfBoundsException(axis, 2);
     }
@@ -201,17 +206,7 @@ std::vector<int> DictTransposeMatrix::sum(int axis) {
     }
 }
 
-int DictTransposeMatrix::trace() {
-    int total = 0;
-    // Assumes that the matrix is square (which it should be in this case)
-    for (int index = 0; index < this->nrows; ++index) {
-        // TODO: this creates 0 elements where they don't exist. To optimize memory, could add a find call first
-        total += this->matrix[index][index];
-    }
-    return total;
-}
-
-EdgeWeights DictTransposeMatrix::outgoing_edges(int block) {
+EdgeWeights DictTransposeMatrix::outgoing_edges(int block) const {
     check_row_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
@@ -223,8 +218,19 @@ EdgeWeights DictTransposeMatrix::outgoing_edges(int block) {
     return EdgeWeights {indices, values};
 }
 
+int DictTransposeMatrix::trace() const {
+    int total = 0;
+    // Assumes that the matrix is square (which it should be in this case)
+    for (int index = 0; index < this->nrows; ++index) {
+        total += this->get(index, index);
+        // total += this->matrix[index][index];
+    }
+    return total;
+}
+
 void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
-    std::vector<int> proposed_row, std::vector<int> current_col, std::vector<int> proposed_col) {
+                                             std::vector<int> proposed_row, std::vector<int> current_col,
+                                             std::vector<int> proposed_col) {
     check_row_bounds(current_block);
     check_col_bounds(current_block);
     check_row_bounds(proposed_block);
@@ -267,7 +273,7 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
     }
 }
 
-std::vector<int> DictTransposeMatrix::values() {
+std::vector<int> DictTransposeMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {

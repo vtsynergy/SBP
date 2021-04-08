@@ -8,6 +8,7 @@
 #include <limits>
 #include <numeric>
 #include <map>
+#include <memory>
 #include <queue>
 
 // #include <Eigen/Core>
@@ -39,7 +40,8 @@ class Blockmodel {
         this->num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
-        this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
+        // this->blockmodel = std::make_unique<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+        this->blockmodel = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
         // Set the block assignment to be the range [0, this->num_blocks)
         this->block_assignment = utils::range<int>(0, this->num_blocks);
 
@@ -85,8 +87,7 @@ class Blockmodel {
     /// TODO
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// TODO: Get rid of getters and setters?
-    DictTransposeMatrix &getBlockmodel() { return this->blockmodel; }
-    void setBlockmodel(DictTransposeMatrix blockmodel) { this->blockmodel = blockmodel; }
+    ISparseMatrix *getBlockmodel() { return this->blockmodel; }
     std::vector<int> &getBlock_assignment() { return this->block_assignment; }
     void setBlock_assignment(std::vector<int> block_assignment) { this->block_assignment = block_assignment; }
     std::vector<int> &getBlock_degrees() { return this->block_degrees; }
@@ -109,7 +110,7 @@ class Blockmodel {
   private:
     // Structure
     int num_blocks;
-    DictTransposeMatrix blockmodel;
+    ISparseMatrix *blockmodel;
     // Known info
     std::vector<int> block_assignment;
     std::vector<int> block_degrees;

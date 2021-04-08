@@ -57,7 +57,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
 }
 
 Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
-                                                      std::vector<int> &true_block_membership) {
+                                                        std::vector<int> &true_block_membership) {
     int num_blocks = 0;
     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
     for (uint i = 0; i < true_block_membership.size(); ++i) {
@@ -76,7 +76,7 @@ Blockmodel Blockmodel::copy() {
     Blockmodel blockmodel_copy = Blockmodel(this->num_blocks, this->block_reduction_rate);
     blockmodel_copy.block_assignment = std::vector<int>(this->block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
-    blockmodel_copy.blockmodel = this->blockmodel.copy();
+    blockmodel_copy.blockmodel = this->blockmodel->copy();
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
@@ -124,7 +124,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 
 void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
-    this->blockmodel = DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    this->blockmodel = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
@@ -144,7 +144,7 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             int weight = 1;
             // int weight = vertex_neighbors[i];
             // Update blockmodel
-            this->blockmodel.add(block, neighbor_block, weight);
+            this->blockmodel->add(block, neighbor_block, weight);
             // Update degrees
             this->block_degrees_out[block] += weight;
             this->block_degrees_in[neighbor_block] += weight;
@@ -155,8 +155,8 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
 }
 
 double Blockmodel::log_posterior_probability() {
-    Indices nonzero_indices = this->blockmodel.nonzero();
-    std::vector<double> values = utils::to_double<int>(this->blockmodel.values());
+    Indices nonzero_indices = this->blockmodel->nonzero();
+    std::vector<double> values = utils::to_double<int>(this->blockmodel->values());
     std::vector<double> degrees_in;
     std::vector<double> degrees_out;
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
@@ -189,6 +189,6 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
 void Blockmodel::set_block_membership(int vertex, int block) { this->block_assignment[vertex] = block; }
 
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
-    this->blockmodel.update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
-                                        updates.block_col, updates.proposal_col);
+    this->blockmodel->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
+                                         updates.block_col, updates.proposal_col);
 }

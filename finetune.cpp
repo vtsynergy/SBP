@@ -91,10 +91,10 @@ EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &
 double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
                              common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    std::vector<int> old_block_row = blockmodel.getBlockmodel().getrow(current_block); // M_r_t1
-    std::vector<int> old_proposal_row = blockmodel.getBlockmodel().getrow(proposal);   // M_s_t1
-    std::vector<int> old_block_col = blockmodel.getBlockmodel().getcol(current_block); // M_t2_r
-    std::vector<int> old_proposal_col = blockmodel.getBlockmodel().getcol(proposal);   // M_t2_s
+    std::vector<int> old_block_row = blockmodel.getBlockmodel()->getrow(current_block); // M_r_t1
+    std::vector<int> old_proposal_row = blockmodel.getBlockmodel()->getrow(proposal);   // M_s_t1
+    std::vector<int> old_block_col = blockmodel.getBlockmodel()->getcol(current_block); // M_t2_r
+    std::vector<int> old_proposal_col = blockmodel.getBlockmodel()->getcol(proposal);   // M_t2_s
 
     // Exclude current_block, proposal to prevent double counting
     std::vector<int> new_block_col = common::exclude_indices(updates.block_col, current_block, proposal); // added
@@ -146,11 +146,11 @@ double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockm
 double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
-    const MapVector<int> &old_block_row = matrix.getrow_sparse(current_block); // M_r_t1
-    const MapVector<int> &old_proposal_row = matrix.getrow_sparse(proposal);   // M_s_t1
-    const MapVector<int> &old_block_col = matrix.getcol_sparse(current_block); // M_t2_r
-    const MapVector<int> &old_proposal_col = matrix.getcol_sparse(proposal);   // M_t2_s
+    const ISparseMatrix *matrix = blockmodel.getBlockmodel();
+    const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
+    const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
+    const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
+    const MapVector<int> &old_proposal_col = matrix->getcol_sparse(proposal);   // M_t2_s
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.block_row, block_degrees.block_degrees_in,
@@ -212,12 +212,12 @@ bool early_stop(int iteration, double initial_entropy, std::vector<double> &delt
 //   - blockmodel proposed_block row
 //   - blockmodel proposed_block col
 // Writes: NA
-EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
-    std::vector<int> block_row = blockmodel.getrow(current_block);
-    std::vector<int> block_col = blockmodel.getcol(current_block);
-    std::vector<int> proposal_row = blockmodel.getrow(proposed_block);
-    std::vector<int> proposal_col = blockmodel.getcol(proposed_block);
+    std::vector<int> block_row = blockmodel->getrow(current_block);
+    std::vector<int> block_col = blockmodel->getcol(current_block);
+    std::vector<int> proposal_row = blockmodel->getrow(proposed_block);
+    std::vector<int> proposal_col = blockmodel->getcol(proposed_block);
 
     int count_in_block = 0, count_out_block = 0;
     int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
@@ -260,13 +260,13 @@ EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current
     return EdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
 }
 
-void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates) {
-    updates.block_row = blockmodel.getrow_sparse(current_block);
-    updates.block_col = blockmodel.getcol_sparse(current_block);
-    updates.proposal_row = blockmodel.getrow_sparse(proposed_block);
-    updates.proposal_col = blockmodel.getcol_sparse(proposed_block);
+    updates.block_row = blockmodel->getrow_sparse(current_block);
+    updates.block_col = blockmodel->getcol_sparse(current_block);
+    updates.proposal_row = blockmodel->getrow_sparse(proposed_block);
+    updates.proposal_col = blockmodel->getcol_sparse(proposed_block);
 
     int count_in_block = 0, count_out_block = 0;
     int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
@@ -356,8 +356,8 @@ double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, Edge
     std::vector<double> block_degrees(num_unique_blocks, 0);
     std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
-    std::vector<int> proposal_row = blockmodel.getBlockmodel().getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.getBlockmodel().getcol(proposal.proposal);
+    std::vector<int> proposal_row = blockmodel.getBlockmodel()->getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.getBlockmodel()->getcol(proposal.proposal);
     // Fill Arrays
     int index = 0;
     int num_blocks = blockmodel.getNum_blocks();
@@ -402,8 +402,8 @@ double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, Edge
     std::vector<double> block_degrees(num_unique_blocks, 0);
     std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
-    std::vector<int> proposal_row = blockmodel.getBlockmodel().getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.getBlockmodel().getcol(proposal.proposal);
+    std::vector<int> proposal_row = blockmodel.getBlockmodel()->getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.getBlockmodel()->getcol(proposal.proposal);
     // Fill Arrays
     int index = 0;
     int num_blocks = blockmodel.getNum_blocks();

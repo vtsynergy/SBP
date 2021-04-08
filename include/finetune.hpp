@@ -53,9 +53,9 @@ double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockm
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
-EdgeCountUpdates edge_count_updates(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
-void edge_count_updates_sparse(DictTransposeMatrix &blockmodel, int current_block, int proposed_block,
+void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex);

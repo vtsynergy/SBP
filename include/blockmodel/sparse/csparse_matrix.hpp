@@ -5,12 +5,13 @@
 #define CPPSBP_PARTITION_SPARSE_CSPARSE_MATRIX_HPP
 
 #include <exception>
-#include <sstream>
 #include <iostream>
+#include <memory>
+#include <sstream>
 
 // #include <Eigen/Core>
 
-#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include "typedefs.hpp"
 
 // typedef Eigen::VectorXi Vector;
 
@@ -49,23 +50,39 @@ private:
 // /****
 //  * C++ implementation of the sparse matrix interface
 //  */
-// class ISparseMatrix {
-// public:
-//     ISparseMatrix() {};
-//     virtual ~ISparseMatrix() {};
-//     virtual void add(int row, int col, int val) = 0;
-//     virtual int get(int row, int col) = 0;
-//     virtual Vector getcol(int col) = 0;
-//     virtual Vector getrow(int row) = 0;
-//     virtual Indices nonzero() = 0;
-//     virtual void sub(int row, int col, int val) = 0;
-//     virtual int sum() = 0;
-//     virtual Eigen::VectorXi sum(int axis = 0) = 0;
-//     virtual void update_edge_counts(int current_block, int proposed_block, py::array_t<int> current_row,
-//         py::array_t<int> proposed_row, py::array_t<int> current_col, py::array_t<int> proposed_col) = 0;
-//     virtual Eigen::ArrayXi values() = 0;
-//     virtual py::array_t<int> _values() = 0;
-//     py::array_t<int> shape;
-// };
+class ISparseMatrix {
+public:
+    // ISparseMatrix() {}
+    virtual ~ISparseMatrix() {}
+    virtual void add(int row, int col, int val) = 0;
+    // virtual void add(int row, std::vector<int> cols, std::vector<int> values) = 0;
+    virtual void clearrow(int row) = 0;
+    virtual void clearcol(int col) = 0;
+    virtual ISparseMatrix* copy() const = 0;
+    virtual int get(int row, int col) const = 0;
+    virtual std::vector<int> getcol(int col) const = 0;
+    virtual MapVector<int> getcol_sparse(int col) = 0;
+    virtual const MapVector<int>& getcol_sparse(int col) const = 0;
+    virtual std::vector<int> getrow(int row) const = 0;
+    virtual MapVector<int> getrow_sparse(int row) = 0;
+    virtual const MapVector<int>& getrow_sparse(int row) const = 0;
+    virtual EdgeWeights incoming_edges(int block) const = 0;
+    virtual Indices nonzero() const = 0;
+    virtual EdgeWeights outgoing_edges(int block) const = 0;
+    /// Sets the values in a row equal to the input vector
+    virtual void setrow(int row, const MapVector<int> &vector) = 0;
+    /// Sets the values in a column equal to the input vector
+    virtual void setcol(int col, const MapVector<int> &vector) = 0;
+    virtual void sub(int row, int col, int val) = 0;
+    virtual int sum() const = 0;
+    virtual std::vector<int> sum(int axis = 0) const = 0;
+    virtual int trace() const = 0;
+    virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
+                                    std::vector<int> proposed_row, std::vector<int> current_col,
+                                    std::vector<int> proposed_col) = 0;
+    virtual std::vector<int> values() const = 0;
+};
+
+// typedef std::unique_ptr<ISparseMatrix> SparseMatrix;
 
 #endif // CPPSBP_PARTITION_SPARSE_CSPARSE_MATRIX_HPP

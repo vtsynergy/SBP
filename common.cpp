@@ -158,9 +158,9 @@ common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeW
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const DictTransposeMatrix &matrix = blockmodel.getBlockmodel();
-    const MapVector<int> &col = matrix.getcol_sparse(neighbor_block);
-    MapVector<int> edges = blockmodel.getBlockmodel().getrow_sparse(neighbor_block);
+    const ISparseMatrix *matrix = blockmodel.getBlockmodel();
+    const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
+    MapVector<int> edges = blockmodel.getBlockmodel()->getrow_sparse(neighbor_block);
     for (const std::pair<int, int> &pair : col) {
         edges[pair.first] += pair.second;
     }
