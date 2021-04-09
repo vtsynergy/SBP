@@ -20,6 +20,12 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args);
 /// Returns true if the exit condition is reached based on the provided blockmodels
 bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks = 0);
 
+namespace dist {
+
+Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args);
+
+} // namespace dist
+
 } // namespace sbp
 
 #endif // SBP_SBP_HPP

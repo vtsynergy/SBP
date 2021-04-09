@@ -9,8 +9,6 @@
 
 #include "blockmodel.hpp"
 
-static const float BLOCK_REDUCTION_RATE = 0.5;
-
 class BlockmodelTriplet {
 
 public:

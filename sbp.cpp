@@ -1,6 +1,10 @@
 #include "sbp.hpp"
 
-Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
+#include "blockmodel/dist_blockmodel.hpp"
+
+namespace sbp {
+
+Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
@@ -26,7 +30,7 @@ Blockmodel sbp::stochastic_block_partition(Graph &graph, Args &args) {
     return blockmodel;
 }
 
-bool sbp::done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
+bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
     if (min_num_blocks > 0) {
         if ((blockmodel.getNum_blocks() <= min_num_blocks) || (blockmodel_triplet.get(2).empty == false)) {
             return true;
@@ -39,3 +43,35 @@ bool sbp::done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmod
     }
     return false;
 }
+
+namespace dist {
+
+Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args) {
+    if (args.threads > 0)
+        omp_set_num_threads(args.threads);
+    else
+        omp_set_num_threads(omp_get_num_procs());
+    std::cout << "num threads: " << omp_get_max_threads() << std::endl;
+    DistBlockmodel blockmodel(graph, args, mpi);
+    // std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
+    //           << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
+    // BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
+    // while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
+    //     if (blockmodel.getNum_blocks_to_merge() != 0) {
+    //         std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
+    //                   << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+    //     }
+    //     blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), args);
+    //     std::cout << "Starting MCMC vertex moves" << std::endl;
+    //     if (args.algorithm == "async_gibbs")
+    //         blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);
+    //     else  // args.algorithm == "metropolis_hastings"
+    //         blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
+    //     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+    // }
+    return Blockmodel();
+}
+
+}  // namespace dist
+
+}  // namespace sbp

@@ -7,6 +7,11 @@
 #include <unordered_map>
 #include <vector>
 
+struct MPI_Data {
+    int rank;           // The rank of the current process
+    int num_processes;  // The total number of processes
+};
+
 typedef std::vector<std::vector<int>> NeighborList;
 
 template <typename T>

@@ -18,6 +18,8 @@
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 
+static const float BLOCK_REDUCTION_RATE = 0.5;
+
 // typedef py::EigenDRef<Eigen::Matrix<int, Eigen::Dynamic, 2>> Matrix2Column;
 
 typedef struct edge_count_updates_t {
