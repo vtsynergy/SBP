@@ -61,11 +61,13 @@ public:
     virtual ISparseMatrix* copy() const = 0;
     virtual int get(int row, int col) const = 0;
     virtual std::vector<int> getcol(int col) const = 0;
-    virtual MapVector<int> getcol_sparse(int col) = 0;
-    virtual const MapVector<int>& getcol_sparse(int col) const = 0;
+    virtual MapVector<int> getcol_sparse(int col) const = 0;
+    virtual void getcol_sparse(int col, MapVector<int> &col_vector) const = 0;
+    // virtual const MapVector<int>& getcol_sparse(int col) const = 0;
     virtual std::vector<int> getrow(int row) const = 0;
-    virtual MapVector<int> getrow_sparse(int row) = 0;
-    virtual const MapVector<int>& getrow_sparse(int row) const = 0;
+    virtual MapVector<int> getrow_sparse(int row) const = 0;
+    virtual void getrow_sparse(int row, MapVector<int> &row_vector) const = 0;
+    // virtual const MapVector<int>& getrow_sparse(int row) const = 0;
     virtual EdgeWeights incoming_edges(int block) const = 0;
     virtual Indices nonzero() const = 0;
     virtual EdgeWeights outgoing_edges(int block) const = 0;
@@ -81,6 +83,21 @@ public:
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) = 0;
     virtual std::vector<int> values() const = 0;
+    std::pair<int, int> shape;
+
+protected:
+    void check_row_bounds(int row) const {
+        if (row < 0 || row >= this->nrows) {
+            throw IndexOutOfBoundsException(row, this->nrows);
+        }
+    }
+    void check_col_bounds(int col) const {
+        if (col < 0 || col >= this->ncols) {
+            throw IndexOutOfBoundsException(col, this->ncols);
+        }
+    }
+    int ncols;
+    int nrows;
 };
 
 // typedef std::unique_ptr<ISparseMatrix> SparseMatrix;

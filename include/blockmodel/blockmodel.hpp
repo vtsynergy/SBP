@@ -13,6 +13,7 @@
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
+#include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
@@ -41,7 +42,7 @@ class Blockmodel {
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
         // this->blockmodel = std::make_unique<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
-        this->blockmodel = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+        this->blockmodel = new DictMatrix(this->num_blocks, this->num_blocks);
         // Set the block assignment to be the range [0, this->num_blocks)
         this->block_assignment = utils::range<int>(0, this->num_blocks);
 

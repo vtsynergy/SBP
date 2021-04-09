@@ -8,29 +8,29 @@ void DictTransposeMatrix::add(int row, int col, int val) {
     this->matrix_transpose[col][row] += val;
 }
 
-void DictTransposeMatrix::check_row_bounds(int row) {
-    if (row < 0 || row >= this->nrows) {
-        throw IndexOutOfBoundsException(row, this->nrows);
-    }
-}
+// void DictTransposeMatrix::check_row_bounds(int row) {
+//     if (row < 0 || row >= this->nrows) {
+//         throw IndexOutOfBoundsException(row, this->nrows);
+//     }
+// }
 
-void DictTransposeMatrix::check_col_bounds(int col) {
-    if (col < 0 || col >= this->ncols) {
-        throw IndexOutOfBoundsException(col, this->ncols);
-    }
-}
+// void DictTransposeMatrix::check_col_bounds(int col) {
+//     if (col < 0 || col >= this->ncols) {
+//         throw IndexOutOfBoundsException(col, this->ncols);
+//     }
+// }
 
-void DictTransposeMatrix::check_row_bounds(int row) const {
-    if (row < 0 || row >= this->nrows) {
-        throw IndexOutOfBoundsException(row, this->nrows);
-    }
-}
+// void DictTransposeMatrix::check_row_bounds(int row) const {
+//     if (row < 0 || row >= this->nrows) {
+//         throw IndexOutOfBoundsException(row, this->nrows);
+//     }
+// }
 
-void DictTransposeMatrix::check_col_bounds(int col) const {
-    if (col < 0 || col >= this->ncols) {
-        throw IndexOutOfBoundsException(col, this->ncols);
-    }
-}
+// void DictTransposeMatrix::check_col_bounds(int col) const {
+//     if (col < 0 || col >= this->ncols) {
+//         throw IndexOutOfBoundsException(col, this->ncols);
+//     }
+// }
 
 void DictTransposeMatrix::clearcol(int col) {
     this->matrix_transpose[col].clear();
@@ -81,14 +81,19 @@ std::vector<int> DictTransposeMatrix::getcol(int col) const {
     return col_values;
 }
 
-MapVector<int> DictTransposeMatrix::getcol_sparse(int col) {
+MapVector<int> DictTransposeMatrix::getcol_sparse(int col) const {
     check_col_bounds(col);
     return this->matrix_transpose[col];
 }
 
-const MapVector<int>& DictTransposeMatrix::getcol_sparse(int col) const {
+// const MapVector<int>& DictTransposeMatrix::getcol_sparse(int col) const {
+//     check_col_bounds(col);
+//     return this->matrix_transpose[col];
+// }
+
+void DictTransposeMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
     check_col_bounds(col);
-    return this->matrix_transpose[col];
+    col_vector = this->matrix_transpose[col];
 }
 
 std::vector<int> DictTransposeMatrix::getrow(int row) const {
@@ -105,14 +110,19 @@ std::vector<int> DictTransposeMatrix::getrow(int row) const {
     return row_values;
 }
 
-MapVector<int> DictTransposeMatrix::getrow_sparse(int row) {
+MapVector<int> DictTransposeMatrix::getrow_sparse(int row) const {
     check_row_bounds(row);
     return this->matrix[row];
 }
 
-const MapVector<int>& DictTransposeMatrix::getrow_sparse(int row) const {
+// const MapVector<int>& DictTransposeMatrix::getrow_sparse(int row) const {
+//     check_row_bounds(row);
+//     return this->matrix[row];
+// }
+
+void DictTransposeMatrix::getrow_sparse(int row, MapVector<int> &row_vector) const {
     check_row_bounds(row);
-    return this->matrix[row];
+    row_vector = this->matrix_transpose[row];
 }
 
 EdgeWeights DictTransposeMatrix::incoming_edges(int block) const {

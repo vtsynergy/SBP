@@ -7,54 +7,52 @@ void DictMatrix::add(int row, int col, int val) {
     matrix[row][col] += val;
 }
 
-void DictMatrix::check_row_bounds(int row) {
-    if (row < 0 || row >= this->nrows) {
-        throw IndexOutOfBoundsException(row, this->nrows);
-    }
+void DictMatrix::clearcol(int col) {
+    for (MapVector<int> &row : this->matrix)
+        row.erase(col);
 }
 
-void DictMatrix::check_col_bounds(int col) {
-    if (col < 0 || col >= this->ncols) {
-        throw IndexOutOfBoundsException(col, this->ncols);
-    }
+void DictMatrix::clearrow(int row) {
+    this->matrix[row].clear();
 }
 
-DictMatrix DictMatrix::copy() {
+// void DictMatrix::check_row_bounds(int row) {
+//     if (row < 0 || row >= this->nrows) {
+//         throw IndexOutOfBoundsException(row, this->nrows);
+//     }
+// }
+
+// void DictMatrix::check_col_bounds(int col) {
+//     if (col < 0 || col >= this->ncols) {
+//         throw IndexOutOfBoundsException(col, this->ncols);
+//     }
+// }
+
+ISparseMatrix* DictMatrix::copy() const {
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
     DictMatrix dict_matrix(this->nrows, this->ncols);
     for (int i = 0; i < this->nrows; ++i) {
         const std::unordered_map<int, int> row = this->matrix[i];
         dict_matrix.matrix[i] = row;  // TODO: double-check that this is a copy constructor
     }
-    return dict_matrix;
+    return new DictMatrix(dict_matrix);
 }
 
-int DictMatrix::get(int row, int col) {
+int DictMatrix::get(int row, int col) const {
     check_row_bounds(row);
     check_col_bounds(col);
-    return matrix[row][col];
+    const MapVector<int> &row_vector = this->matrix[row];
+    auto it = row_vector.find(col);
+    if (it == row_vector.end())
+        return 0;
+    return it->second;
+    // return matrix[row][col];
 }
 
-std::vector<int> DictMatrix::getrow(int row) {
-    check_row_bounds(row);
-    std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
-    // int row_values [this->ncols];
-    // NOTE: could save some time by pulling this->matrix[row] out, and then iterating over it using references
-    // but, this could be not thread safe
-    // for (int row_index = 0; row_index < this->nrows; ++row_index) {
-    const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-    for (const std::pair<int, int> element : matrix_row) {
-        row_values[element.first] = element.second;
-    }
-    // for (int col = 0; col < ncols; ++col) {
-    //     row_values[col] = matrix[row][col];
-    // }
-    return row_values;  // py::array_t<int>(this->ncols, row_values);
-}
-
-std::vector<int> DictMatrix::getcol(int col) {
+std::vector<int> DictMatrix::getcol(int col) const {
+    check_col_bounds(col);
     std::vector<int> col_values(this->nrows, 0);
-    for (int row = 0; row < nrows; ++row) {
+    for (int row = 0; row < this->nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
         for (const std::pair<int, int> &element : matrix_row) {
             if (element.first == col) {
@@ -66,7 +64,62 @@ std::vector<int> DictMatrix::getcol(int col) {
     return col_values;
 }
 
-EdgeWeights DictMatrix::incoming_edges(int block) {
+MapVector<int> DictMatrix::getcol_sparse(int col) const {
+    check_col_bounds(col);
+    MapVector<int> col_vector;
+    for (int row = 0; row < this->nrows; ++row) {
+        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        for (const std::pair<int, int> &element : matrix_row) {
+            if (element.first == col) {
+                col_vector[row] = element.second;
+                break;
+            }
+        }
+    }
+    return col_vector;
+}
+
+void DictMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
+    check_col_bounds(col);
+    for (int row = 0; row < this->nrows; ++row) {
+        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        for (const std::pair<int, int> &element : matrix_row) {
+            if (element.first == col) {
+                col_vector[row] = element.second;
+                break;
+            }
+        }
+    }
+}
+
+std::vector<int> DictMatrix::getrow(int row) const {
+    check_row_bounds(row);
+    std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
+    // int row_values [this->ncols];
+    // NOTE: could save some time by pulling this->matrix[row] out, and then iterating over it using references
+    // but, this could be not thread safe
+    // for (int row_index = 0; row_index < this->nrows; ++row_index) {
+    const MapVector<int> &matrix_row = this->matrix[row];
+    for (const std::pair<int, int> element : matrix_row) {
+        row_values[element.first] = element.second;
+    }
+    // for (int col = 0; col < ncols; ++col) {
+    //     row_values[col] = matrix[row][col];
+    // }
+    return row_values;  // py::array_t<int>(this->ncols, row_values);
+}
+
+MapVector<int> DictMatrix::getrow_sparse(int row) const {
+    check_row_bounds(row);
+    return this->matrix[row];
+}
+
+void DictMatrix::getrow_sparse(int row, MapVector<int> &col_vector) const {
+    check_row_bounds(row);
+    col_vector = this->matrix[row];
+}
+
+EdgeWeights DictMatrix::incoming_edges(int block) const {
     check_col_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
@@ -83,7 +136,7 @@ EdgeWeights DictMatrix::incoming_edges(int block) {
     return EdgeWeights {indices, values};
 }
 
-Indices DictMatrix::nonzero() {
+Indices DictMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;
     for (int row = 0; row < nrows; ++row) {
@@ -102,6 +155,34 @@ Indices DictMatrix::nonzero() {
     return Indices{row_vector, col_vector};
 }
 
+EdgeWeights DictMatrix::outgoing_edges(int block) const {
+    check_row_bounds(block);
+    std::vector<int> indices;
+    std::vector<int> values;
+    const std::unordered_map<int, int> &block_row = this->matrix[block];
+    for (const std::pair<int, int> &element : block_row) {
+        indices.push_back(element.first);
+        values.push_back(element.second);
+    }
+    return EdgeWeights {indices, values};
+}
+
+void DictMatrix::setrow(int row, const MapVector<int> &vector) {
+    check_row_bounds(row);
+    this->matrix[row] = MapVector<int>(vector);
+}
+
+void DictMatrix::setcol(int col, const MapVector<int> &vector) {
+    check_col_bounds(col);
+    for (int row = 0; row < this->matrix.size(); ++row) {
+        MapVector<int>::const_iterator value = vector.find(row);
+        if (value == vector.end())  // value is not in vector
+            this->matrix[row].erase(col);
+        else
+            this->matrix[row][col] = value->second;
+    }
+}
+
 void DictMatrix::sub(int row, int col, int val) {
     check_row_bounds(row);
     check_col_bounds(col);
@@ -109,7 +190,7 @@ void DictMatrix::sub(int row, int col, int val) {
     matrix[row][col] -= val;
 }
 
-int DictMatrix::sum() {
+int DictMatrix::sum() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
@@ -123,7 +204,7 @@ int DictMatrix::sum() {
     return total;
 }
 
-std::vector<int> DictMatrix::sum(int axis) {
+std::vector<int> DictMatrix::sum(int axis) const {
     if (axis < 0 || axis > 1) {
         throw IndexOutOfBoundsException(axis, 2);
     }
@@ -157,26 +238,15 @@ std::vector<int> DictMatrix::sum(int axis) {
     }
 }
 
-int DictMatrix::trace() {
+int DictMatrix::trace() const {
     int total = 0;
     // Assumes that the matrix is square (which it should be in this case)
     for (int index = 0; index < this->nrows; ++index) {
         // TODO: this creates 0 elements where they don't exist. To optimize memory, could add a find call first
-        total += this->matrix[index][index];
+        total += this->get(index, index);
+        // total += this->matrix[index][index];
     }
     return total;
-}
-
-EdgeWeights DictMatrix::outgoing_edges(int block) {
-    check_row_bounds(block);
-    std::vector<int> indices;
-    std::vector<int> values;
-    const std::unordered_map<int, int> &block_row = this->matrix[block];
-    for (const std::pair<int, int> &element : block_row) {
-        indices.push_back(element.first);
-        values.push_back(element.second);
-    }
-    return EdgeWeights {indices, values};
 }
 
 void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
@@ -211,7 +281,7 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::
     }
 }
 
-std::vector<int> DictMatrix::values() {
+std::vector<int> DictMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {

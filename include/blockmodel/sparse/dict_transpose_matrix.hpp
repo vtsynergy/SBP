@@ -21,7 +21,9 @@
 class DictTransposeMatrix : public ISparseMatrix {
   public:
     DictTransposeMatrix() {}
-    DictTransposeMatrix(int nrows, int ncols) : ncols(ncols), nrows(nrows) {
+    DictTransposeMatrix(int nrows, int ncols) {  // : ncols(ncols), nrows(nrows) {
+        this->ncols = ncols;
+        this->nrows = nrows;
         this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
         this->matrix_transpose = std::vector<std::unordered_map<int, int>>(this->ncols, std::unordered_map<int, int>());
         this->shape = std::make_pair(this->nrows, this->ncols);
@@ -38,15 +40,17 @@ class DictTransposeMatrix : public ISparseMatrix {
     /// Returns all values in the requested column as a dense vector.
     virtual std::vector<int> getcol(int col) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    virtual MapVector<int> getcol_sparse(int col) override;
+    virtual MapVector<int> getcol_sparse(int col) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map) reference.
-    virtual const MapVector<int>& getcol_sparse(int col) const override;
+    // const MapVector<int>& getcol_sparse(int col) const;
+    virtual void getcol_sparse(int col, MapVector<int> &col_vector) const override;
     /// Returns all values in the requested row as a dense vector.
     virtual std::vector<int> getrow(int row) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    virtual MapVector<int> getrow_sparse(int row) override;
+    virtual MapVector<int> getrow_sparse(int row) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map) reference.
-    virtual const MapVector<int>& getrow_sparse(int row) const override;
+    // const MapVector<int>& getrow_sparse(int row) const;
+    virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
     virtual EdgeWeights incoming_edges(int block) const override;
     virtual Indices nonzero() const override;
     virtual EdgeWeights outgoing_edges(int block) const override;
@@ -62,15 +66,14 @@ class DictTransposeMatrix : public ISparseMatrix {
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
     virtual std::vector<int> values() const override;
-    std::pair<int, int> shape;
 
   private:
-    void check_row_bounds(int row);
-    void check_col_bounds(int col);
-    void check_row_bounds(int row) const;
-    void check_col_bounds(int col) const;
-    int ncols;
-    int nrows;
+    // void check_row_bounds(int row);
+    // void check_col_bounds(int col);
+    // void check_row_bounds(int row) const;
+    // void check_col_bounds(int col) const;
+    // int ncols;
+    // int nrows;
     std::vector<std::unordered_map<int, int>> matrix;
     std::vector<std::unordered_map<int, int>> matrix_transpose;
 };
