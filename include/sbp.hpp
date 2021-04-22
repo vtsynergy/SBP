@@ -8,9 +8,10 @@
 
 #include "args.hpp"
 #include "block_merge.hpp"
+#include "blockmodel/blockmodel_triplet.hpp"
 #include "finetune.hpp"
 #include "graph.hpp"
-#include "blockmodel/blockmodel_triplet.hpp"
+#include "mpi_data.hpp"
 
 namespace sbp {
 
@@ -22,7 +23,8 @@ bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_tr
 
 namespace dist {
 
-Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args);
+// Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args);
+Blockmodel stochastic_block_partition(Graph &graph, Args &args);
 
 } // namespace dist
 

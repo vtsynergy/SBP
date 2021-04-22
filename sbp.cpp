@@ -46,13 +46,15 @@ bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_tr
 
 namespace dist {
 
-Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args) {
+// Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args) {
+Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    DistBlockmodel blockmodel(graph, args, mpi);
+    // DistBlockmodel blockmodel(graph, args, mpi);
+    DistBlockmodel blockmodel(graph, args);
     // std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
     //           << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     // BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();

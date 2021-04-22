@@ -47,9 +47,9 @@ private:
     std::string message;
 };
 
-// /****
-//  * C++ implementation of the sparse matrix interface
-//  */
+///
+/// C++ implementation of the sparse matrix interface
+///
 class ISparseMatrix {
 public:
     // ISparseMatrix() {}
@@ -98,6 +98,24 @@ protected:
     }
     int ncols;
     int nrows;
+};
+
+///
+/// C++ implementation of the distributed sparse matrix interface
+///
+class IDistSparseMatrix : public ISparseMatrix {
+public:
+    // IDistSparseMatrix() {}
+    virtual ~IDistSparseMatrix() {}
+    /// Returns true if this process owns this block.
+    virtual bool owns(int block) const = 0;
+    /// Returns a copy of this distributed matrix.
+    virtual IDistSparseMatrix* copyDistSparseMatrix() const = 0;
+
+protected:
+    std::vector<int> _ownership;
+    virtual void sync_ownership(const std::vector<int> &myblocks) = 0;
+
 };
 
 // typedef std::unique_ptr<ISparseMatrix> SparseMatrix;

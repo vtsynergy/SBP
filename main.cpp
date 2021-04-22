@@ -9,6 +9,7 @@
 #include "blockmodel/blockmodel.hpp"
 #include "evaluate.hpp"
 #include "graph.hpp"
+#include "mpi_data.hpp"
 #include "partition.hpp"
 #include "sbp.hpp"
 
@@ -22,11 +23,11 @@
 //     exit(-1);
 // }
 
+MPI_Data mpi;
 
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // int rank, num_processes;
-    MPI_Data mpi;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
@@ -40,7 +41,8 @@ int main(int argc, char* argv[]) {
     Graph graph = Graph::load(args);
 
     if (mpi.num_processes > 1) {
-        Blockmodel b = sbp::dist::stochastic_block_partition(graph, mpi, args);
+        // Blockmodel b = sbp::dist::stochastic_block_partition(graph, mpi, args);
+        Blockmodel b = sbp::dist::stochastic_block_partition(graph, args);
         double avg_f1;
         Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
         Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
