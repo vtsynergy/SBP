@@ -180,7 +180,7 @@ void DictTransposeMatrix::sub(int row, int col, int val) {
     this->matrix_transpose[col][row] -= val;
 }
 
-int DictTransposeMatrix::sum() const {
+int DictTransposeMatrix::edges() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];

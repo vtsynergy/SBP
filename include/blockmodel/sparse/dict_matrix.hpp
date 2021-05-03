@@ -52,7 +52,7 @@ class DictMatrix : public ISparseMatrix {
     /// Sets the values in a column equal to the input vector
     virtual void setcol(int col, const MapVector<int> &vector) override;
     virtual void sub(int row, int col, int val) override;
-    virtual int sum() const override;
+    virtual int edges() const override;
     virtual std::vector<int> sum(int axis = 0) const override;
     virtual int trace() const override;
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,

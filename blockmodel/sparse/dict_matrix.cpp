@@ -190,7 +190,7 @@ void DictMatrix::sub(int row, int col, int val) {
     matrix[row][col] -= val;
 }
 
-int DictMatrix::sum() const {
+int DictMatrix::edges() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];

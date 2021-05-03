@@ -86,23 +86,69 @@ void DistDictMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
 }
 
 std::vector<int> DistDictMatrix::getrow(int row) const {
+    throw "Dense getrow used!";
     check_row_bounds(row);
-    std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
-    const MapVector<int> &matrix_row = this->_matrix[row];
-    for (const std::pair<int, int> element : matrix_row) {
-        row_values[element.first] = element.second;
+    if (this->owns(row)) {
+        std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
+        const MapVector<int> &matrix_row = this->_matrix[row];
+        for (const std::pair<int, int> element : matrix_row) {
+            row_values[element.first] = element.second;
+        }
+        return row_values;  // py::array_t<int>(this->ncols, row_values);
     }
-    return row_values;  // py::array_t<int>(this->ncols, row_values);
+    // send message asking for row
+    MPI_Send(&row, 1, MPI_INT, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), MPI_COMM_WORLD);
+    int rowsize = -1;
+    MPI_Status status;
+    MPI_Recv(&rowsize, 1, MPI_INT, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), MPI_COMM_WORLD, &status);
+    // Other side
+    MPI_Status status2;
+    int requested;
+    MPI_Recv(&requested, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    int threadID = status2.MPI_TAG % 100000;
+    int tag = status2.MPI_TAG - threadID;
+    if (tag == MSG_GETROW) {
+        auto row = this->getrow(requested);
+        // MPI_Send(&(row.data()), )
+    }
 }
 
 MapVector<int> DistDictMatrix::getrow_sparse(int row) const {
+    throw "Wrong sparse getrow used!";
     check_row_bounds(row);
     return this->_matrix[row];
 }
 
-void DistDictMatrix::getrow_sparse(int row, MapVector<int> &col_vector) const {
+void DistDictMatrix::getrow_sparse(int row, MapVector<int> &row_vector) const {
     check_row_bounds(row);
-    col_vector = this->_matrix[row];
+    if (this->owns(row)) {
+        row_vector = this->_matrix[row];
+        return;
+    }
+    // send message asking for row
+    MPI_Send(&row, 1, MPI_INT, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), MPI_COMM_WORLD);
+    int rowsize = -1;
+    MPI_Status status;
+    MPI_Recv(&rowsize, 1, MPI_INT, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), MPI_COMM_WORLD, &status);
+    // Other side
+    MPI_Status status2;
+    int requested;
+    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    // Change count type depending on status
+    MPI_Get_count(&status, MPI_INT, &requested);
+    MPI_Recv(&requested, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    int threadID = status2.MPI_TAG % 100000;
+    int tag = status2.MPI_TAG - threadID;
+    if (tag == MSG_GETROW) {
+        MapVector<int> reqrow;
+        std::vector<int> sendrow;
+        this->getrow_sparse(requested, reqrow);
+        for (auto p : reqrow) {
+            sendrow.push_back(p.first);
+            sendrow.push_back(p.second);
+        }
+        MPI_Send(sendrow.data(), sendrow.size(), MPI_INT, status2.MPI_SOURCE, MSG_SENDROW, MPI_COMM_WORLD);
+    }
 }
 
 EdgeWeights DistDictMatrix::incoming_edges(int block) const {
@@ -174,7 +220,7 @@ void DistDictMatrix::sub(int row, int col, int val) {
     _matrix[row][col] -= val;
 }
 
-int DistDictMatrix::sum() const {
+int DistDictMatrix::edges() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->_matrix[row];

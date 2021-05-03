@@ -76,7 +76,7 @@ public:
     /// Sets the values in a column equal to the input vector
     virtual void setcol(int col, const MapVector<int> &vector) = 0;
     virtual void sub(int row, int col, int val) = 0;
-    virtual int sum() const = 0;
+    virtual int edges() const = 0;
     virtual std::vector<int> sum(int axis = 0) const = 0;
     virtual int trace() const = 0;
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
