@@ -9,7 +9,6 @@
 #include <random>
 
 // #include <omp.h>
-#include "args.hpp"
 #include "common.hpp"
 #include "blockmodel/blockmodel.hpp"
 // #include "blockmodel/sparse/boost_mapped_matrix.hpp"
@@ -29,10 +28,14 @@ typedef struct proposal_evaluation_t {
 /// Performs the block merges with the highest change in entropy/MDL, recalculating change in entropy before each
 /// merge to account for dependencies between merges. This function modified the blockmodel.
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
-                                    const std::vector<int> &best_merge_for_each_block);
+                                    const std::vector<int> &best_merge_for_each_block, int num_edges);
 
-/// Computes the change in entropy under a proposed block merge using sparse intermediate structures
-double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
+/// Computes the change in entropy under a proposed block merge.
+double compute_delta_entropy(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+
+/// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
+double compute_delta_entropy_sparse(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
                                     SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the new edge counts for the affected blocks (communities) 
@@ -46,18 +49,16 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
 
 /// Merges entire blocks (communities) in blockmodel together
-Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, Args &args);
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
 
 /// Proposes a merge for current_block based on the current blockmodel state
-ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel);
+ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &blockmodel,
+                                 std::vector<int> &block_blockmodel);
 
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
+                                        std::vector<int> &block_blockmodel,
                                         std::unordered_map<int, bool> &past_proposals);
-
-/// Computes the change in entropy under a proposed block merge
-double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
-                             common::NewBlockDegrees &block_degrees);
 
 } // block_merge
 

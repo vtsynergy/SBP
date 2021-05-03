@@ -24,6 +24,7 @@
 // }
 
 MPI_Data mpi;
+Args args;
 
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
@@ -32,7 +33,7 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
 
-    Args args(argc, argv);
+    args = Args(argc, argv);
     if (mpi.rank == 0) {
         std::cout << "Number of processes = " << mpi.num_processes << std::endl;
         std::cout << "Parsed out the arguments" << std::endl;

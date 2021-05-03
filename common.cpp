@@ -1,12 +1,18 @@
 #include "common.hpp"
 
-int common::choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights) {
+#include "args.hpp"
+
+#include "assert.h"
+
+namespace common {
+
+int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights) {
     std::discrete_distribution<int> distribution(neighbor_weights.begin(), neighbor_weights.end());
     int index = distribution(generator);
     return neighbor_indices[index];
 }
 
-int common::choose_neighbor(const SparseVector<double> &multinomial_distribution) {
+int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
     // std::cout << "in choose_neighbor" << std::endl;
     // std::cout << "data.size = " << multinomial_distribution.data.size() << " idx.size = ";
     // std::cout << multinomial_distribution.idx.size() << std::endl;
@@ -17,8 +23,8 @@ int common::choose_neighbor(const SparseVector<double> &multinomial_distribution
     return multinomial_distribution.idx[index];
 }
 
-common::NewBlockDegrees common::compute_new_block_degrees(int current_block, Blockmodel &blockmodel,
-                                                          common::ProposalAndEdgeCounts &proposal) {
+NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel,
+                                          ProposalAndEdgeCounts &proposal) {
     // TODO: These are copy constructors. Maybe getting rid of them will speed things up?
     std::vector<int> new_block_degrees_out(blockmodel.getBlock_degrees_out());
     std::vector<int> new_block_degrees_in(blockmodel.getBlock_degrees_in());
@@ -32,41 +38,27 @@ common::NewBlockDegrees common::compute_new_block_degrees(int current_block, Blo
     return NewBlockDegrees{new_block_degrees_out, new_block_degrees_in, new_block_degrees_total};
 }
 
-double common::delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {
-    std::vector<double> row_or_col_double = utils::to_double<int>(row_or_col);
-    std::vector<double> block_degrees_double = utils::to_double<int>(block_degrees);
-    std::vector<double> result = row_or_col_double / block_degrees_double / degree;
-    result = row_or_col_double * utils::nat_log<double>(result);
-    return utils::sum<double>(result);
+double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges) {
+    if (args.undirected)
+        return undirected::delta_entropy_temp(row_or_col, block_degrees, degree, num_edges);
+    return directed::delta_entropy_temp(row_or_col, block_degrees, degree);
 }
 
-double common::delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree) {
-    double result = 0.0;
-    for (const std::pair<int, int> &pair : row_or_col) {
-        if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
-            continue;
-        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
-        temp = (double) pair.second * std::log(temp);
-        result += temp;
-    }
-    return result;
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int num_edges) {
+    if (args.undirected)
+        return undirected::delta_entropy_temp(row_or_col, block_degrees, degree, num_edges);
+    return directed::delta_entropy_temp(row_or_col, block_degrees, degree);
 }
 
-double common::delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                                  int current_block, int proposal) {
-    double result = 0.0;
-    for (const std::pair<int, int> &pair : row_or_col) {
-        // 0s sometimes get inserted into the sparse matrix
-        if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
-            continue;
-        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
-        temp = (double) pair.second * std::log(temp);
-        result += temp;
-    }
-    return result;
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int current_block, int proposal, int num_edges) {
+    if (args.undirected)
+        return undirected::delta_entropy_temp(row_or_col, block_degrees, degree, current_block, proposal, num_edges);
+    return directed::delta_entropy_temp(row_or_col, block_degrees, degree, current_block, proposal);
 }
 
-std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int index2) {
+std::vector<int> exclude_indices(const std::vector<int> &in, int index1, int index2) {
     std::vector<int> out = utils::constant<int>(in.size() - 1, 0);
     int count = 0;
     for (int i = 0; i < in.size(); ++i) {
@@ -79,14 +71,14 @@ std::vector<int> common::exclude_indices(std::vector<int> &in, int index1, int i
     return out;
 }
 
-MapVector<int>& common::exclude_indices(MapVector<int> &in, int index1, int index2) {
+MapVector<int>& exclude_indices(MapVector<int> &in, int index1, int index2) {
     // MapVector<int> out(in);
     in.erase(index1);
     in.erase(index2);
     return in;
 }
 
-std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int> &indices) {
+std::vector<int> index_nonzero(const std::vector<int> &values, std::vector<int> &indices) {
     std::vector<int> results;
     for (int i = 0; i < indices.size(); ++i) {
         int index = indices[i];
@@ -98,7 +90,7 @@ std::vector<int> common::index_nonzero(std::vector<int> &values, std::vector<int
     return results;
 }
 
-std::vector<int> common::index_nonzero(std::vector<int> &values, MapVector<int> &indices_map) {
+std::vector<int> index_nonzero(const std::vector<int> &values, MapVector<int> &indices_map) {
     // if (omp_get_thread_num() == 0)
     //     std::cout << "sparse version" << std::endl;
     std::vector<int> results;
@@ -112,7 +104,7 @@ std::vector<int> common::index_nonzero(std::vector<int> &values, MapVector<int> 
     return results;
 }
 
-std::vector<int> common::nonzeros(std::vector<int> &in) {
+std::vector<int> nonzeros(std::vector<int> &in) {
     std::vector<int> values;
     for (int i = 0; i < in.size(); ++i) {
         int value = in[i];
@@ -123,7 +115,7 @@ std::vector<int> common::nonzeros(std::vector<int> &in) {
     return values;
 }
 
-std::vector<int> common::nonzeros(MapVector<int> &in) {
+std::vector<int> nonzeros(MapVector<int> &in) {
     std::vector<int> values;
     for (const std::pair<int, int> &element : in) {
         if (element.second != 0) {
@@ -133,9 +125,10 @@ std::vector<int> common::nonzeros(MapVector<int> &in) {
     return values;
 }
 
-common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeWeights &out_blocks,
-                                                        EdgeWeights &in_blocks, std::vector<int> &block_blockmodel,
-                                                        Blockmodel &blockmodel, bool block_merge) {
+// TODO: get rid of block_assignment, just use blockmodel?
+ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                        const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
+                                        bool block_merge) {
     std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
     std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
     int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
@@ -148,7 +141,7 @@ common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeW
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor = choose_neighbor(neighbor_indices, neighbor_weights);
-    int neighbor_block = block_blockmodel[neighbor];
+    int neighbor_block = block_assignment[neighbor];
 
     // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
@@ -158,9 +151,9 @@ common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeW
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const ISparseMatrix *matrix = blockmodel.getBlockmodel();
+    const ISparseMatrix *matrix = blockmodel.blockmatrix();
     const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
-    MapVector<int> edges = blockmodel.getBlockmodel()->getrow_sparse(neighbor_block);
+    MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
     for (const std::pair<int, int> &pair : col) {
         edges[pair.first] += pair.second;
     }
@@ -181,7 +174,7 @@ common::ProposalAndEdgeCounts common::propose_new_block(int current_block, EdgeW
     return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 
-int common::propose_random_block(int current_block, int num_blocks) {
+int propose_random_block(int current_block, int num_blocks) {
     // Generate numbers 0..num_blocks-2 in order to exclude the current block
     std::uniform_int_distribution<int> distribution(0, num_blocks - 2);
     int proposed = distribution(generator);
@@ -190,3 +183,102 @@ int common::propose_random_block(int current_block, int num_blocks) {
     }
     return proposed;
 }
+
+namespace directed {
+
+double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {
+    // std::cout << "dE_temp_directed_dense!" << std::endl;
+    std::vector<double> row_or_col_double = utils::to_double<int>(row_or_col);
+    std::vector<double> block_degrees_double = utils::to_double<int>(block_degrees);
+    std::vector<double> result = row_or_col_double / block_degrees_double / degree;
+    result = row_or_col_double * utils::nat_log<double>(result);
+    return utils::sum<double>(result);
+}
+
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree) {
+    // std::cout << "dE_temp_directed_sparse!" << std::endl;
+    // throw std::runtime_error("SHOULD BE UNDIRECTED");
+    double result = 0.0;
+    for (const std::pair<int, int> &pair : row_or_col) {
+        if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
+            continue;
+        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    return result;
+}
+
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int current_block, int proposal) {
+    // std::cout << "dE_temp_directed_sparse_ignore!" << std::endl;
+    // throw std::runtime_error("SHOULD BE UNDIRECTED");
+    double result = 0.0;
+    for (const std::pair<int, int> &pair : row_or_col) {
+        // 0s sometimes get inserted into the sparse matrix
+        if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
+            continue;
+        double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    return result;
+}
+}  // namespace directed
+
+namespace undirected {
+
+double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges) {
+    // std::cout << "dE_temp_undirected_dense!" << std::endl;
+    std::vector<double> row_or_col_double = utils::to_double<int>(row_or_col) / (2.0 * num_edges);
+    std::vector<double> block_degrees_double = utils::to_double<int>(block_degrees) / (2.0 * num_edges);
+    std::vector<double> result = (row_or_col_double * 2.0 * num_edges) / (block_degrees_double * degree);
+    // std::vector<double> result = row_or_col_double / (block_degrees_double * degree * 2.0 * num_edges);
+    result = row_or_col_double * utils::nat_log<double>(result);
+    double dE = 0.5 * utils::sum<double>(result);
+    assert(!std::isnan(dE));
+    return dE;
+    // return 0.5 * utils::sum<double>(result);
+}
+
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int num_edges) {
+    // std::cout << "dE_temp_undirected_sparse!" << std::endl;
+    double result = 0.0;
+    double deg = degree / (2.0 * num_edges);
+    for (const std::pair<int, int> &pair : row_or_col) {
+        if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
+            continue;
+        double block_deg = (double) block_degrees[pair.first] / (2.0 * num_edges);
+        // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+        double temp = ((double) pair.second * 2.0 * num_edges) / (block_deg * deg);
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    result *= 0.5;
+    assert(!std::isnan(result));
+    return result;
+}
+
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+                          int current_block, int proposal, int num_edges) {
+    // std::cout << "dE_temp_undirected_sparse_ignore!" << std::endl;
+    double result = 0.0;
+    double deg = degree / (2.0 * num_edges);
+    for (const std::pair<int, int> &pair : row_or_col) {
+        // 0s sometimes get inserted into the sparse matrix
+        if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
+            continue;
+        double block_deg = (double) block_degrees[pair.first] / (2.0 * num_edges);
+        double temp = ((double) pair.second * 2.0 * num_edges) / (block_deg * deg);
+        // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+        temp = (double) pair.second * std::log(temp);
+        result += temp;
+    }
+    result *= 0.5;
+    assert(!std::isnan(result));
+    return result;
+}
+}  // namespace undirected
+
+}  // namespace common

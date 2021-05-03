@@ -1,9 +1,11 @@
 #include "block_merge.hpp"
 
+#include "args.hpp"
+
 namespace block_merge {
 
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
-                                    const std::vector<int> &best_merge_for_each_block) {
+                                    const std::vector<int> &best_merge_for_each_block, int num_edges) {
     // The following code is modeled after the `merge_sweep` function in
     // https://git.skewed.de/count0/graph-tool/-/blob/master/src/graph/inference/loops/merge_loop.hh
     typedef std::tuple<int, int, double> merge_t;
@@ -24,19 +26,20 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
         int delta_entropy_hint = std::get<2>(merge);
         if (merge_from != merge_to) {
             // Calculate the delta entropy given the current block assignment
-            EdgeWeights out_blocks = blockmodel.getBlockmodel()->outgoing_edges(merge_from);
-            EdgeWeights in_blocks = blockmodel.getBlockmodel()->incoming_edges(merge_from);
+            EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(merge_from);
+            EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(merge_from);
             int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
             int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
             int k = k_out + k_in;
             common::ProposalAndEdgeCounts proposal { merge_to, k_out, k_in, k };
             SparseEdgeCountUpdates updates;
-            edge_count_updates_sparse(blockmodel.getBlockmodel(), merge_from, proposal.proposal, out_blocks, in_blocks,
+            edge_count_updates_sparse(blockmodel.blockmatrix(), merge_from, proposal.proposal, out_blocks, in_blocks,
                                       updates);
             common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(merge_from, blockmodel,
                                                                                           proposal);
             double delta_entropy_actual =
-                compute_delta_entropy_sparse(merge_from, proposal.proposal, blockmodel, updates, new_block_degrees);
+                compute_delta_entropy_sparse(merge_from, proposal.proposal, num_edges, blockmodel, updates,
+                                             new_block_degrees);
             if (std::isnan(delta_entropy_actual)) {
                 std::cout << merge_from << " --> " << merge_to << " : " << delta_entropy_actual << std::endl;
                 std::cout << "proposal --> k_out: " << proposal.num_out_neighbor_edges << " k_in: " << proposal.num_in_neighbor_edges << " k: " << proposal.num_neighbor_edges << std::endl;
@@ -65,32 +68,33 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
             blockmodel.merge_blocks(merge_from, merge_to);
             // 2. Update the matrix
             // NOTE: if getting funky results, try replacing the following with a matrix rebuild
-            blockmodel.getBlockmodel()->clearrow(merge_from);
-            blockmodel.getBlockmodel()->clearcol(merge_from);
-            blockmodel.getBlockmodel()->setrow(merge_to, updates.proposal_row);
-            blockmodel.getBlockmodel()->setcol(merge_to, updates.proposal_col);
+            blockmodel.blockmatrix()->clearrow(merge_from);
+            blockmodel.blockmatrix()->clearcol(merge_from);
+            blockmodel.blockmatrix()->setrow(merge_to, updates.proposal_row);
+            blockmodel.blockmatrix()->setcol(merge_to, updates.proposal_col);
             blockmodel.setBlock_degrees_out(new_block_degrees.block_degrees_out);
             blockmodel.setBlock_degrees_in(new_block_degrees.block_degrees_in);
             blockmodel.setBlock_degrees(new_block_degrees.block_degrees);
             num_merged++;
         }
     }
-    std::vector<int> mapping = blockmodel.build_mapping(blockmodel.getBlock_assignment());
-    for (int i = 0; i < blockmodel.getBlock_assignment().size(); ++i) {
-        int block = blockmodel.getBlock_assignment()[i];
+    std::vector<int> mapping = blockmodel.build_mapping(blockmodel.block_assignment());
+    for (int i = 0; i < blockmodel.block_assignment().size(); ++i) {
+        int block = blockmodel.block_assignment(i);
         int new_block = mapping[block];
-        blockmodel.getBlock_assignment()[i] = new_block;
+        blockmodel.set_block_assignment(i, new_block);
+        // blockmodel.getBlock_assignment()[i] = new_block;
     }
     blockmodel.setNum_blocks(blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge());
 }
 
-double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
-                             common::NewBlockDegrees &block_degrees) {
+double compute_delta_entropy(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel, 
+                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    std::vector<int> old_block_row = blockmodel.getBlockmodel()->getrow(current_block); // M_r_t1
-    std::vector<int> old_proposal_row = blockmodel.getBlockmodel()->getrow(proposal);   // M_s_t1
-    std::vector<int> old_block_col = blockmodel.getBlockmodel()->getcol(current_block); // M_t2_r
-    std::vector<int> old_proposal_col = blockmodel.getBlockmodel()->getcol(proposal);   // M_t2_s
+    std::vector<int> old_block_row = blockmodel.blockmatrix()->getrow(current_block); // M_r_t1
+    std::vector<int> old_proposal_row = blockmodel.blockmatrix()->getrow(proposal);   // M_s_t1
+    std::vector<int> old_block_col = blockmodel.blockmatrix()->getcol(current_block); // M_t2_r
+    std::vector<int> old_proposal_col = blockmodel.blockmatrix()->getcol(proposal);   // M_t2_s
 
     // Exclude current_block, proposal to prevent double counting
     std::vector<int> new_proposal_col = common::exclude_indices(updates.proposal_col, current_block, proposal);
@@ -116,24 +120,24 @@ double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockm
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(new_proposal_row, new_proposal_row_degrees_in,
-                                                block_degrees.block_degrees_out[proposal]);
+                                                block_degrees.block_degrees_out[proposal], num_edges);
     delta_entropy -= common::delta_entropy_temp(new_proposal_col, new_proposal_col_degrees_out,
-                                                block_degrees.block_degrees_in[proposal]);
+                                                block_degrees.block_degrees_in[proposal], num_edges);
     delta_entropy += common::delta_entropy_temp(old_block_row, old_block_row_degrees_in,
-                                                blockmodel.getBlock_degrees_out()[current_block]);
+                                                blockmodel.getBlock_degrees_out()[current_block], num_edges);
     delta_entropy += common::delta_entropy_temp(old_proposal_row, old_proposal_row_degrees_in,
-                                                blockmodel.getBlock_degrees_out()[proposal]);
+                                                blockmodel.getBlock_degrees_out()[proposal], num_edges);
     delta_entropy += common::delta_entropy_temp(old_block_col, old_block_col_degrees_out,
-                                                blockmodel.getBlock_degrees_in()[current_block]);
+                                                blockmodel.getBlock_degrees_in()[current_block], num_edges);
     delta_entropy += common::delta_entropy_temp(old_proposal_col, old_proposal_col_degrees_out,
-                                                blockmodel.getBlock_degrees_in()[proposal]);
+                                                blockmodel.getBlock_degrees_in()[proposal], num_edges);
     return delta_entropy;
 }
 
-double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel &blockmodel,
+double compute_delta_entropy_sparse(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
                                     SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    const ISparseMatrix *matrix = blockmodel.getBlockmodel();
+    const ISparseMatrix *matrix = blockmodel.blockmatrix();
     const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
     const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
     const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
@@ -141,17 +145,20 @@ double compute_delta_entropy_sparse(int current_block, int proposal, Blockmodel 
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.proposal_row, block_degrees.block_degrees_in,
-                                                block_degrees.block_degrees_out[proposal]);
+                                                block_degrees.block_degrees_out[proposal], num_edges);
     delta_entropy -= common::delta_entropy_temp(updates.proposal_col, block_degrees.block_degrees_out,
-                                                block_degrees.block_degrees_in[proposal], current_block, proposal);
+                                                block_degrees.block_degrees_in[proposal], current_block, proposal,
+                                                num_edges);
     delta_entropy += common::delta_entropy_temp(old_block_row, blockmodel.getBlock_degrees_in(),
-                                                blockmodel.getBlock_degrees_out()[current_block]);
+                                                blockmodel.getBlock_degrees_out()[current_block], num_edges);
     delta_entropy += common::delta_entropy_temp(old_proposal_row, blockmodel.getBlock_degrees_in(),
-                                                blockmodel.getBlock_degrees_out()[proposal]);
+                                                blockmodel.getBlock_degrees_out()[proposal], num_edges);
     delta_entropy += common::delta_entropy_temp(old_block_col, blockmodel.getBlock_degrees_out(),
-                                                blockmodel.getBlock_degrees_in()[current_block], current_block, proposal);
+                                                blockmodel.getBlock_degrees_in()[current_block], current_block,
+                                                proposal, num_edges);
     delta_entropy += common::delta_entropy_temp(old_proposal_col, blockmodel.getBlock_degrees_out(),
-                                                blockmodel.getBlock_degrees_in()[proposal], current_block, proposal);
+                                                blockmodel.getBlock_degrees_in()[proposal], current_block, proposal,
+                                                num_edges);
     return delta_entropy;
 }
 
@@ -214,7 +221,7 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int
     updates.proposal_col[proposed_block] += count_out;
 }
 
-Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, Args &args) {
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges) {
     // TODO: add block merge timings to evaluation
     int num_blocks = blockmodel.getNum_blocks();
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
@@ -227,7 +234,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbo
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         std::unordered_map<int, bool> past_proposals;
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, block_assignment,
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, block_assignment,
                                                                past_proposals);
             if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
@@ -240,39 +247,44 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbo
     if (args.approximate)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     else
-        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block);
+        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
     blockmodel.initialize_edge_counts(out_neighbors);
     return blockmodel;
 }
 
-ProposalEvaluation propose_merge(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel) {
-    EdgeWeights out_blocks = blockmodel.getBlockmodel()->outgoing_edges(current_block);
-    EdgeWeights in_blocks = blockmodel.getBlockmodel()->incoming_edges(current_block);
+// TODO: get rid of block_blockmodel (block_assignment), just use blockmodel
+ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &blockmodel,
+                                 std::vector<int> &block_blockmodel) {
+    EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
+    EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
         common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
     EdgeCountUpdates updates =
-        edge_count_updates(blockmodel.getBlockmodel(), current_block, proposal.proposal, out_blocks, in_blocks);
+        edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double delta_entropy =
-        compute_delta_entropy(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
+        compute_delta_entropy(current_block, proposal.proposal, num_edges, blockmodel, updates, new_block_degrees);
     // std::cout << "dE: " << delta_entropy << std::endl;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-ProposalEvaluation propose_merge_sparse(int current_block, Blockmodel &blockmodel, std::vector<int> &block_blockmodel,
+// TODO: get rid of block_blockmodel (block_assignment), just use blockmodel
+ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
+                                        std::vector<int> &block_blockmodel,
                                         std::unordered_map<int, bool> &past_proposals) {
-    EdgeWeights out_blocks = blockmodel.getBlockmodel()->outgoing_edges(current_block);
-    EdgeWeights in_blocks = blockmodel.getBlockmodel()->incoming_edges(current_block);
+    EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
+    EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
         common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
     if (past_proposals[proposal.proposal] == true)
         return ProposalEvaluation{ proposal.proposal, std::numeric_limits<double>::max() };
     SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(blockmodel.getBlockmodel(), current_block, proposal.proposal, out_blocks, in_blocks,
+    edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
                               updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
     double delta_entropy =
-        compute_delta_entropy_sparse(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
+        compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, updates,
+                                     new_block_degrees);
     past_proposals[proposal.proposal] = true;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }

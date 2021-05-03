@@ -1,6 +1,10 @@
 #include "blockmodel.hpp"
 
-std::vector<int> Blockmodel::build_mapping(std::vector<int> &values) {
+#include "assert.h"
+
+#include "../args.hpp"
+
+std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) const {
     std::map<int, bool> unique_map;
     for (int i = 0; i < values.size(); ++i) {
         unique_map[values[i]] = true;
@@ -47,11 +51,11 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
             num_merged++;
         }
     }
-    std::vector<int> mapping = build_mapping(this->block_assignment);
-    for (int i = 0; i < this->block_assignment.size(); ++i) {
-        int block = this->block_assignment[i];
+    std::vector<int> mapping = build_mapping(this->_block_assignment);
+    for (int i = 0; i < this->_block_assignment.size(); ++i) {
+        int block = this->_block_assignment[i];
         int new_block = mapping[block];
-        this->block_assignment[i] = new_block;
+        this->_block_assignment[i] = new_block;
     }
     this->num_blocks -= this->num_blocks_to_merge;
 }
@@ -74,9 +78,9 @@ Blockmodel Blockmodel::clone_with_true_block_membership(NeighborList &neighbors,
 
 Blockmodel Blockmodel::copy() {
     Blockmodel blockmodel_copy = Blockmodel(this->num_blocks, this->block_reduction_rate);
-    blockmodel_copy.block_assignment = std::vector<int>(this->block_assignment);
+    blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
-    blockmodel_copy.blockmodel = this->blockmodel->copy();
+    blockmodel_copy._blockmatrix = this->_blockmatrix->copy();
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
@@ -87,22 +91,22 @@ Blockmodel Blockmodel::copy() {
 Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate) {
     // Fill in initial block assignment
-    std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
+    std::vector<int> _block_assignment = utils::constant<int>(neighbors.size(), -1);
     for (const auto &item : mapping) {
-        block_assignment[item.first] = sample_block_membership[item.second];
+        _block_assignment[item.first] = sample_block_membership[item.second];
     }
     // Every unassigned block gets assigned to the next block number
     int next_block = num_blocks;
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        if (block_assignment[vertex] >= 0) {
+        if (_block_assignment[vertex] >= 0) {
             continue;
         }
-        block_assignment[vertex] = next_block;
+        _block_assignment[vertex] = next_block;
         next_block++;
     }
     // Every previously unassigned block gets assigned to the block it's most connected to
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        if (block_assignment[vertex] < num_blocks) {
+        if (_block_assignment[vertex] < num_blocks) {
             continue;
         }
         std::vector<int> block_counts = utils::constant<int>(num_blocks, 0);
@@ -110,21 +114,21 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
         std::vector<int> vertex_neighbors = neighbors[vertex];
         for (uint i = 0; i < vertex_neighbors.size(); ++i) {
             int neighbor = vertex_neighbors[i];
-            int neighbor_block = block_assignment[neighbor];
+            int neighbor_block = _block_assignment[neighbor];
             if (neighbor_block < num_blocks) {
                 block_counts[neighbor_block]++;
             }
         }
         int new_block = utils::argmax<int>(block_counts);
         // block_counts.maxCoeff(&new_block);
-        block_assignment[vertex] = new_block;
+        _block_assignment[vertex] = new_block;
     }
-    return Blockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
+    return Blockmodel(num_blocks, neighbors, block_reduction_rate, _block_assignment);
 }
 
 void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
-    this->blockmodel = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
@@ -135,28 +139,32 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
         if (vertex_neighbors.size() == 0) {
             continue;
         }
-        int block = this->block_assignment[vertex];
+        int block = this->_block_assignment[vertex];
         for (int i = 0; i < vertex_neighbors.size(); ++i) {
             // Get count
             int neighbor = vertex_neighbors[i];
-            int neighbor_block = this->block_assignment[neighbor];
+            int neighbor_block = this->_block_assignment[neighbor];
             // TODO: change this once code is updated to support weighted graphs
             int weight = 1;
             // int weight = vertex_neighbors[i];
             // Update blockmodel
-            this->blockmodel->add(block, neighbor_block, weight);
+            this->_blockmatrix->add(block, neighbor_block, weight);
             // Update degrees
             this->block_degrees_out[block] += weight;
             this->block_degrees_in[neighbor_block] += weight;
         }
     }
     // Count block degrees
-    this->block_degrees = this->block_degrees_out + this->block_degrees_in;
+    if (args.undirected) {
+        this->block_degrees = std::vector<int>(this->block_degrees_out);
+    } else {
+        this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
+    }
 }
 
-double Blockmodel::log_posterior_probability() {
-    Indices nonzero_indices = this->blockmodel->nonzero();
-    std::vector<double> values = utils::to_double<int>(this->blockmodel->values());
+double Blockmodel::log_posterior_probability() const {
+    Indices nonzero_indices = this->_blockmatrix->nonzero();
+    std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
     std::vector<double> degrees_in;
     std::vector<double> degrees_out;
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
@@ -168,27 +176,46 @@ double Blockmodel::log_posterior_probability() {
     return utils::sum<double>(temp);
 }
 
+double Blockmodel::log_posterior_probability(int num_edges) const {
+    if (args.undirected) {
+        Indices nonzero_indices = this->_blockmatrix->nonzero();
+        std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
+        std::vector<double> degrees_in;
+        std::vector<double> degrees_out;
+        for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
+            // This is OK bcause block_degrees_in == block_degrees_out == block_degrees
+            degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]] / (2.0 * num_edges));
+            degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]] / (2.0 * num_edges));
+        }
+        std::vector<double> temp = values * utils::nat_log<double>(
+            (values / (2.0 * num_edges)) / (degrees_out * degrees_in));
+        double result = 0.5 * utils::sum<double>(temp);
+        return result;
+    }
+    return log_posterior_probability();
+}
+
 void Blockmodel::merge_blocks(int from_block, int to_block) {
-    for (int index = 0; index < this->block_assignment.size(); ++index) {
-        if (this->block_assignment[index] == from_block) {
-            this->block_assignment[index] = to_block;
+    for (int index = 0; index < this->_block_assignment.size(); ++index) {
+        if (this->_block_assignment[index] == from_block) {
+            this->_block_assignment[index] = to_block;
         }
     }
 };
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
-                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
-                            std::vector<int> &new_block_degrees) {
-    this->block_assignment[vertex] = new_block;
+                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                             std::vector<int> &new_block_degrees) {
+    this->_block_assignment[vertex] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
     this->block_degrees_out = new_block_degrees_out;
     this->block_degrees_in = new_block_degrees_in;
     this->block_degrees = new_block_degrees;
 };
 
-void Blockmodel::set_block_membership(int vertex, int block) { this->block_assignment[vertex] = block; }
+void Blockmodel::set_block_membership(int vertex, int block) { this->_block_assignment[vertex] = block; }
 
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
-    this->blockmodel->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
-                                         updates.block_col, updates.proposal_col);
+    this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
+                                           updates.block_col, updates.proposal_col);
 }

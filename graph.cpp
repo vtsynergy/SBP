@@ -16,12 +16,17 @@ Graph Graph::load(Args &args) {
         Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, csv_contents);
     else
         Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, csv_contents);
-    num_edges = 0;
+    std::cout << "num_edges before: " << num_edges << std::endl;
+    num_edges = 0;  // TODO: unnecessary re-counting of edges?
     for (const std::vector<int> &neighborhood : out_neighbors) {
         for (int neighbor : neighborhood) {
             num_edges++;
         }
     }
+    if (args.undirected) {
+        num_edges /= 2;
+    }
+    std::cout << "num_edges after: " << num_edges << std::endl;
     std::cout << "V: " << num_vertices << " E: " << num_edges << std::endl;
     // for (std::vector<std::string> &edge : csv_contents) {
     //     int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
@@ -71,8 +76,6 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         utils::insert_nodup(out_neighbors, from , to);
         if (from != to)
             utils::insert_nodup(out_neighbors, to, from);
-        utils::insert_nodup(in_neighbors, to, from);
-        if (from != to)
-            utils::insert_nodup(in_neighbors, from, to);
+        in_neighbors = NeighborList(out_neighbors);
     }
 }

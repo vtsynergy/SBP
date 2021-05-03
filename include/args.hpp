@@ -28,6 +28,9 @@ class Args {
     std::string type;
     bool undirected;
 
+    /// Default Args constructor.
+    Args() {}
+
     /// Parses the command-line options and stores the results in an easy-to-retrieve manner.
     Args(int argc, char** argv) {
         /** Use tclap to retrieve the arguments here */
@@ -100,5 +103,7 @@ class Args {
         }
     }
 };
+
+extern Args args;
 
 #endif // TCLAP_WRAPPER_ARGS

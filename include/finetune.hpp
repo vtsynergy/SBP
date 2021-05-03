@@ -45,11 +45,11 @@ static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is 
 static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning iterations
 
 bool accept(double delta_entropy, double hastings_correction);
-EdgeWeights block_edge_weights(std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
-double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, EdgeCountUpdates &updates,
-                             common::NewBlockDegrees &block_degrees);
-double compute_delta_entropy(int current_block, int proposal, Blockmodel &blockmodel, SparseEdgeCountUpdates &updates,
-                             common::NewBlockDegrees &block_degrees);
+EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
+double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
+                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
+                             SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
@@ -59,20 +59,35 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex);
-double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
-double hastings_correction(Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
-double overall_entropy(Blockmodel &blockmodel, int num_vertices, int num_edges);
-ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const NeighborList &out_neighbors,
-                                const NeighborList &in_neighbors);
-VertexMove propose_gibbs_move(Blockmodel &blockmodel, int vertex, const NeighborList &out_neighbors,
-                              const NeighborList &in_neighbors);
+/// Computes the overall entropy of the given blockmodel.
+double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+/// Proposes a new Metropolis-Hastings vertex move.
+ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
+//NeighborList &out_neighbors,
+//                                const NeighborList &in_neighbors);
+/// Proposes a new Asynchronous Gibbs vertex move.
+VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
+//NeighborList &out_neighbors,
+//                              const NeighborList &in_neighbors);
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels, Args &args);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
+namespace directed {
+/// Computes the overall entropy of the given blockmodel for a directed graph.
+double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+}
+
+namespace undirected {
+/// Computes the overall entropy of the given blockmodel for an undirected graph.
+double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+}
 
 } // namespace finetune
 

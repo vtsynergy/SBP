@@ -80,11 +80,11 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
     int nrows, ncols;
     if (num_true_communities < blockmodel.getNum_blocks()) {
         rows = true_assignment;
-        cols = blockmodel.getBlock_assignment();
+        cols = blockmodel.block_assignment();
         nrows = num_true_communities;
         ncols = blockmodel.getNum_blocks();
     } else {
-        rows = blockmodel.getBlock_assignment();
+        rows = blockmodel.block_assignment();
         cols = true_assignment;
         nrows = blockmodel.getNum_blocks();
         ncols = num_true_communities;
@@ -137,6 +137,10 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
 
     std::cout << "Contingency Table" << std::endl;
     for (int i = 0; i < nrows; ++i) {
+        if (nrows > 50) {
+            if (i == 25) std::cout << "...\n";
+            if (i > 25 && i < (nrows - 25)) continue;
+        }
         for (int j = 0; j < ncols; ++j) {
             std::cout << new_contingency_table[i][j] << "\t";
         }
