@@ -184,14 +184,37 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
         std::vector<double> degrees_out;
         for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
             // This is OK bcause block_degrees_in == block_degrees_out == block_degrees
-            degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]] / (2.0 * num_edges));
-            degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]] / (2.0 * num_edges));
+            degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]] / (2.0));
+            degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]] / (2.0));
         }
         std::vector<double> temp = values * utils::nat_log<double>(
-            (values / (2.0 * num_edges)) / (degrees_out * degrees_in));
+            (values / (2.0)) / (degrees_out * degrees_in));
         double result = 0.5 * utils::sum<double>(temp);
         return result;
     }
+    // if (args.undirected) {
+    //     Indices nonzero_indices = this->_blockmatrix->nonzero();
+    //     std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
+    //     std::vector<double> degrees_in;
+    //     std::vector<double> degrees_out;
+    //     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
+    //         // This is OK bcause block_degrees_in == block_degrees_out == block_degrees
+    //         degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]] / (2.0 * num_edges));
+    //         degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]] / (2.0 * num_edges));
+    //     }
+    //     std::vector<double> temp = values * utils::nat_log<double>(
+    //         (values / (2.0 * num_edges)) / (degrees_out * degrees_in));
+    //     // std::cout << "temp: ";
+    //     // utils::print<double>(temp);
+    //     std::cout << "for index 10: " << std::endl;
+    //     std::cout << "num_edges = " << num_edges;
+    //     std::cout << " values[10] = " << values[10];
+    //     std::cout << " d_in[10] = " << block_degrees_in[nonzero_indices.cols[10]];
+    //     std::cout << " d_out[10] = " << block_degrees_out[nonzero_indices.rows[10]];
+    //     std::cout << " temp[10] = " << temp[10] << std::endl;
+    //     double result = 0.5 * utils::sum<double>(temp);
+    //     return result;
+    // }
     return log_posterior_probability();
 }
 

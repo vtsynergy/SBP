@@ -13,13 +13,13 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
-    if (args.undirected) {
-        std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
-        assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
-        int s = blockmodel.blockmatrix()->edges() / 2;
-        std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
-        assert(s == graph.num_edges());
-    }
+    // if (args.undirected) {
+    //     std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
+    //     assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
+    //     int s = blockmodel.blockmatrix()->edges() / 2;
+    //     std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
+    //     assert(s == graph.num_edges());
+    // }
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
@@ -29,25 +29,25 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
-        if (args.undirected) {
-            std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
-            assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
-            int s = blockmodel.blockmatrix()->edges() / 2;
-            std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
-            assert(s == graph.num_edges());
-        }
+        // if (args.undirected) {
+        //     std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
+        //     assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
+        //     int s = blockmodel.blockmatrix()->edges() / 2;
+        //     std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
+        //     assert(s == graph.num_edges());
+        // }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else  // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
-        if (args.undirected) {
-            std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
-            assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
-            int s = blockmodel.blockmatrix()->edges() / 2;
-            std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
-            assert(s == graph.num_edges());
-        }
+        // if (args.undirected) {
+        //     std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
+        //     assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
+        //     int s = blockmodel.blockmatrix()->edges() / 2;
+        //     std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
+        //     assert(s == graph.num_edges());
+        // }
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     return blockmodel;

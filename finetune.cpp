@@ -186,10 +186,13 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
 
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies) {
+    int last_index = delta_entropies.size() - 1;
+    if (delta_entropies[last_index] == 0.0) {
+        return true;
+    }
     if (iteration < 3) {
         return false;
     }
-    int last_index = delta_entropies.size() - 1;
     double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
     average /= -3.0;
     double threshold;
@@ -510,8 +513,6 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
             ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph);
-            // ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph.out_neighbors(),
-            //                                            graph.in_neighbors());
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
@@ -519,15 +520,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
-        if (std::isnan(blockmodel.getOverall_entropy())) {
-            std::cout << "overall entropy is NAN!!!!!" << std::endl;
-            exit(-1000);
-        }
-        if (std::isnan(delta_entropy)) {
-            std::cout << "delta entropy is NAN!!!!!" << std::endl;
-            exit(-2000);
-        }
-        std::cout << delta_entropy / blockmodel.getOverall_entropy() << std::endl;
+        std::cout << delta_entropy << std::endl;
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, blockmodels, blockmodel.getOverall_entropy(), delta_entropies)) {
@@ -600,11 +593,13 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
     if (std::isnan(h)) {
         std::cout << "nan in h()" << std::endl;
     }
-        std::cout << "X: " << x << std::endl;
-        std::cout << "log(X): " << log(x) << std::endl;
+        // std::cout << "X: " << x << std::endl;
+        // std::cout << "log(X): " << log(x) << std::endl;
     if (std::isnan(h)) {
         exit(-5000);
     }
+    double first = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks()));
+    std::cout << "first: " << first << " log_posterior: " << log_posterior_p << std::endl;
     double result = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
     if (std::isnan(result)) {
         std::cout << "nan in result" << std::endl;
