@@ -114,7 +114,7 @@ DistBlockmodel DistBlockmodel::copy() {
 //     return DistBlockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
 // }
 
-// void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const MPI_Data &mpi, const std::vector<int> &myblocks) {
+// void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const MPI &mpi, const std::vector<int> &myblocks) {
 void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const std::vector<int> &myblocks) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     // this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, mpi, myblocks);

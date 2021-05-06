@@ -34,6 +34,12 @@ struct SparseVector {
 template <typename T> 
 using MapVector = std::unordered_map<int, T>;
 
+struct Merge {
+    int block = -1;
+    int proposal = -1;
+    double delta_entropy = std::numeric_limits<double>::max();
+};
+
 // template<class T>
 // using SparseVector = std::vector
 // typedef struct proposal_evaluation_t {

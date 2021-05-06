@@ -23,7 +23,7 @@ bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_tr
 
 namespace dist {
 
-// Blockmodel stochastic_block_partition(Graph &graph, MPI_Data &mpi, Args &args);
+// Blockmodel stochastic_block_partition(Graph &graph, MPI &mpi, Args &args);
 Blockmodel stochastic_block_partition(Graph &graph, Args &args);
 
 } // namespace dist

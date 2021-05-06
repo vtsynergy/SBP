@@ -21,7 +21,7 @@
 class DistDictMatrix : public IDistSparseMatrix {
   public:
     DistDictMatrix() {}
-    // DistDictMatrix(int nrows, int ncols, const MPI_Data &mpi, const std::vector<int> &myblocks) {
+    // DistDictMatrix(int nrows, int ncols, const MPI &mpi, const std::vector<int> &myblocks) {
     DistDictMatrix(int nrows, int ncols, const std::vector<int> &myblocks) {
         this->ncols = ncols;
         this->nrows = nrows;
@@ -72,7 +72,7 @@ class DistDictMatrix : public IDistSparseMatrix {
     std::vector<std::unordered_map<int, int>> _matrix;
     // std::vector<int> _ownership;
     /// Syncs the ownership between all MPI processes.
-    // void sync_ownership(const std::vector<int> &myblocks, const MPI_Data &mpi) {
+    // void sync_ownership(const std::vector<int> &myblocks, const MPI &mpi) {
     virtual void sync_ownership(const std::vector<int> &myblocks) override;
     // void sync_ownership(const std::vector<int> &myblocks) {
     //     int numblocks[mpi.num_processes];

@@ -60,6 +60,13 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
                                         std::vector<int> &block_blockmodel,
                                         std::unordered_map<int, bool> &past_proposals);
 
-} // block_merge
+namespace dist {
+
+/// Merges entire blocks (communities) in blockmodel together in a distributed fashion.
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
+
+}  // namespace dist
+
+} // namespace block_merge
 
 #endif // CPPSBP_BLOCK_MERGE_HPP

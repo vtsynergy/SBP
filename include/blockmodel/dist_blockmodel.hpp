@@ -51,7 +51,7 @@ class DistBlockmodel {
     //     // Number of blocks to merge
     //     this->initialize_edge_counts(out_neighbors);
     // }
-    // DistBlockmodel(const Graph &graph, const Args &args, const MPI_Data &mpi) {
+    // DistBlockmodel(const Graph &graph, const Args &args, const MPI &mpi) {
     DistBlockmodel(const Graph &graph, const Args &args) {
         /// ================= TODO: move to partition() methid =====================
         // NeighborList in_neighbors(graph.num_vertices());
@@ -115,7 +115,7 @@ class DistBlockmodel {
     // static DistBlockmodel from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
     //                               std::map<int, int> &mapping, float block_reduction_rate);
     /// Uses the graph to fill out the blockmatrix and the block degree vectors.
-    // void initialize_edge_counts(const NeighborList &neighbors, const MPI_Data &mpi, const std::vector<int> &myblocks);
+    // void initialize_edge_counts(const NeighborList &neighbors, const MPI &mpi, const std::vector<int> &myblocks);
     void initialize_edge_counts(const NeighborList &neighbors, const std::vector<int> &myblocks);
     /// TODO
     double log_posterior_probability();
@@ -179,7 +179,7 @@ class DistBlockmodel {
     // std::vector<int> _ownership;
     /// Syncs the ownership between all MPI processes. NOTE: assumes _num_blocks and _global_num_blocks are correctly
     /// set already
-    // void sync_ownership(const std::vector<int> &myblocks, const MPI_Data &mpi) {
+    // void sync_ownership(const std::vector<int> &myblocks, const MPI &mpi) {
     //     int numblocks[mpi.num_processes];
     //     MPI_Allgather(&(this->_num_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
     //     int offsets[mpi.num_processes];
