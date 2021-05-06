@@ -156,6 +156,39 @@ template <typename T> inline void print(const std::vector<T> &vector) {
     std::cout << vector[vector.size() - 1] << "]" << std::endl;
 }
 
+/// Prints a vector, cuts vector off at 20 elements
+template <typename T> inline void print_short(const std::vector<T> &vector) {
+    if (vector.size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    std::cout << "[" << vector[0] << ", ";
+    if (vector.size() <= 20) {
+        for (int nprinted = 1; nprinted < vector.size() - 1; nprinted++) {
+            if (nprinted % 25 == 0) {
+                std::cout << std::endl << " ";
+            }
+            std::cout << vector[nprinted] << ", ";
+        }
+        std::cout << vector[vector.size() - 1] << "]" << std::endl;
+    }else {
+        for (int nprinted = 1; nprinted < 10; nprinted++) {
+            if (nprinted % 25 == 0) {
+                std::cout << std::endl << " ";
+            }
+            std::cout << vector[nprinted] << ", ";
+        }
+        std::cout << " ... ";
+        for (int nprinted = vector.size() - 10; nprinted < vector.size() - 1; nprinted++) {
+            if (nprinted % 25 == 0) {
+                std::cout << std::endl << " ";
+            }
+            std::cout << vector[nprinted] << ", ";
+        }
+    }
+    std::cout << vector[vector.size() - 1] << "]" << std::endl;
+}
+
 }
 
 /// Allows elementwise multiplication of two std::vector<double> objects.

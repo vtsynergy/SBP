@@ -80,14 +80,25 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
 Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
 namespace directed {
+
 /// Computes the overall entropy of the given blockmodel for a directed graph.
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
-}
+
+}  // namespace directed
 
 namespace undirected {
+
 /// Computes the overall entropy of the given blockmodel for an undirected graph.
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
-}
+
+}  // namespace undirected
+
+namespace dist {
+
+/// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+
+}  // namespace dist
 
 } // namespace finetune
 

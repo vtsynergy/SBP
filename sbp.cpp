@@ -82,45 +82,16 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
-        if (blockmodel.getNum_blocks_to_merge() != 0) {
+        if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
-        exit(-500);
-        std::cout << "Starting MCMC vertex moves" << std::endl;
-        if (args.algorithm == "async_gibbs")
-            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
-        else  // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
-        // if (args.undirected) {
-        //     std::cout << "a == " << utils::sum<int>(blockmodel.getBlock_degrees()) << " b == " << graph.num_edges() << std::endl;
-        //     assert(utils::sum<int>(blockmodel.getBlock_degrees()) / 2 == graph.num_edges());
-        //     int s = blockmodel.blockmatrix()->edges() / 2;
-        //     std::cout << "a == " << s << " b == " << graph.num_edges() << std::endl;
-        //     assert(s == graph.num_edges());
-        // }
+        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
+        blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     return blockmodel;
-    // DistBlockmodel blockmodel(graph, args);
-    // std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
-    //           << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
-    // BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
-    // while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
-    //     if (blockmodel.getNum_blocks_to_merge() != 0) {
-    //         std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
-    //                   << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
-    //     }
-    //     blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), args);
-    //     std::cout << "Starting MCMC vertex moves" << std::endl;
-    //     if (args.algorithm == "async_gibbs")
-    //         blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet, args);
-    //     else  // args.algorithm == "metropolis_hastings"
-    //         blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
-    //     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-    // }
-    return Blockmodel();
 }
 
 }  // namespace dist

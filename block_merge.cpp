@@ -295,24 +295,20 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
 namespace dist {
 
 Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges) {
+    // MPI Datatype init
     MPI_Datatype Merge_t;
-    // Initialize necessary data types
-    int error;
-    int merge_structlen = 3;
-    int merge_blocklengths[merge_structlen] = { 1, 1, 1 };
-    // int merge_blocklengths[merge_structlen] = { sizeof(int), sizeof(int), sizeof(double) };
-    MPI_Aint merge_displacements[merge_structlen] = { 0, sizeof(int), sizeof(int) + sizeof(int) };
-    MPI_Datatype merge_types[merge_structlen] = { MPI_INT, MPI_INT, MPI_DOUBLE };
-    // std::cout << mpi.rank << " blocklengths: " << merge_blocklengths[0] << " " << merge_blocklengths[1] << " " << merge_blocklengths[2] << std::endl;
-    // std::cout << mpi.rank << " displacements: " << merge_displacements[0] << " " << merge_displacements[1] << " " << merge_displacements[2] << std::endl;
-    error = MPI_Type_create_struct(merge_structlen, merge_blocklengths, merge_displacements, merge_types, &Merge_t);
-    error = MPI_Type_commit(&Merge_t);
+    int merge_blocklengths[3] = { 1, 1, 1 };
+    MPI_Aint merge_displacements[3] = { 0, sizeof(int), sizeof(int) + sizeof(int) };
+    MPI_Datatype merge_types[3] = { MPI_INT, MPI_INT, MPI_DOUBLE };
+    MPI_Type_create_struct(3, merge_blocklengths, merge_displacements, merge_types, &Merge_t);
+    MPI_Type_commit(&Merge_t);
+    // MPI Datatype init
     int num_blocks = blockmodel.getNum_blocks();
     // std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
     // std::vector<double> delta_entropy_for_each_block =
     //     utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
-    int my_blocks = ceil((double) num_blocks / (double) mpi.num_processes);
+    int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
     std::vector<Merge> best_merges(my_blocks);
     int num_avoided = 0;  // number of avoided/skipped calculations
     #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
@@ -331,16 +327,18 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbo
     // MPI COMMUNICATION
     int numblocks[mpi.num_processes];
     MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
-    std::cout << "Got the numbers of blocks all sorted!" << std::endl;
+    // std::cout << "Got the numbers of blocks all sorted!" << std::endl;
     int offsets[mpi.num_processes];
     offsets[0] = 0;
     for (int i = 1; i < mpi.num_processes; ++i) {
         offsets[i] = offsets[i-1] + numblocks[i-1];
     }
+    int total_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
+    std::cout << "calculated total: " << total_blocks << " actual total: " << num_blocks << std::endl;
     std::vector<Merge> all_best_merges(num_blocks);
-    error = MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), &(numblocks[0]), &(offsets[0]),
-                               Merge_t, MPI_COMM_WORLD);
-    std::cout << "rank " << mpi.rank << " done with block merge communication!!!! ===================" << std::endl;
+    MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
+                   Merge_t, MPI_COMM_WORLD);
+    // std::cout << "rank " << mpi.rank << " done with block merge communication!!!! ===================" << std::endl;
     // END MPI COMMUNICATION
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block = utils::constant<double>(num_blocks, -1);

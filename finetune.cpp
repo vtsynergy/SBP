@@ -1,6 +1,7 @@
 #include "finetune.hpp"
 
 #include "../args.hpp"
+#include "mpi_data.hpp"
 
 #include "assert.h"
 
@@ -573,7 +574,8 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
     return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
 }
-}
+
+}  // namespace directed
 
 namespace undirected {
 
@@ -607,6 +609,89 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
     }
     return result;
 }
+
+}  // namespace undirected
+
+namespace dist {
+
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+    // MPI Datatype init
+    MPI_Datatype Membership_t;
+    int membership_blocklengths[2] = { 1, 1 };
+    MPI_Aint membership_displacements[2] = { 0, sizeof(int) };
+    MPI_Datatype membership_types[2] = { MPI_INT, MPI_INT };
+    MPI_Type_create_struct(2, membership_blocklengths, membership_displacements, membership_types, &Membership_t);
+    MPI_Type_commit(&Membership_t);
+    // MPI Datatype init
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
+    }
+    std::vector<double> delta_entropies;
+    int total_vertex_moves = 0;
+    double old_entropy = overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    blockmodel.setOverall_entropy(old_entropy);
+    double initial_entropy = blockmodel.getOverall_entropy();
+
+    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        int vertex_moves = 0;
+        int num_batches = args.batches;
+        int batch_size = int(ceil(graph.num_vertices() / num_batches));
+        // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
+        // asynchronous Gibbs sampling
+        std::vector<int> block_assignment(blockmodel.block_assignment());
+        for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
+            int start = batch * batch_size;
+            int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
+            std::vector<Membership> membership_updates;
+            #pragma omp parallel for schedule(dynamic)
+            for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
+                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
+                if (proposal.did_move) {
+                    membership_updates.push_back(Membership { vertex, proposal.proposed_block });
+                }
+            }
+            int num_moves = membership_updates.size();
+            // MPI COMMUNICATION
+            int rank_moves[mpi.num_processes];
+            MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
+            int offsets[mpi.num_processes];
+            offsets[0] = 0;
+            for (int i = 1; i < mpi.num_processes; ++i) {
+                offsets[i] = offsets[i-1] + rank_moves[i-1];
+            }
+            int batch_vertex_moves = offsets[mpi.num_processes-1] + rank_moves[mpi.num_processes-1];
+            std::vector<Membership> collected_membership_updates(batch_vertex_moves);
+            MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
+                           rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
+            // std::cout << "rank " << mpi.rank << " done with async gibbs communication for batch " << batch << std::endl;
+            // END MPI COMMUNICATION
+            for (const Membership &membership : collected_membership_updates) {
+                block_assignment[membership.vertex] = membership.block;
+            }
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
+                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+            vertex_moves += batch_vertex_moves;
+        }
+        double new_entropy = overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+        double delta_entropy = new_entropy - old_entropy;
+        delta_entropies.push_back(delta_entropy);
+        if (mpi.rank == 0) {
+            std::cout << "Itr: " << iteration << " vertex moves: " << vertex_moves << " delta S: "
+                      << delta_entropy / initial_entropy << std::endl;
+        }
+        total_vertex_moves += vertex_moves;
+        // Early stopping
+        if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    MPI_Type_free(&Membership_t);
+    return blockmodel;
 }
+
+}  // namespace dist
 
 }  // namespace finetune

@@ -44,16 +44,20 @@ int main(int argc, char* argv[]) {
 
     if (mpi.num_processes > 1) {
         // Blockmodel b = sbp::dist::stochastic_block_partition(graph, mpi, args);
-        Blockmodel b = sbp::dist::stochastic_block_partition(graph, args);
-        double avg_f1;
-        Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
-        Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
-        double f1 = evaluate::evaluate_blockmodel(partition, partial_blockmodel);
-        MPI_Reduce(&f1, &avg_f1, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        Blockmodel blockmodel = sbp::dist::stochastic_block_partition(graph, args);
         if (mpi.rank == 0) {
-            avg_f1 /= mpi.num_processes;
-            std::cout << "Average F1 Score across " << mpi.num_processes << " partitions = " << avg_f1 << std::endl;
+            double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+            std::cout << "Final F1 score = " << f1 << std::endl;
         }
+        // double avg_f1;
+        // Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
+        // Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
+        // double f1 = evaluate::evaluate_blockmodel(partition, partial_blockmodel);
+        // MPI_Reduce(&f1, &avg_f1, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        // if (mpi.rank == 0) {
+        //     avg_f1 /= mpi.num_processes;
+        //     std::cout << "Average F1 Score across " << mpi.num_processes << " partitions = " << avg_f1 << std::endl;
+        // }
     } else {
         Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
         double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
