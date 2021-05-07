@@ -25,6 +25,7 @@ class Args {
     std::string partition;
     std::string tag;  // TODO: add tag to saved results
     int threads;
+    bool transpose;
     std::string type;
     bool undirected;
 
@@ -77,6 +78,8 @@ class Args {
                                              "string or param1=value1;param2=value2", parser);
             TCLAP::ValueArg<int> threads("", "threads", "The number of OpenMP threads to use. If less than 1, will set "
                                          "number of threads to number of logical CPU cores", false, 0, "int", parser);
+            TCLAP::SwitchArg transpose("", "transpose", "If set, will also store the matrix transpose for faster column"
+                                       "indexing", parser, false);
             TCLAP::ValueArg<std::string> type("t", "type", "The type of streaming/name of the graph", false, "static",
                                               "string", parser);
             TCLAP::SwitchArg undirected("", "undirected", "If set, graph will be treated as undirected", parser,
@@ -95,6 +98,7 @@ class Args {
             this->partition = partition.getValue();
             this->tag = tag.getValue();
             this->threads = threads.getValue();
+            this->transpose = transpose.getValue();
             this->type = type.getValue();
             this->undirected = undirected.getValue();
         } catch (TCLAP::ArgException &exception) {

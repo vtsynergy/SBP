@@ -128,7 +128,11 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 
 void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
-    this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    if (args.transpose) {
+        this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    } else {
+        this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+    }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
