@@ -279,5 +279,5 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     } else {
         this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
     }
-    exit(-1000000);
+    // exit(-1000000);
 }

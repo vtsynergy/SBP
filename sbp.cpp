@@ -58,8 +58,9 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     // DistBlockmodel blockmodel(graph, args, mpi);
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
     // Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
-    std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
-              << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
+    if (mpi.rank == 0)
+        std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
+                  << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {

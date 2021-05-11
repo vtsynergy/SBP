@@ -347,14 +347,15 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
         delta_entropy_for_each_block[m.block] = m.delta_entropy;
     }
     // std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
-    if (args.approximate)
-        blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
-    else
-        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
+    // if (args.approximate)
+    blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
+    // else
+        // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
     blockmodel.initialize_edge_counts(out_neighbors);
     // std::cout << "rank " << mpi.rank;
     // utils::print<int>(blockmodel.block_assignment());
     MPI_Type_free(&Merge_t);
+    std::cout << "rank " << mpi.rank << " done with block merge!" << std::endl;
     return blockmodel;
 }
 
