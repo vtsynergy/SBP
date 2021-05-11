@@ -1,5 +1,6 @@
 #include "graph.hpp"
 #include "utils.hpp"
+#include "mpi_data.hpp"
 
 Graph Graph::load(Args &args) {
     // TODO: Add capability to process multiple "streaming" graph parts
@@ -16,7 +17,7 @@ Graph Graph::load(Args &args) {
         Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, csv_contents);
     else
         Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, csv_contents);
-    std::cout << "num_edges before: " << num_edges << std::endl;
+    // std::cout << "num_edges before: " << num_edges << std::endl;
     num_edges = 0;  // TODO: unnecessary re-counting of edges?
     for (const std::vector<int> &neighborhood : out_neighbors) {
         for (int neighbor : neighborhood) {
@@ -26,16 +27,10 @@ Graph Graph::load(Args &args) {
     if (args.undirected) {
         num_edges /= 2;
     }
-    std::cout << "num_edges after: " << num_edges << std::endl;
-    std::cout << "V: " << num_vertices << " E: " << num_edges << std::endl;
-    // for (std::vector<std::string> &edge : csv_contents) {
-    //     int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
-    //     int to = std::stoi(edge[1]) - 1;
-    //     num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
-    //     num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-    //     utils::insert(out_neighbors, from , to);
-    //     utils::insert(in_neighbors, to, from);
-    // }
+    // std::cout << "num_edges after: " << num_edges << std::endl;
+    if (mpi.rank == 0)
+        std::cout << "V: " << num_vertices << " E: " << num_edges << std::endl;
+
     csv_contents = utils::read_csv(truthpath);
     std::vector<int> assignment;
     if (!csv_contents.empty()) {
@@ -54,7 +49,6 @@ Graph Graph::load(Args &args) {
 
 void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
                            std::vector<std::vector<std::string>> &contents) {
-    // TODO: Add code to make sure this isn't a multigraph
     for (std::vector<std::string> &edge : contents) {
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;
@@ -67,7 +61,6 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
 
 void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
                              std::vector<std::vector<std::string>> &contents) {
-    // TODO: Add code to make sure this isn't a multigraph
     for (std::vector<std::string> &edge : contents) {
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;

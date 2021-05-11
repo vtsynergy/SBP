@@ -241,8 +241,6 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             }
         }
     }
-    // std::cout << std::boolalpha << "num_blocks: " << num_blocks << " rank: " << mpi.rank << " P: " << mpi.num_processes << std::endl;
-    // utils::print<bool>(in_two_hop_radius);
     int two_hop_radius_size = 0;
     for (const bool val : in_two_hop_radius) {
         if (val == true) two_hop_radius_size++;

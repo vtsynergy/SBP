@@ -1,11 +1,8 @@
 #include "utils.hpp"
 
+#include "mpi_data.hpp"
+
 std::string utils::build_filepath(Args &args) {
-    // std::string directory = args.get("--directory");
-    // std::string type = args.get("--type");
-    // std::string overlap = args.get<std::string>("--overlap");
-    // std::string blocksizevar = args.get<std::string>("--blocksizevar");
-    // std::string vertices = args.get<std::string>("--numvertices");
     std::ostringstream filepathstream;
     filepathstream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
     filepathstream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
@@ -22,7 +19,8 @@ std::string utils::build_filepath(Args &args) {
 std::vector<std::vector<std::string>> utils::read_csv(fs::path &filepath) {
     std::vector<std::vector<std::string>> contents;
     if (!fs::exists(filepath)) {
-        std::cerr << "File doesn't exist: " << filepath << std::endl;
+        if (mpi.rank == 0)
+            std::cerr << "File doesn't exist: " << filepath << std::endl;
         return contents;
     }
     std::string line;
@@ -38,7 +36,8 @@ std::vector<std::vector<std::string>> utils::read_csv(fs::path &filepath) {
         }
         contents.push_back(row);
     }
-    std::cout << "Read in " << contents.size() << " lines and " << items << " values." << std::endl;
+    if (mpi.rank == 0)
+        std::cout << "Read in " << contents.size() << " lines and " << items << " values." << std::endl;
     return contents;
 }
 
