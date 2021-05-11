@@ -121,7 +121,7 @@ class Blockmodel {
     // Other
     bool empty;
 
-  private:
+  protected:
     // Structure
     int num_blocks;
     ISparseMatrix *_blockmatrix;

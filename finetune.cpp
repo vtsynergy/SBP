@@ -614,7 +614,7 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 
 namespace dist {
 
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
     // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
@@ -668,8 +668,8 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
             for (const Membership &membership : collected_membership_updates) {
                 block_assignment[membership.vertex] = membership.block;
             }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
-                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+            blockmodel = TwoHopBlockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
+                                          blockmodel.getBlock_reduction_rate(), block_assignment);
             vertex_moves += batch_vertex_moves;
         }
         double new_entropy = overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());

@@ -8,6 +8,7 @@
 #include <limits>
 
 #include "blockmodel.hpp"
+#include "dist_blockmodel.hpp"
 
 class BlockmodelTriplet {
 
@@ -29,7 +30,7 @@ public:
     /// TODO
     Blockmodel get_next_blockmodel(Blockmodel &old_blockmodel);
 
-private:
+protected:
     /// Blockmodels arranged in order of decreasing number of blocks.
     /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
     /// TODO
@@ -38,6 +39,26 @@ private:
     int lower_difference();
     /// TODO
     int upper_difference();
+};
+
+class DistBlockmodelTriplet : public BlockmodelTriplet{
+
+public:
+    using BlockmodelTriplet::BlockmodelTriplet;
+    /// TODO
+    void update(TwoHopBlockmodel &blockmodel);
+    void update(Blockmodel &blockmodel) = delete;
+    /// TODO
+    TwoHopBlockmodel &get(int i) { return blockmodels[i]; }
+    /// TODO
+    Blockmodel get_next_blockmodel(Blockmodel &old_blockmodel) = delete;
+    TwoHopBlockmodel get_next_blockmodel(TwoHopBlockmodel &old_blockmodel);
+
+private:
+    /// Blockmodels arranged in order of decreasing number of blocks.
+    /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
+    /// TODO
+    TwoHopBlockmodel blockmodels[3];
 };
 
 #endif // CPPSBP_PARTITION_PARTITION_TRIPLET_HPP

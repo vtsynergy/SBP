@@ -199,3 +199,87 @@ void DistBlockmodel::update_edge_counts(int current_block, int proposed_block, E
     this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                          updates.block_col, updates.proposal_col);
 }
+
+TwoHopBlockmodel TwoHopBlockmodel::copy() {
+    TwoHopBlockmodel blockmodel_copy = TwoHopBlockmodel(this->num_blocks, this->block_reduction_rate);
+    blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
+    blockmodel_copy.overall_entropy = this->overall_entropy;
+    blockmodel_copy._blockmatrix = this->_blockmatrix->copy();
+    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
+    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
+    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy.num_blocks_to_merge = 0;
+    return blockmodel_copy;
+}
+
+void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+    /// TODO: this recreates the matrix (possibly unnecessary)
+    if (args.transpose) {
+        this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    } else {
+        this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+    }
+    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
+    this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    // First pass: find out which blocks are in the 2-hop radius of my blocks
+    // TODO: make this a class variable for testing; at runtime, can check if there is a missing block
+    // I think there will be a missing block in mcmc phase vertex->neighbor->block->neighbor_block
+    std::vector<bool> in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
+    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+        std::vector<int> vertex_neighbors = neighbors[vertex];
+        if (vertex_neighbors.size() == 0) {
+            continue;
+        }
+        int block = this->_block_assignment[vertex];
+        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+            int neighbor = vertex_neighbors[i];
+            int neighbor_block = this->_block_assignment[neighbor];
+            if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
+                in_two_hop_radius[block] = true;
+                in_two_hop_radius[neighbor_block] = true;
+            }
+        }
+    }
+    // std::cout << std::boolalpha << "num_blocks: " << num_blocks << " rank: " << mpi.rank << " P: " << mpi.num_processes << std::endl;
+    // utils::print<bool>(in_two_hop_radius);
+    int two_hop_radius_size = 0;
+    for (const bool val : in_two_hop_radius) {
+        if (val == true) two_hop_radius_size++;
+    }
+    std::cout << "rank " << mpi.rank << " : num blocks in 2-hop radius == " << two_hop_radius_size << std::endl;
+    // Second pass: initialize the blockmodel
+    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+        std::vector<int> vertex_neighbors = neighbors[vertex];
+        if (vertex_neighbors.size() == 0) {
+            continue;
+        }
+        int block = this->_block_assignment[vertex];
+        if (in_two_hop_radius[block] == false) {
+            continue;
+        }
+        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+            // Get count
+            int neighbor = vertex_neighbors[i];
+            int neighbor_block = this->_block_assignment[neighbor];
+            if (in_two_hop_radius[neighbor_block] == false) {
+                continue;
+            }
+            // TODO: change this once code is updated to support weighted graphs
+            int weight = 1;
+            // int weight = vertex_neighbors[i];
+            // Update blockmodel
+            this->_blockmatrix->add(block, neighbor_block, weight);
+            // Update degrees
+            this->block_degrees_out[block] += weight;
+            this->block_degrees_in[neighbor_block] += weight;
+        }
+    }
+    // Count block degrees
+    if (args.undirected) {
+        this->block_degrees = std::vector<int>(this->block_degrees_out);
+    } else {
+        this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
+    }
+    exit(-1000000);
+}

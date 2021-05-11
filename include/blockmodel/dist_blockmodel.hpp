@@ -205,4 +205,25 @@ class DistBlockmodel {
     // }
 };
 
+class TwoHopBlockmodel : public Blockmodel {
+  public:
+    // using Blockmodel::Blockmodel;
+    // Constructors are not derived from base class
+    TwoHopBlockmodel() : Blockmodel() {}
+    TwoHopBlockmodel(int num_blocks, float block_reduction_rate) : Blockmodel(num_blocks, block_reduction_rate) {}
+    TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate)
+        : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
+        this->initialize_edge_counts(out_neighbors);
+    }
+    TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate,
+                     std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
+        // Set the block assignment
+        this->_block_assignment = block_assignment;
+        // Number of blocks to merge
+        this->initialize_edge_counts(out_neighbors);
+    }
+    TwoHopBlockmodel copy();
+    void initialize_edge_counts(const NeighborList &neighbors);
+};
+
 #endif // SBP_DIST_BLOCKMODEL_HPP

@@ -11,6 +11,7 @@
 // #include <omp.h>
 #include "common.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/dist_blockmodel.hpp"
 // #include "blockmodel/sparse/boost_mapped_matrix.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
@@ -63,7 +64,7 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
 namespace dist {
 
 /// Merges entire blocks (communities) in blockmodel together in a distributed fashion.
-Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
+TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
 
 }  // namespace dist
 

@@ -14,6 +14,7 @@
 #include "common.hpp"
 #include "graph.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/dist_blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "utils.hpp"
 
@@ -96,7 +97,7 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 namespace dist {
 
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 
 }  // namespace dist
 

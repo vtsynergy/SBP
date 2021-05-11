@@ -127,6 +127,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 }
 
 void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
     /// TODO: this recreates the matrix (possibly unnecessary)
     if (args.transpose) {
         this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
