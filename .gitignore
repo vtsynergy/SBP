@@ -126,6 +126,7 @@ dmypy.json
 *.py
 *.ipynb
 r0*/
+*r0*/
 vtune*
 
 # output files
