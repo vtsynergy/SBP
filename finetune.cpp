@@ -422,8 +422,6 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 }
 
 ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
-//NeighborList &out_neighbors,
-//                                const NeighborList &in_neighbors) {
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
     EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
@@ -463,8 +461,6 @@ ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph 
 }
 
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph) {
-//NeighborList &out_neighbors,
-//                              const NeighborList &in_neighbors) {
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);
     EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
@@ -614,7 +610,7 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 
 namespace dist {
 
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
@@ -628,9 +624,10 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    double old_entropy = overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double initial_entropy = blockmodel.getOverall_entropy();
+    double new_entropy = 0;
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
@@ -644,9 +641,15 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
             #pragma omp parallel for schedule(dynamic)
-            for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
-                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
+            // for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
+            for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+                int block = blockmodel.block_assignment(vertex);
+                if (!(block % mpi.num_processes == mpi.rank))
+                    continue;
+                VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
+                // std::cout << "proposal.proposed_block: " << proposal.proposed_block << " size: " << blockmodel.in_two_hop_radius().size() << std::endl;
+                    assert(blockmodel.owns(proposal.proposed_block));
                     membership_updates.push_back(Membership { vertex, proposal.proposed_block });
                 }
             }
@@ -663,7 +666,6 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             std::vector<Membership> collected_membership_updates(batch_vertex_moves);
             MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
                            rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
-            // std::cout << "rank " << mpi.rank << " done with async gibbs communication for batch " << batch << std::endl;
             // END MPI COMMUNICATION
             for (const Membership &membership : collected_membership_updates) {
                 block_assignment[membership.vertex] = membership.block;
@@ -672,7 +674,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                                           blockmodel.getBlock_reduction_rate(), block_assignment);
             vertex_moves += batch_vertex_moves;
         }
-        double new_entropy = overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         delta_entropies.push_back(delta_entropy);
         if (mpi.rank == 0) {
@@ -685,12 +687,92 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(new_entropy);
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
     return blockmodel;
 }
+
+bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+                std::vector<double> &delta_entropies) {
+    int last_index = delta_entropies.size() - 1;
+    if (delta_entropies[last_index] == 0.0) {
+        return true;
+    }
+    if (iteration < 3) {
+        return false;
+    }
+    double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
+    average /= -3.0;
+    double threshold;
+    if (blockmodels.get(2).empty) { // Golden ratio bracket not yet established
+        threshold = 5e-4 * initial_entropy;
+    } else {
+        threshold = 1e-4 * initial_entropy;
+    }
+    return (average < threshold) ? true : false;
+}
+
+double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {
+    return dist::directed::overall_entropy(blockmodel, num_vertices, num_edges);
+    // if (args.undirected)
+    //     return dist::undirected::overall_entropy(blockmodel, num_vertices, num_edges);
+    // return dist::directed::overall_entropy(blockmodel, num_vertices, num_edges);
+}
+
+VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph) {
+    bool did_move = false;
+    int current_block = blockmodel.block_assignment(vertex);
+    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
+    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors(), vertex);
+
+    common::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
+        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
+    if (!blockmodel.owns(proposal.proposal)) {
+        std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
+        exit(-1000000000);
+    }
+    if (proposal.proposal == current_block) {
+        return VertexMove{0.0, did_move, -1, -1};
+    }
+
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_out_neighbors);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_in_neighbors);
+    int self_edge_weight = 0;
+    for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
+        if (vertex_out_neighbors.indices[i] == vertex) {
+            self_edge_weight = vertex_out_neighbors.values[i];
+            break;
+        }
+    }
+
+    SparseEdgeCountUpdates updates;
+    edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, blocks_out_neighbors,
+                              blocks_in_neighbors, self_edge_weight, updates);
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
+    double hastings =
+        hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+    double delta_entropy =
+        compute_delta_entropy(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
+                              new_block_degrees);
+    if (accept(delta_entropy, hastings)) {
+        did_move = true;
+        return VertexMove{delta_entropy, did_move, vertex, proposal.proposal};
+    }
+    return VertexMove{delta_entropy, did_move, -1, -1};
+}
+
+namespace directed {
+
+double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {
+    double log_posterior_p = blockmodel.log_posterior_probability();
+    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
+    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+}
+
+}  // namespace directed
 
 }  // namespace dist
 

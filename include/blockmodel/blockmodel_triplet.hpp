@@ -41,24 +41,34 @@ protected:
     int upper_difference();
 };
 
-class DistBlockmodelTriplet : public BlockmodelTriplet{
+class DistBlockmodelTriplet {
 
 public:
-    using BlockmodelTriplet::BlockmodelTriplet;
+    DistBlockmodelTriplet() : optimal_num_blocks_found(false) {}
+    /// TODO
+    bool optimal_num_blocks_found;
+    /// TODO
+    TwoHopBlockmodel &get(int i) { return this->blockmodels[i]; }
+    /// TODO
+    TwoHopBlockmodel get_next_blockmodel(TwoHopBlockmodel &old_blockmodel);
+    /// TODO
+    bool golden_ratio_not_reached();
+    /// TODO
+    bool is_done();
     /// TODO
     void update(TwoHopBlockmodel &blockmodel);
-    void update(Blockmodel &blockmodel) = delete;
     /// TODO
-    TwoHopBlockmodel &get(int i) { return blockmodels[i]; }
-    /// TODO
-    Blockmodel get_next_blockmodel(Blockmodel &old_blockmodel) = delete;
-    TwoHopBlockmodel get_next_blockmodel(TwoHopBlockmodel &old_blockmodel);
+    void status();
 
 private:
     /// Blockmodels arranged in order of decreasing number of blocks.
     /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
     /// TODO
     TwoHopBlockmodel blockmodels[3];
+    /// TODO
+    int lower_difference();
+    /// TODO
+    int upper_difference();
 };
 
 #endif // CPPSBP_PARTITION_PARTITION_TRIPLET_HPP

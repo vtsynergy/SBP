@@ -54,11 +54,11 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbo
 
 /// Proposes a merge for current_block based on the current blockmodel state
 ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &blockmodel,
-                                 std::vector<int> &block_blockmodel);
+                                 std::vector<int> &block_assignment);
 
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
 ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
-                                        std::vector<int> &block_blockmodel,
+                                        std::vector<int> &block_assignment,
                                         std::unordered_map<int, bool> &past_proposals);
 
 namespace dist {

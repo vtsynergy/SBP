@@ -97,7 +97,30 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 namespace dist {
 
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+
+bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+                std::vector<double> &delta_entropies);
+
+/// Computes the overall entropy of the given distributed blockmodel for a directed graph.
+double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
+
+/// Proposes an asynchronous Gibbs move in a distributed setting.
+VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
+
+namespace directed {
+
+/// Computes the overall entropy of the given blockmodel for a directed graph.
+double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
+
+}  // namespace directed
+
+// namespace undirected {
+
+// /// Computes the overall entropy of the given blockmodel for an undirected graph.
+// double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+
+// }  // namespace undirected
 
 }  // namespace dist
 

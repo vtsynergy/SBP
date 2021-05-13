@@ -255,13 +255,13 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const NeighborList &out_neighbo
     return blockmodel;
 }
 
-// TODO: get rid of block_blockmodel (block_assignment), just use blockmodel
+// TODO: get rid of block_assignment (block_assignment), just use blockmodel
 ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &blockmodel,
-                                 std::vector<int> &block_blockmodel) {
+                                 std::vector<int> &block_assignment) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
-        common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
+        common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
     EdgeCountUpdates updates =
         edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
@@ -271,14 +271,14 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-// TODO: get rid of block_blockmodel (block_assignment), just use blockmodel
+// TODO: get rid of block_assignment (block_assignment), just use blockmodel
 ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
-                                        std::vector<int> &block_blockmodel,
+                                        std::vector<int> &block_assignment,
                                         std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     common::ProposalAndEdgeCounts proposal =
-        common::propose_new_block(current_block, out_blocks, in_blocks, block_blockmodel, blockmodel, true);
+        common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
     if (past_proposals[proposal.proposal] == true)
         return ProposalEvaluation{ proposal.proposal, std::numeric_limits<double>::max() };
     SparseEdgeCountUpdates updates;
@@ -304,9 +304,6 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     MPI_Type_commit(&Merge_t);
     // MPI Datatype init
     int num_blocks = blockmodel.getNum_blocks();
-    // std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
-    // std::vector<double> delta_entropy_for_each_block =
-    //     utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
     std::vector<Merge> best_merges(my_blocks);
@@ -327,18 +324,15 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     // MPI COMMUNICATION
     int numblocks[mpi.num_processes];
     MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
-    // std::cout << "Got the numbers of blocks all sorted!" << std::endl;
     int offsets[mpi.num_processes];
     offsets[0] = 0;
     for (int i = 1; i < mpi.num_processes; ++i) {
         offsets[i] = offsets[i-1] + numblocks[i-1];
     }
     int total_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
-    std::cout << "calculated total: " << total_blocks << " actual total: " << num_blocks << std::endl;
     std::vector<Merge> all_best_merges(num_blocks);
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
                    Merge_t, MPI_COMM_WORLD);
-    // std::cout << "rank " << mpi.rank << " done with block merge communication!!!! ===================" << std::endl;
     // END MPI COMMUNICATION
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block = utils::constant<double>(num_blocks, -1);
@@ -352,10 +346,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     // else
         // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
     blockmodel.initialize_edge_counts(out_neighbors);
-    // std::cout << "rank " << mpi.rank;
-    // utils::print<int>(blockmodel.block_assignment());
     MPI_Type_free(&Merge_t);
-    std::cout << "rank " << mpi.rank << " done with block merge!" << std::endl;
     return blockmodel;
 }
 

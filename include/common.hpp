@@ -11,6 +11,7 @@
 // #include <Eigen/Core>
 
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/dist_blockmodel.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
@@ -82,7 +83,7 @@ std::vector<int> nonzeros(MapVector<int> &in);
 
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
 ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        const std::vector<int> &block_blockmodel, const Blockmodel &blockmodel,
+                                        const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
                                         bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
@@ -115,6 +116,15 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
                           int current_block, int proposal, int num_edges);
 }
+
+namespace dist {
+
+// TODO: get rid of block_assignment, just use blockmodel?
+ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                        const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
+                                        bool block_merge);
+
+} // namespace dist
 
 } // namespace common
 

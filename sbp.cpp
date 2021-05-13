@@ -62,7 +62,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
                   << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
-    while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
+    while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
@@ -73,6 +73,21 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     return blockmodel;
+}
+
+bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
+    if (mpi.rank == 0) std::cout << "distributed done_blockmodeling" << std::endl;
+    if (min_num_blocks > 0) {
+        if ((blockmodel.getNum_blocks() <= min_num_blocks) || (blockmodel_triplet.get(2).empty == false)) {
+            return true;
+        }
+    }
+    if (blockmodel_triplet.optimal_num_blocks_found) {
+        blockmodel_triplet.status();
+        std::cout << "Optimal number of blocks was found" << std::endl;
+        return true;
+    }
+    return false;
 }
 
 }  // namespace dist

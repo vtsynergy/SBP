@@ -208,7 +208,9 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._in_two_hop_radius = std::vector<bool>(this->_in_two_hop_radius);
     blockmodel_copy.num_blocks_to_merge = 0;
+    blockmodel_copy.empty = this->empty;
     return blockmodel_copy;
 }
 
@@ -223,9 +225,8 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     // First pass: find out which blocks are in the 2-hop radius of my blocks
-    // TODO: make this a class variable for testing; at runtime, can check if there is a missing block
     // I think there will be a missing block in mcmc phase vertex->neighbor->block->neighbor_block
-    std::vector<bool> in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
+    this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
         if (vertex_neighbors.size() == 0) {
@@ -236,16 +237,16 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
             if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
-                in_two_hop_radius[block] = true;
-                in_two_hop_radius[neighbor_block] = true;
+                this->_in_two_hop_radius[block] = true;
+                this->_in_two_hop_radius[neighbor_block] = true;
             }
         }
     }
     int two_hop_radius_size = 0;
-    for (const bool val : in_two_hop_radius) {
+    for (const bool val : this->_in_two_hop_radius) {
         if (val == true) two_hop_radius_size++;
     }
-    std::cout << "rank " << mpi.rank << " : num blocks in 2-hop radius == " << two_hop_radius_size << std::endl;
+    if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << std::endl;
     // Second pass: initialize the blockmodel
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
@@ -253,19 +254,18 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             continue;
         }
         int block = this->_block_assignment[vertex];
-        if (in_two_hop_radius[block] == false) {
+        if (this->_in_two_hop_radius[block] == false) {
             continue;
         }
         for (int i = 0; i < vertex_neighbors.size(); ++i) {
             // Get count
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
-            if (in_two_hop_radius[neighbor_block] == false) {
+            if (this->_in_two_hop_radius[neighbor_block] == false) {
                 continue;
             }
             // TODO: change this once code is updated to support weighted graphs
             int weight = 1;
-            // int weight = vertex_neighbors[i];
             // Update blockmodel
             this->_blockmatrix->add(block, neighbor_block, weight);
             // Update degrees
@@ -279,5 +279,31 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     } else {
         this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
     }
-    // exit(-1000000);
+}
+
+double TwoHopBlockmodel::log_posterior_probability() const {
+    Indices nonzero_indices = this->_blockmatrix->nonzero();
+    std::vector<double> all_values = utils::to_double<int>(this->_blockmatrix->values());
+    std::vector<double> degrees_in;
+    std::vector<double> degrees_out;
+    std::vector<double> values;
+    for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
+        int row = nonzero_indices.rows[i];
+        if (row % mpi.num_processes != mpi.rank) continue;
+        values.push_back(all_values[i]);
+        degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]]);
+        degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]]);
+    }
+    std::vector<double> temp = values * utils::nat_log<double>(
+        values / (degrees_out * degrees_in));
+    double partial_sum = utils::sum<double>(temp);
+    // MPI COMMUNICATION START
+    double final_sum = 0.0;
+    MPI_Allreduce(&partial_sum, &final_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    // MPI COMMUNICATION END
+    return final_sum;
+}
+
+bool TwoHopBlockmodel::owns(int block) const {
+    return this->_in_two_hop_radius[block];
 }

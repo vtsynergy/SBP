@@ -100,12 +100,14 @@ void BlockmodelTriplet::update(Blockmodel &blockmodel) {
 }
 
 TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {
+    if (mpi.rank == 0) std::cout << "2 hop getting next blockmodel" << std::endl;
     old_blockmodel.setNum_blocks_to_merge(0);
     this->update(old_blockmodel);
     this->status();
-
     // If have not yet reached golden ratio, continue from middle blockmodel
     if (this->golden_ratio_not_reached()) {
+        if (mpi.rank == 0) std::cout << "golden ratio NOT reached" << std::endl;
+        if (mpi.rank == 0) std::cout << std::boolalpha << this->get(0).empty << " " << this->get(1).empty << " " << this->get(2).empty << std::endl;
         TwoHopBlockmodel blockmodel = this->get(1).copy();
         blockmodel.setNum_blocks_to_merge(int(blockmodel.getNum_blocks() * BLOCK_REDUCTION_RATE));
         if (blockmodel.getNum_blocks_to_merge() == 0) {
@@ -134,7 +136,47 @@ TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &ol
     return blockmodel;
 }
 
+bool DistBlockmodelTriplet::golden_ratio_not_reached() { return this->get(2).empty; }
+
+bool DistBlockmodelTriplet::is_done() {
+    if ((!this->get(0).empty && this->get(0).getNum_blocks() - this->get(2).getNum_blocks() == 2) ||
+        (this->get(0).empty && this->get(1).getNum_blocks() - this->get(2).getNum_blocks() == 1)) {
+        this->optimal_num_blocks_found = true;
+    }
+    return this->optimal_num_blocks_found;
+}
+
+int DistBlockmodelTriplet::lower_difference() {
+    return this->get(1).getNum_blocks() - this->get(2).getNum_blocks();
+}
+
+int DistBlockmodelTriplet::upper_difference() {
+    return this->get(0).getNum_blocks() - this->get(1).getNum_blocks();
+}
+
+void DistBlockmodelTriplet::status() {
+    double entropies[3];
+    int num_blocks[3];
+    for (int i = 0; i < 3; ++i) {
+        if (this->blockmodels[i].empty) {
+            entropies[i] = std::numeric_limits<double>::min();
+            num_blocks[i] = 0;
+        } else {
+            entropies[i] = this->blockmodels[i].getOverall_entropy();
+            num_blocks[i] = this->blockmodels[i].getNum_blocks();
+        }
+    }
+    if (mpi.rank == 0) std::cout << "Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl;
+    if (mpi.rank == 0) std::cout << "Number of blocks: " << num_blocks[0] << " " << num_blocks[1] << " " << num_blocks[2] << std::endl;
+    if (this->optimal_num_blocks_found) {
+        if (mpi.rank == 0) std::cout << "Optimal blockmodel found with " << num_blocks[1] << " blocks" << std::endl;
+    } else if (!(this->golden_ratio_not_reached())) {
+        if (mpi.rank == 0) std::cout << "Golden ratio has been reached" << std::endl;
+    }
+}
+
 void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
+    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.getNum_blocks() << std::endl;
     int index;
     if (this->blockmodels[1].empty) {
         index = 1;
@@ -156,5 +198,7 @@ void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
             }
         }
     }
+    if (mpi.rank == 0) std::cout << "found the index to be = " << index << std::endl;
     this->blockmodels[index] = blockmodel;
+    if (mpi.rank == 0) std::cout << "blockmodels[index] has B = " << this->blockmodels[index].getNum_blocks() << std::endl;
 }

@@ -158,7 +158,7 @@ class DistBlockmodel {
     bool empty;
     // TODO: method to sync after an iteration (rebalance blocks, etc)
 
-  private:
+  protected:
     // Structure
     int _num_blocks;
     int _global_num_blocks;
@@ -224,6 +224,14 @@ class TwoHopBlockmodel : public Blockmodel {
     }
     TwoHopBlockmodel copy();
     void initialize_edge_counts(const NeighborList &neighbors);
+    double log_posterior_probability() const;
+    /// Returns true if this blockmodel owns storage for the requested block.
+    bool owns(int block) const;
+    /// Returns the _in_two_hop_radius vector.
+    const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
+  private:
+    // Stores true for in_two_hop_radius[block] if block is stored in this blockmodel.
+    std::vector<bool> _in_two_hop_radius;
 };
 
 #endif // SBP_DIST_BLOCKMODEL_HPP
