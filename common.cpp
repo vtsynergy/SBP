@@ -336,7 +336,10 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     int num_blocks = blockmodel.getNum_blocks();
 
     if (k == 0) { // If the current block has no neighbors, propose merge with random block
-        int proposal = propose_random_block(current_block, num_blocks);
+        std::vector<int> blocks = utils::range<int>(0, blockmodel.getNum_blocks());
+        std::vector<int> weights = utils::to_int<bool>(blockmodel.in_two_hop_radius());
+        int proposal = choose_neighbor(blocks, weights);
+        // int proposal = propose_random_block(current_block, num_blocks);  // TODO: only propose blocks in 2 hop radius
         assert(blockmodel.owns(proposal));
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
@@ -351,7 +354,10 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
 
     // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
-        int proposal = propose_random_block(current_block, num_blocks);
+        std::vector<int> blocks = utils::range<int>(0, blockmodel.getNum_blocks());
+        std::vector<int> weights = utils::to_int<bool>(blockmodel.in_two_hop_radius());
+        int proposal = choose_neighbor(blocks, weights);
+        // int proposal = propose_random_block(current_block, num_blocks);
         assert(blockmodel.owns(proposal));
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }

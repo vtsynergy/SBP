@@ -114,6 +114,12 @@ template <typename T> inline std::vector<double> to_double(const std::vector<T> 
     return std::vector<double>(vector.begin(), vector.end());
 }
 
+/// Casts the values in vector to type int.
+/// Relies on an implicit cast from vector type T to int.
+template <typename T> inline std::vector<int> to_int(const std::vector<T> &vector) {
+    return std::vector<int>(vector.begin(), vector.end());
+}
+
 /// Returns the natural log of every value in vector.
 /// Relies on an implicit conversion from type T to double.
 template <typename T> inline std::vector<double> nat_log(const std::vector<T> &vector) {
