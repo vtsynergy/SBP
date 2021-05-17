@@ -213,25 +213,41 @@ class TwoHopBlockmodel : public Blockmodel {
     TwoHopBlockmodel(int num_blocks, float block_reduction_rate) : Blockmodel(num_blocks, block_reduction_rate) {}
     TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate)
         : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
+        // If the block assignment is not provided, use round-robin assignment
+        this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+        for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {
+            this->_my_blocks[i] = true;
+        }
         this->initialize_edge_counts(out_neighbors);
     }
     TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate,
                      std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
-        // Number of blocks to merge
+        this->load_balance();
         this->initialize_edge_counts(out_neighbors);
     }
     TwoHopBlockmodel copy();
+    /// Returns the _in_two_hop_radius vector.
+    const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
     void initialize_edge_counts(const NeighborList &neighbors);
     double log_posterior_probability() const;
     /// Returns true if this blockmodel owns storage for the requested block.
     bool owns(int block) const;
-    /// Returns the _in_two_hop_radius vector.
-    const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
+    /// Returns true if this blockmodel owns the computer for the requested block.
+    bool owns_compute(int block) const;
+    /// Performs load balancing, and internally sets a vector of blocks, with True for the blocks this rank is
+    /// responsible for.
+    void load_balance();
   private:
-    // Stores true for in_two_hop_radius[block] if block is stored in this blockmodel.
+    // ===== Functions
+    /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.
+    std::vector<std::pair<int,int>> sorted_block_sizes() const;
+    // ===== Variables
+    /// Stores true for in_two_hop_radius[block] if block is stored in this blockmodel.
     std::vector<bool> _in_two_hop_radius;
+    /// Stores true for my_blocks[block] if this blockmodel owns the compute for this block.
+    std::vector<bool> _my_blocks;
 };
 
 #endif // SBP_DIST_BLOCKMODEL_HPP

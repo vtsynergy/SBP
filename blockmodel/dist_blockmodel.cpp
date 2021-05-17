@@ -114,7 +114,6 @@ DistBlockmodel DistBlockmodel::copy() {
 //     return DistBlockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
 // }
 
-// void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const MPI &mpi, const std::vector<int> &myblocks) {
 void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const std::vector<int> &myblocks) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     // this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, mpi, myblocks);
@@ -236,7 +235,8 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
         for (int i = 0; i < vertex_neighbors.size(); ++i) {
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
-            if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
+            if ((this->_my_blocks[block] == true) || (this->_my_blocks[neighbor_block] == true)) {
+            // if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
                 this->_in_two_hop_radius[block] = true;
                 this->_in_two_hop_radius[neighbor_block] = true;
             }
@@ -246,7 +246,7 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     for (const bool val : this->_in_two_hop_radius) {
         if (val == true) two_hop_radius_size++;
     }
-    if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << std::endl;
+    if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << " / " << this->num_blocks << std::endl;
     // Second pass: initialize the blockmodel
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
@@ -289,7 +289,8 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     std::vector<double> values;
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
         int row = nonzero_indices.rows[i];
-        if (row % mpi.num_processes != mpi.rank) continue;
+        if (this->_my_blocks[row] == false) continue;
+        // if (row % mpi.num_processes != mpi.rank) continue;
         values.push_back(all_values[i]);
         degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]]);
         degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]]);
@@ -304,6 +305,37 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     return final_sum;
 }
 
+void TwoHopBlockmodel::load_balance() {
+    // std::cout << "rank " << mpi.rank << " is load balancing!" << std::endl;
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
+    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+}
+
 bool TwoHopBlockmodel::owns(int block) const {
     return this->_in_two_hop_radius[block];
+}
+
+bool TwoHopBlockmodel::owns_compute(int block) const {
+    return this->_my_blocks[block];
+}
+
+std::vector<std::pair<int,int>> TwoHopBlockmodel::sorted_block_sizes() const {
+    std::vector<std::pair<int,int>> block_sizes;
+    for (int i = 0; i < this->num_blocks; ++i) {
+        block_sizes.push_back(std::make_pair(i, 0));
+    }
+    for (const int &block : this->_block_assignment) {
+        block_sizes[block].second++;
+    }
+    std::sort(block_sizes.begin(), block_sizes.end(),
+              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    return block_sizes;
 }

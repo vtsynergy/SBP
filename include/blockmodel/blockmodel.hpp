@@ -106,7 +106,7 @@ class Blockmodel {
     bool owns(int block) const { return true; }
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(int vertex, int block) { this->_block_assignment[vertex] = block; }
-    void setBlock_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }
+    void set_block_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }
     const std::vector<int> &getBlock_degrees() const { return this->block_degrees; }
     void setBlock_degrees(std::vector<int> block_degrees) { this->block_degrees = block_degrees; }
     const std::vector<int> &getBlock_degrees_in() const { return this->block_degrees_in; }

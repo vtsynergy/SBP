@@ -636,6 +636,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         std::vector<int> block_assignment(blockmodel.block_assignment());
+        int my_vertices = 0;
         for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
@@ -643,9 +644,13 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             #pragma omp parallel for schedule(dynamic)
             // for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
             for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+                // TODO: separate "new" code so can be switched on/off
+                // TODO: batch by % of my vertices? Can be calculated same time as load balancing
                 int block = blockmodel.block_assignment(vertex);
-                if (!(block % mpi.num_processes == mpi.rank))
+                if (!blockmodel.owns_compute(block))
+                // if (!(block % mpi.num_processes == mpi.rank))
                     continue;
+                my_vertices++;
                 VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                 // std::cout << "proposal.proposed_block: " << proposal.proposed_block << " size: " << blockmodel.in_two_hop_radius().size() << std::endl;
@@ -670,10 +675,13 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             for (const Membership &membership : collected_membership_updates) {
                 block_assignment[membership.vertex] = membership.block;
             }
-            blockmodel = TwoHopBlockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
-                                          blockmodel.getBlock_reduction_rate(), block_assignment);
+            blockmodel.set_block_assignment(block_assignment);
+            blockmodel.initialize_edge_counts(graph.out_neighbors());
+            // blockmodel = TwoHopBlockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
+                                        //   blockmodel.getBlock_reduction_rate(), block_assignment);
             vertex_moves += batch_vertex_moves;
         }
+        std::cout << "rank: " << mpi.rank << " is responsible for " << my_vertices << " vertices" << std::endl;
         new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         delta_entropies.push_back(delta_entropy);
