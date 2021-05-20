@@ -345,7 +345,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     // else
         // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
-    blockmodel.load_balance();
+    blockmodel.distribute(out_neighbors);
     blockmodel.initialize_edge_counts(out_neighbors);
     MPI_Type_free(&Merge_t);
     return blockmodel;

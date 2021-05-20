@@ -1,5 +1,8 @@
 #include "dist_blockmodel.hpp"
 
+#include <time.h>
+#include <unordered_set>
+
 std::vector<int> DistBlockmodel::build_mapping(std::vector<int> &values) {
     std::map<int, bool> unique_map;
     for (int i = 0; i < values.size(); ++i) {
@@ -199,31 +202,11 @@ void DistBlockmodel::update_edge_counts(int current_block, int proposed_block, E
                                          updates.block_col, updates.proposal_col);
 }
 
-TwoHopBlockmodel TwoHopBlockmodel::copy() {
-    TwoHopBlockmodel blockmodel_copy = TwoHopBlockmodel(this->num_blocks, this->block_reduction_rate);
-    blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
-    blockmodel_copy.overall_entropy = this->overall_entropy;
-    blockmodel_copy._blockmatrix = this->_blockmatrix->copy();
-    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
-    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
-    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
-    blockmodel_copy._in_two_hop_radius = std::vector<bool>(this->_in_two_hop_radius);
-    blockmodel_copy.num_blocks_to_merge = 0;
-    blockmodel_copy.empty = this->empty;
-    return blockmodel_copy;
-}
-
-void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
-    /// TODO: this recreates the matrix (possibly unnecessary)
-    if (args.transpose) {
-        this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
-    } else {
-        this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
+    if (args.distribute == "none") {
+        this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
+        return;
     }
-    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
-    this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
-    // First pass: find out which blocks are in the 2-hop radius of my blocks
     // I think there will be a missing block in mcmc phase vertex->neighbor->block->neighbor_block
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
@@ -247,7 +230,200 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
         if (val == true) two_hop_radius_size++;
     }
     if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << " / " << this->num_blocks << std::endl;
-    // Second pass: initialize the blockmodel
+}
+
+TwoHopBlockmodel TwoHopBlockmodel::copy() {
+    TwoHopBlockmodel blockmodel_copy = TwoHopBlockmodel(this->num_blocks, this->block_reduction_rate);
+    blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
+    blockmodel_copy.overall_entropy = this->overall_entropy;
+    blockmodel_copy._blockmatrix = this->_blockmatrix->copy();
+    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
+    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
+    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._in_two_hop_radius = std::vector<bool>(this->_in_two_hop_radius);
+    blockmodel_copy.num_blocks_to_merge = 0;
+    blockmodel_copy._my_blocks = std::vector<bool>(this->_my_blocks);
+    blockmodel_copy.empty = this->empty;
+    return blockmodel_copy;
+}
+
+void TwoHopBlockmodel::distribute(const NeighborList &neighbors) {
+    if (args.distribute == "none")
+        distribute_none();
+    else if (args.distribute == "2hop-round-robin")
+        distribute_2hop_round_robin(neighbors);
+    else if (args.distribute == "2hop-size-balanced")
+        distribute_2hop_size_balanced(neighbors);
+    else if (args.distribute == "2hop-snowball")
+        distribute_2hop_snowball(neighbors);
+    else
+        distribute_2hop_snowball(neighbors);
+    // // std::cout << "rank " << mpi.rank << " is load balancing!" << std::endl;
+    // this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    // std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
+    // for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+    //     int block = block_sizes[i].first;
+    //     this->_my_blocks[block] = true;
+    // }
+    // for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+    //     int block = block_sizes[i].first;
+    //     this->_my_blocks[block] = true;
+    // }
+    // // First pass: find out which blocks are in the 2-hop radius of my blocks
+    // // I think there will be a missing block in mcmc phase vertex->neighbor->block->neighbor_block
+    // this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
+    // for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+    //     std::vector<int> vertex_neighbors = neighbors[vertex];
+    //     if (vertex_neighbors.size() == 0) {
+    //         continue;
+    //     }
+    //     int block = this->_block_assignment[vertex];
+    //     for (int i = 0; i < vertex_neighbors.size(); ++i) {
+    //         int neighbor = vertex_neighbors[i];
+    //         int neighbor_block = this->_block_assignment[neighbor];
+    //         if ((this->_my_blocks[block] == true) || (this->_my_blocks[neighbor_block] == true)) {
+    //         // if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
+    //             this->_in_two_hop_radius[block] = true;
+    //             this->_in_two_hop_radius[neighbor_block] = true;
+    //         }
+    //     }
+    // }
+    // int two_hop_radius_size = 0;
+    // for (const bool val : this->_in_two_hop_radius) {
+    //     if (val == true) two_hop_radius_size++;
+    // }
+    // if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << " / " << this->num_blocks << std::endl;
+}
+
+void TwoHopBlockmodel::distribute_none() {
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes)
+        this->_my_blocks[i] = true;
+    this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
+}
+
+void TwoHopBlockmodel::distribute_2hop_round_robin(const NeighborList &neighbors) {
+    // Step 1: decide which blocks to own
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes)
+        this->_my_blocks[i] = true;
+    // Step 2: find out which blocks are in the 2-hop radius of my blocks
+    build_two_hop_blockmodel(neighbors);
+}
+
+void TwoHopBlockmodel::distribute_2hop_size_balanced(const NeighborList &neighbors) {
+    // Step 1: decide which blocks to own
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
+    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+    // Step 2: find out which blocks are in the 2-hop radius of my blocks
+    build_two_hop_blockmodel(neighbors);
+}
+
+void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
+    // Step 1: decide which blocks to own
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    std::cout << "my vertices size: " << this->_my_vertices.size() << " neighbors size: " << neighbors.size() << std::endl;
+    if (this->_my_vertices.size() == neighbors.size()) {  // if already done sampling, no need to do it again
+        std::cout << "already done sampling, now just re-assigning blocks based on sampled vertices" << std::endl;
+        for (int vertex = 0; vertex < neighbors.size(); ++vertex) {
+            if (this->_my_vertices[vertex] == 0) continue;
+            int block = this->_block_assignment[vertex];
+            this->_my_blocks[block] = true;
+        }
+    } else {
+        int target = ceil((double) neighbors.size() / (double) mpi.num_processes);
+        this->_my_vertices = utils::constant<int>(neighbors.size(), 0);  // cannot send vector<bool>.data() over MPI
+        std::unordered_set<int> frontier;
+        // Snowball Sampling
+        srand(mpi.num_processes + mpi.rank);
+        int start = rand() % neighbors.size();  // replace this with a proper int distribution
+        std::cout << "rank: " << mpi.rank << " with start = " << start << std::endl;
+        this->_my_vertices[start] = 1;
+        for (int neighbor : neighbors[start]) {
+            frontier.insert(neighbor);
+        }
+        int block = this->_block_assignment[start];
+        this->_my_blocks[block] = true;
+        int num_vertices = 1;
+        while (num_vertices < target) {
+            std::unordered_set<int> new_frontier;
+            for (int vertex : frontier) {
+                if (this->_my_vertices[vertex] == 1) continue;
+                this->_my_vertices[vertex] = 1;
+                for (int neighbor : neighbors[vertex]) {
+                    new_frontier.insert(neighbor);
+                }
+                block = this->_block_assignment[vertex];
+                this->_my_blocks[block] = true;
+                num_vertices++;
+                if (num_vertices == target) break;
+            }
+            if (num_vertices < target && frontier.size() == 0) {  // restart with a new vertex that isn't already selected
+                std::unordered_set<int> candidates;
+                for (int i = 0; i < neighbors.size(); ++i) {
+                    if (this->_my_vertices[i] == 0) candidates.insert(i);
+                }
+                int index = rand() % candidates.size();
+                auto it = candidates.begin();
+                std::advance(it, index);
+                start = *it;
+                this->_my_vertices[start] = 1;
+                for (int neighbor : neighbors[start]) {
+                    new_frontier.insert(neighbor);
+                }
+                block = this->_block_assignment[start];
+                this->_my_blocks[block] = true;
+                num_vertices++;
+            }
+            frontier = std::unordered_set<int>(new_frontier);
+        }
+        // Some vertices may be unassigned across all ranks. Find out what they are, and assign 1/num_processes of them
+        // to this process.
+        std::vector<int> global_selected(neighbors.size(), 0);
+        MPI_Allreduce(this->_my_vertices.data(), global_selected.data(), neighbors.size(), MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (mpi.rank == 0) {
+            std::cout << "my selected: " << std::boolalpha;
+            utils::print<int>(this->_my_vertices);
+            std::cout << "globally selected: ";
+            utils::print<int>(global_selected);
+        }
+        std::vector<int> vertices_left;
+        for (int vertex = 0; vertex < global_selected.size(); ++vertex) {
+            if (global_selected[vertex] == 0) {
+                vertices_left.push_back(vertex);
+            }
+        }
+        // assign remaining vertices in round-robin fashion
+        for (int i = mpi.rank; i < vertices_left.size(); i += mpi.num_processes) {
+            int vertex = vertices_left[i];
+            this->_my_vertices[vertex] == 1;
+            block = this->_block_assignment[vertex];
+            this->_my_blocks[block] = true;
+        }
+    }
+    // Step 2: find out which blocks are in the 2-hop radius of my blocks
+    build_two_hop_blockmodel(neighbors);
+}
+
+void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+    /// TODO: this recreates the matrix (possibly unnecessary)
+    if (args.transpose) {
+        this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+    } else {
+        this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+    }
+    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
+    this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
         if (vertex_neighbors.size() == 0) {
@@ -282,6 +458,16 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
 }
 
 double TwoHopBlockmodel::log_posterior_probability() const {
+    std::vector<int> my_blocks;
+    if (args.distribute == "2hop-snowball") {
+        my_blocks = utils::constant<int>(this->num_blocks, -1);
+        for (int block = 0; block < this->num_blocks; ++block) {
+            if (this->_my_blocks[block])
+                my_blocks[block] = mpi.rank;
+        }
+        MPI_Allreduce(MPI_IN_PLACE, my_blocks.data(), this->num_blocks, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        utils::print<int>(my_blocks);
+    }
     Indices nonzero_indices = this->_blockmatrix->nonzero();
     std::vector<double> all_values = utils::to_double<int>(this->_blockmatrix->values());
     std::vector<double> degrees_in;
@@ -289,7 +475,11 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     std::vector<double> values;
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
         int row = nonzero_indices.rows[i];
-        if (this->_my_blocks[row] == false) continue;
+        if (args.distribute == "2hop-snowball") {
+            if (my_blocks[row] != mpi.rank) continue;
+        } else {
+            if (this->_my_blocks[row] == false) continue;
+        }
         // if (row % mpi.num_processes != mpi.rank) continue;
         values.push_back(all_values[i]);
         degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]]);
@@ -302,21 +492,12 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     double final_sum = 0.0;
     MPI_Allreduce(&partial_sum, &final_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     // MPI COMMUNICATION END
+    // Alternative Plan for sampled 2-hop blockmodel:
+    // 1. Break all_values, degrees_in, degrees_out into row-like statuses
+    // 2. Compute temp across the rows that you own
+    // 3. Perform an AllReduce MAX to find missing values
+    // 4. Sum across the rows to find the final_sum
     return final_sum;
-}
-
-void TwoHopBlockmodel::load_balance() {
-    // std::cout << "rank " << mpi.rank << " is load balancing!" << std::endl;
-    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-    std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
-    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
-        int block = block_sizes[i].first;
-        this->_my_blocks[block] = true;
-    }
-    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
-        int block = block_sizes[i].first;
-        this->_my_blocks[block] = true;
-    }
 }
 
 bool TwoHopBlockmodel::owns(int block) const {

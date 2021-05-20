@@ -189,6 +189,11 @@ int propose_random_block(int current_block, int num_blocks) {
     return proposed;
 }
 
+int random_integer(int low, int high) {
+    std::uniform_int_distribution<int> distribution(low, high);
+    return distribution(generator);
+}
+
 namespace directed {
 
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {

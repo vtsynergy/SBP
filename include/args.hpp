@@ -18,6 +18,7 @@ class Args {
     std::string blocksizevar;
     std::string csv;  // TODO: save results in a csv file
     std::string delimiter;
+    std::string distribute;
     std::string directory;
     int nodes;  // TODO: remove after this experiment
     int numvertices;
@@ -56,7 +57,10 @@ class Args {
                                              false, "./eval/test", "path", parser);
             TCLAP::ValueArg<std::string> delimiter("", "delimiter", "The delimiter used in the file storing the graph",
                                                    false, "\t", "string, usually `\\t` or `,`", parser);
-            TCLAP::ValueArg<std::string> directory("d", "directory", 
+            TCLAP::ValueArg<std::string> distribute("", "distribute", "The distribution scheme to use. Default = "
+                                                    "2hop-snowball", false, "2hop-snowball", "none | 2hop-round-robin "
+                                                    "| 2hop-size-balanced | 2hop-snowball", parser);
+            TCLAP::ValueArg<std::string> directory("d", "directory",
                                 "The directory in which the graph is stored. The following structure is assumed:\n"
                                 "filename for graph:"
                                 "<type>_<overlap>Overlap_<blocksizevar>BlockSizeVar_<numvertices>_nodes.tsv\n"
@@ -91,6 +95,7 @@ class Args {
             this->blocksizevar = blocksizevar.getValue();
             this->csv = csv.getValue();
             this->delimiter = delimiter.getValue();
+            this->distribute = distribute.getValue();
             this->directory = directory.getValue();
             this->nodes = nodes.getValue();
             this->numvertices = numvertices.getValue();

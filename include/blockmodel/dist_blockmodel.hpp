@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <mpi.h>
+#include <random>
 #include <queue>
 
 // #include <Eigen/Core>
@@ -27,31 +28,6 @@
 class DistBlockmodel {
   public:
     DistBlockmodel() : empty(true) {}
-    // DistBlockmodel(int num_blocks, int global_num_blocks) : empty(false) {
-    //     this->_num_blocks = num_blocks;
-    //     this->_global_num_blocks = global_num_blocks;
-    //     // this->block_reduction_rate = block_reduction_rate;
-    //     this->_overall_entropy = std::numeric_limits<float>::max();
-    //     // this->blockmodel = std::make_unique<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
-    //     this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks);
-    //     // Set the block assignment to be the range [0, this->num_blocks)
-    //     this->_assignment = utils::range<int>(0, this->_num_blocks);
-
-    //     // Number of blocks to merge
-    //     this->_num_blocks_to_merge = (int)(this->_num_blocks * BLOCK_REDUCTION_RATE);
-    // }
-    // DistBlockmodel(int num_blocks, int global_num_blocks, const NeighborList &out_neighbors)
-    //      : DistBlockmodel(num_blocks, global_num_blocks) {
-    //     this->initialize_edge_counts(out_neighbors);
-    // }
-    // DistBlockmodel(int num_blocks, int global_num_blocks, const NeighborList &out_neighbors,
-    //     std::vector<int> &block_assignment) : DistBlockmodel(num_blocks, global_num_blocks) {
-    //     // Set the block assignment
-    //     this->_assignment = block_assignment;
-    //     // Number of blocks to merge
-    //     this->initialize_edge_counts(out_neighbors);
-    // }
-    // DistBlockmodel(const Graph &graph, const Args &args, const MPI &mpi) {
     DistBlockmodel(const Graph &graph, const Args &args) {
         /// ================= TODO: move to partition() methid =====================
         // NeighborList in_neighbors(graph.num_vertices());
@@ -215,18 +191,21 @@ class TwoHopBlockmodel : public Blockmodel {
         : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // If the block assignment is not provided, use round-robin assignment
         this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-        for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {
+        for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {  // round-robin work mapping
             this->_my_blocks[i] = true;
         }
+        this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);  // no distribution
         this->initialize_edge_counts(out_neighbors);
     }
     TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate,
                      std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
-        this->load_balance();
+        this->distribute(out_neighbors);
         this->initialize_edge_counts(out_neighbors);
     }
+    /// Sets the _in_two_hop_radius for a 2-hop blockmodel.
+    void build_two_hop_blockmodel(const NeighborList &neighbors);
     TwoHopBlockmodel copy();
     /// Returns the _in_two_hop_radius vector.
     const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
@@ -236,18 +215,32 @@ class TwoHopBlockmodel : public Blockmodel {
     bool owns(int block) const;
     /// Returns true if this blockmodel owns the computer for the requested block.
     bool owns_compute(int block) const;
-    /// Performs load balancing, and internally sets a vector of blocks, with True for the blocks this rank is
-    /// responsible for.
-    void load_balance();
+    /// Distributes the blockmodel amongst MPI ranks. Needs to be called before the first call to
+    /// initialize_edge_counts, since it sets the _in_two_hop_radius and _my_blocks vectors. After that, it only needs
+    /// to be called to re-distribute the blockmodel (followed by initialize_edge_counts).
+    void distribute(const NeighborList &neighbors);
   private:
     // ===== Functions
     /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.
     std::vector<std::pair<int,int>> sorted_block_sizes() const;
+    /// No data distribution, work is mapped using round-robin strategy.
+    void distribute_none();
+    /// 2-Hop data distribution using round-robin assignment, each MPI rank responsible for the vertices in the blocks
+    /// mapped to it.
+    void distribute_2hop_round_robin(const NeighborList &neighbors);
+    /// 2-Hop data distribution, balanced by block size, each MPI rank responsible for the vertices in the blocks
+    /// mapped to it.
+    void distribute_2hop_size_balanced(const NeighborList &neighbors);
+    /// 2-Hop data distribution, based on snowball sampling over vertices, each MPI rank responsible for the vertices
+    /// in the blocks mapped to it.
+    void distribute_2hop_snowball(const NeighborList &neighbors);
     // ===== Variables
     /// Stores true for in_two_hop_radius[block] if block is stored in this blockmodel.
     std::vector<bool> _in_two_hop_radius;
     /// Stores true for my_blocks[block] if this blockmodel owns the compute for this block.
     std::vector<bool> _my_blocks;
+    /// Stores 1 for any vertex that this blockmodel owns.
+    std::vector<int> _my_vertices;
 };
 
 #endif // SBP_DIST_BLOCKMODEL_HPP

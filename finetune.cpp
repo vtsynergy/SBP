@@ -7,6 +7,8 @@
 
 namespace finetune {
 
+int num_iterations = 0;
+
 bool accept(double delta_entropy, double hastings_correction) {
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     double random_probability = distribution(common::generator);
@@ -630,6 +632,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     double new_entropy = 0;
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        num_iterations++;
         int vertex_moves = 0;
         int num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices() / num_batches));
@@ -643,7 +646,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             std::vector<Membership> membership_updates;
             #pragma omp parallel for schedule(dynamic)
             // for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
-            for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            // for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            for (int vertex = 0; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
                 // TODO: batch by % of my vertices? Can be calculated same time as load balancing
                 int block = blockmodel.block_assignment(vertex);
@@ -676,6 +680,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                 block_assignment[membership.vertex] = membership.block;
             }
             blockmodel.set_block_assignment(block_assignment);
+            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
             blockmodel.initialize_edge_counts(graph.out_neighbors());
             // blockmodel = TwoHopBlockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
                                         //   blockmodel.getBlock_reduction_rate(), block_assignment);
@@ -699,6 +704,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
+    // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
     return blockmodel;
 }
 

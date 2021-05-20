@@ -23,6 +23,8 @@
  ******************/
 namespace finetune {
 
+extern int num_iterations;
+
 typedef struct proposal_evaluation_t {
     double delta_entropy;
     bool did_move;

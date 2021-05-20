@@ -72,6 +72,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
+    std::cout << "Total MCMC iterations: " << finetune::num_iterations << std::endl;
     return blockmodel;
 }
 

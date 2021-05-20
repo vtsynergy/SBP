@@ -16,6 +16,8 @@
 #include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
 
+// TODO: move everything that uses `blockmodel` to one of the Blockmodel classes
+
 namespace common {
 
 static std::random_device seeder;
@@ -87,6 +89,9 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
                                         bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
+
+/// Returns a random integer between low and high
+int random_integer(int low, int high);
 
 namespace directed {
 
