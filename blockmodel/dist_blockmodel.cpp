@@ -330,7 +330,7 @@ void TwoHopBlockmodel::distribute_2hop_size_balanced(const NeighborList &neighbo
 void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
     // Step 1: decide which blocks to own
     this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-    std::cout << "my vertices size: " << this->_my_vertices.size() << " neighbors size: " << neighbors.size() << std::endl;
+    // std::cout << "my vertices size: " << this->_my_vertices.size() << " neighbors size: " << neighbors.size() << std::endl;
     if (this->_my_vertices.size() == neighbors.size()) {  // if already done sampling, no need to do it again
         std::cout << "already done sampling, now just re-assigning blocks based on sampled vertices" << std::endl;
         for (int vertex = 0; vertex < neighbors.size(); ++vertex) {
@@ -389,12 +389,12 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
         // to this process.
         std::vector<int> global_selected(neighbors.size(), 0);
         MPI_Allreduce(this->_my_vertices.data(), global_selected.data(), neighbors.size(), MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        if (mpi.rank == 0) {
-            std::cout << "my selected: " << std::boolalpha;
-            utils::print<int>(this->_my_vertices);
-            std::cout << "globally selected: ";
-            utils::print<int>(global_selected);
-        }
+        // if (mpi.rank == 0) {
+            // std::cout << "my selected: " << std::boolalpha;
+            // utils::print<int>(this->_my_vertices);
+            // std::cout << "globally selected: ";
+            // utils::print<int>(global_selected);
+        // }
         std::vector<int> vertices_left;
         for (int vertex = 0; vertex < global_selected.size(); ++vertex) {
             if (global_selected[vertex] == 0) {
@@ -466,7 +466,7 @@ double TwoHopBlockmodel::log_posterior_probability() const {
                 my_blocks[block] = mpi.rank;
         }
         MPI_Allreduce(MPI_IN_PLACE, my_blocks.data(), this->num_blocks, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        utils::print<int>(my_blocks);
+        // utils::print<int>(my_blocks);
     }
     Indices nonzero_indices = this->_blockmatrix->nonzero();
     std::vector<double> all_values = utils::to_double<int>(this->_blockmatrix->values());

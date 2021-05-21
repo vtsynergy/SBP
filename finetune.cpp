@@ -686,7 +686,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                                         //   blockmodel.getBlock_reduction_rate(), block_assignment);
             vertex_moves += batch_vertex_moves;
         }
-        std::cout << "rank: " << mpi.rank << " is responsible for " << my_vertices << " vertices" << std::endl;
+        // std::cout << "rank: " << mpi.rank << " is responsible for " << my_vertices << " vertices" << std::endl;
         new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         delta_entropies.push_back(delta_entropy);
