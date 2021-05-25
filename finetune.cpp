@@ -4,10 +4,15 @@
 #include "mpi_data.hpp"
 
 #include "assert.h"
+#include <fstream>
+#include <iostream>
+
+#define MPI_WTIME_IS_GLOBAL true
 
 namespace finetune {
 
 int num_iterations = 0;
+std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
@@ -613,6 +618,9 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 namespace dist {
 
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
+    if (mpi.rank == 0) {
+        my_file.open("iterations.out", std::ios::out | std::ios::app);
+    }
     // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
@@ -630,7 +638,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     blockmodel.setOverall_entropy(old_entropy);
     double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
-
+    double t0 = MPI_Wtime();
+    double t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         num_iterations++;
         int vertex_moves = 0;
@@ -697,13 +706,24 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
+            t1 = MPI_Wtime();
+            if (mpi.rank == 0) {
+                my_file << t1 - t0 << std::endl;
+            }
+            t0 = t1;
             break;
         }
+        t1 = MPI_Wtime();
+        if (mpi.rank == 0) {
+            my_file << t1 - t0 << std::endl;
+        }
+        t0 = t1;
     }
     blockmodel.setOverall_entropy(new_entropy);
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
+    my_file.close();
     // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
     return blockmodel;
 }
