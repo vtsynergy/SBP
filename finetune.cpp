@@ -618,9 +618,9 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 namespace dist {
 
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
-    if (mpi.rank == 0) {
-        my_file.open("iterations.out", std::ios::out | std::ios::app);
-    }
+    // if (mpi.rank == 0) {
+    my_file.open("iterations.csv", std::ios::out | std::ios::app);
+    // }
     // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
@@ -650,6 +650,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         std::vector<int> block_assignment(blockmodel.block_assignment());
         int my_vertices = 0;
         for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
+            t0 = MPI_Wtime();
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
@@ -674,6 +675,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int num_moves = membership_updates.size();
             // MPI COMMUNICATION
             int rank_moves[mpi.num_processes];
+            t1 = MPI_Wtime();
+            my_file << mpi.rank << "," << num_iterations << "," << t1 - t0 << std::endl;
             MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
             int offsets[mpi.num_processes];
             offsets[0] = 0;
@@ -706,18 +709,18 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
-            t1 = MPI_Wtime();
-            if (mpi.rank == 0) {
-                my_file << t1 - t0 << std::endl;
-            }
-            t0 = t1;
+            // t1 = MPI_Wtime();
+            // if (mpi.rank == 0) {
+            //     my_file << t1 - t0 << std::endl;
+            // }
+            // t0 = t1;
             break;
         }
-        t1 = MPI_Wtime();
-        if (mpi.rank == 0) {
-            my_file << t1 - t0 << std::endl;
-        }
-        t0 = t1;
+        // t1 = MPI_Wtime();
+        // if (mpi.rank == 0) {
+        //     my_file << t1 - t0 << std::endl;
+        // }
+        // t0 = t1;
     }
     blockmodel.setOverall_entropy(new_entropy);
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
