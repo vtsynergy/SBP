@@ -619,7 +619,7 @@ namespace dist {
 
 TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     // std::cout << "running distributed metropolis hastings yo!" << std::endl;
-    my_file.open("iterations_mh.csv", std::ios::out | std::ios::app);
+    my_file.open(args.csv, std::ios::out | std::ios::app);
     // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
@@ -707,7 +707,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     // if (mpi.rank == 0) {
-    my_file.open("iterations_async.csv", std::ios::out | std::ios::app);
+    my_file.open(args.csv, std::ios::out | std::ios::app);
     // }
     // MPI Datatype init
     MPI_Datatype Membership_t;
