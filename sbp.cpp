@@ -69,7 +69,10 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         }
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
         if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
-        blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
+        if (args.algorithm == "async_gibbs")
+            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
+        else
+            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     std::cout << "Total MCMC iterations: " << finetune::num_iterations << std::endl;
