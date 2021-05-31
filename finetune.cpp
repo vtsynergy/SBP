@@ -752,12 +752,15 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                 if (!blockmodel.owns_compute(block))
                 // if (!(block % mpi.num_processes == mpi.rank))
                     continue;
-                my_vertices++;
+                // my_vertices++;
                 VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                 // std::cout << "proposal.proposed_block: " << proposal.proposed_block << " size: " << blockmodel.in_two_hop_radius().size() << std::endl;
                     assert(blockmodel.owns(proposal.proposed_block));
+                    #pragma omp critical (updates)
+                    {
                     membership_updates.push_back(Membership { vertex, proposal.proposed_block });
+                    }
                 }
             }
             int num_moves = membership_updates.size();
