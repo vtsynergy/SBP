@@ -305,21 +305,35 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     // MPI Datatype init
     int num_blocks = blockmodel.getNum_blocks();
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
-    int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
-    std::vector<Merge> best_merges(my_blocks);
+    // int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
+    std::vector<Merge> merge_buffer(num_blocks);
     int num_avoided = 0;  // number of avoided/skipped calculations
+    // int index = 0;
+    int my_blocks = 0;
     #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
-    for (int current_block = mpi.rank; current_block < num_blocks; current_block += mpi.num_processes) {
-        int index = current_block / mpi.num_processes;
+    for (int current_block = 0; current_block < num_blocks; ++current_block) {
+    // for (int current_block = mpi.rank; current_block < num_blocks; current_block += mpi.num_processes) {
+        if (blockmodel.owns_compute(current_block) == false) continue;
+        #pragma omp atomic update
+        my_blocks++;
         std::unordered_map<int, bool> past_proposals;
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, block_assignment,
                                                                past_proposals);
-            if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
-            if (proposal.delta_entropy < best_merges[index].delta_entropy) {
-                best_merges[index] = Merge { current_block, proposal.proposed_block, proposal.delta_entropy };
+            // TODO: find a way to do this without having a large merge buffer. Maybe store list of my blocks in
+            // TwoHopBlockmodel?
+            if (proposal.delta_entropy < merge_buffer[current_block].delta_entropy) {
+                merge_buffer[current_block] = Merge { current_block, proposal.proposed_block, proposal.delta_entropy };
             }
         }
+    }
+    // Get list of best merges
+    std::vector<Merge> best_merges(my_blocks);
+    int index = 0;
+    for (const Merge & merge : merge_buffer) {
+        if (merge.block == -1) continue;
+        best_merges[index] = merge;
+        index++;
     }
     // MPI COMMUNICATION
     int numblocks[mpi.num_processes];
@@ -330,6 +344,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
         offsets[i] = offsets[i-1] + numblocks[i-1];
     }
     int total_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
+    // TODO: change the size of this to total_blocks? Otherwise when there is overlapping computation there may be a segfault
     std::vector<Merge> all_best_merges(num_blocks);
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
                    Merge_t, MPI_COMM_WORLD);
@@ -340,8 +355,6 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
         best_merge_for_each_block[m.block] = m.proposal;
         delta_entropy_for_each_block[m.block] = m.delta_entropy;
     }
-    // std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons." << std::endl;
-    // if (args.approximate)
     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     // else
         // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);

@@ -213,7 +213,7 @@ class TwoHopBlockmodel : public Blockmodel {
     double log_posterior_probability() const;
     /// Returns true if this blockmodel owns storage for the requested block.
     bool owns(int block) const;
-    /// Returns true if this blockmodel owns the computer for the requested block.
+    /// Returns true if this blockmodel owns the compute for the requested block.
     bool owns_compute(int block) const;
     /// Distributes the blockmodel amongst MPI ranks. Needs to be called before the first call to
     /// initialize_edge_counts, since it sets the _in_two_hop_radius and _my_blocks vectors. After that, it only needs
