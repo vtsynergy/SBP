@@ -307,10 +307,10 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     // int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
     std::vector<Merge> merge_buffer(num_blocks);
-    int num_avoided = 0;  // number of avoided/skipped calculations
+    // int num_avoided = 0;  // number of avoided/skipped calculations
     // int index = 0;
     int my_blocks = 0;
-    #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided)
+    #pragma omp parallel for schedule(dynamic)  // reduction( + : num_avoided)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
     // for (int current_block = mpi.rank; current_block < num_blocks; current_block += mpi.num_processes) {
         if (blockmodel.owns_compute(current_block) == false) continue;
