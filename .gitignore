@@ -132,3 +132,6 @@ vtune*
 # output files
 main
 *.o
+*.out
+*.csv
+*.xlsx
