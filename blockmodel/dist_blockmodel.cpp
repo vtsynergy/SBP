@@ -140,7 +140,7 @@ void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const
             int weight = 1;
             // int weight = vertex_neighbors[i];
             // Update blockmodel
-            if (this->_blockmatrix->owns(block))
+            if (this->_blockmatrix->stores(block))
                 this->_blockmatrix->add(block, neighbor_block, weight);
             // Update degrees
             this->_degrees_out[block] += weight;
@@ -500,12 +500,16 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     return final_sum;
 }
 
-bool TwoHopBlockmodel::owns(int block) const {
-    return this->_in_two_hop_radius[block];
+bool TwoHopBlockmodel::owns_block(int block) const {
+    return this->_my_blocks[block];
 }
 
-bool TwoHopBlockmodel::owns_compute(int block) const {
-    return this->_my_blocks[block];
+bool TwoHopBlockmodel::owns_vertex(int vertex) const {
+    if (args.distribute == "2hop-snowball") {
+        return this->_my_vertices[vertex];
+    }
+    int block = this->_block_assignment[vertex];
+    return this->owns_block(block);
 }
 
 std::vector<std::pair<int,int>> TwoHopBlockmodel::sorted_block_sizes() const {
@@ -519,4 +523,8 @@ std::vector<std::pair<int,int>> TwoHopBlockmodel::sorted_block_sizes() const {
     std::sort(block_sizes.begin(), block_sizes.end(),
               [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
     return block_sizes;
+}
+
+bool TwoHopBlockmodel::stores(int block) const {
+    return this->_in_two_hop_radius[block];
 }

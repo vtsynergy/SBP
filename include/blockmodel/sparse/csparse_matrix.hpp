@@ -108,7 +108,7 @@ public:
     // IDistSparseMatrix() {}
     virtual ~IDistSparseMatrix() {}
     /// Returns true if this process owns this block.
-    virtual bool owns(int block) const = 0;
+    virtual bool stores(int block) const = 0;
     /// Returns a copy of this distributed matrix.
     virtual IDistSparseMatrix* copyDistSparseMatrix() const = 0;
 

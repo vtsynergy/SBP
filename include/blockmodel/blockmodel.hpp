@@ -103,7 +103,7 @@ class Blockmodel {
     /// Returns the block assignment for `vertex`.
     int block_assignment(int vertex) const { return this->_block_assignment[vertex]; }
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
-    bool owns(int block) const { return true; }
+    bool stores(int block) const { return true; }
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(int vertex, int block) { this->_block_assignment[vertex] = block; }
     void set_block_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }

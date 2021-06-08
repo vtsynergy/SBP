@@ -54,7 +54,7 @@ class DistDictMatrix : public IDistSparseMatrix {
     virtual Indices nonzero() const override;
     virtual EdgeWeights outgoing_edges(int block) const override;
     // Returns True if this rank owns this block.
-    virtual bool owns(int block) const override;
+    virtual bool stores(int block) const override;
     /// Sets the values in a row equal to the input vector
     virtual void setrow(int row, const MapVector<int> &vector) override;
     /// Sets the values in a column equal to the input vector

@@ -647,14 +647,11 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         num_iterations++;
         int vertex_moves = 0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            int block = blockmodel.block_assignment(vertex);
-            if (!blockmodel.owns_compute(block))
-                continue;
+            if (blockmodel.owns_vertex(vertex) == false) continue;
             VertexMove proposal = dist::propose_mh_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
-                // delta_entropy += proposal.delta_entropy;
-                assert(blockmodel.owns(proposal.proposed_block));
+                assert(blockmodel.stores(proposal.proposed_block));
                 membership_updates.push_back(Membership { vertex, proposal.proposed_block });
             }
         }
@@ -697,7 +694,6 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         }
     }
     blockmodel.setOverall_entropy(new_entropy);
-    // blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
@@ -706,10 +702,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 }
 
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
-    // if (mpi.rank == 0) {
     my_file.open(args.csv, std::ios::out | std::ios::app);
-    // }
-    // MPI Datatype init
     MPI_Datatype Membership_t;
     int membership_blocklengths[2] = { 1, 1 };
     MPI_Aint membership_displacements[2] = { 0, sizeof(int) };
@@ -743,20 +736,13 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
             #pragma omp parallel for schedule(dynamic)
-            // for (int vertex = start + mpi.rank; vertex < end; vertex += mpi.num_processes) {
-            // for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
             for (int vertex = 0; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
                 // TODO: batch by % of my vertices? Can be calculated same time as load balancing
-                int block = blockmodel.block_assignment(vertex);
-                if (!blockmodel.owns_compute(block))
-                // if (!(block % mpi.num_processes == mpi.rank))
-                    continue;
-                // my_vertices++;
+                if (blockmodel.owns_vertex(vertex) == false) continue;
                 VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
-                // std::cout << "proposal.proposed_block: " << proposal.proposed_block << " size: " << blockmodel.in_two_hop_radius().size() << std::endl;
-                    assert(blockmodel.owns(proposal.proposed_block));
+                    assert(blockmodel.stores(proposal.proposed_block));
                     #pragma omp critical (updates)
                     {
                     membership_updates.push_back(Membership { vertex, proposal.proposed_block });
@@ -785,11 +771,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             blockmodel.set_block_assignment(block_assignment);
             blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
             blockmodel.initialize_edge_counts(graph.out_neighbors());
-            // blockmodel = TwoHopBlockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
-                                        //   blockmodel.getBlock_reduction_rate(), block_assignment);
             vertex_moves += batch_vertex_moves;
         }
-        // std::cout << "rank: " << mpi.rank << " is responsible for " << my_vertices << " vertices" << std::endl;
         new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
@@ -801,18 +784,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         total_vertex_moves += vertex_moves;
         // Early stopping
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
-            // t1 = MPI_Wtime();
-            // if (mpi.rank == 0) {
-            //     my_file << t1 - t0 << std::endl;
-            // }
-            // t0 = t1;
             break;
         }
-        // t1 = MPI_Wtime();
-        // if (mpi.rank == 0) {
-        //     my_file << t1 - t0 << std::endl;
-        // }
-        // t0 = t1;
     }
     blockmodel.setOverall_entropy(new_entropy);
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
@@ -858,7 +831,7 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, co
 
     common::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
         current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
-    if (!blockmodel.owns(proposal.proposal)) {
+    if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
     }
@@ -900,7 +873,7 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
 
     common::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
         current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
-    if (!blockmodel.owns(proposal.proposal)) {
+    if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
     }

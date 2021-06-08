@@ -345,7 +345,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         std::vector<int> weights = utils::to_int<bool>(blockmodel.in_two_hop_radius());
         int proposal = choose_neighbor(blocks, weights);
         // int proposal = propose_random_block(current_block, num_blocks);  // TODO: only propose blocks in 2 hop radius
-        assert(blockmodel.owns(proposal));
+        assert(blockmodel.stores(proposal));
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor_block;
@@ -355,7 +355,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         int neighbor = choose_neighbor(neighbor_indices, neighbor_weights);
         neighbor_block = block_assignment[neighbor];
     }
-    assert(blockmodel.owns(neighbor_block));
+    assert(blockmodel.stores(neighbor_block));
 
     // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
@@ -363,7 +363,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         std::vector<int> weights = utils::to_int<bool>(blockmodel.in_two_hop_radius());
         int proposal = choose_neighbor(blocks, weights);
         // int proposal = propose_random_block(current_block, num_blocks);
-        assert(blockmodel.owns(proposal));
+        assert(blockmodel.stores(proposal));
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
 
@@ -380,7 +380,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         total_edges = utils::sum<double, int>(edges);
         if (total_edges == 0.0) { // Neighbor block has no neighbors, so propose a random block
             int proposal = propose_random_block(current_block, num_blocks);
-            assert(blockmodel.owns(proposal));
+            assert(blockmodel.stores(proposal));
             return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
         }
     } else {
@@ -390,7 +390,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     SparseVector<double> multinomial_distribution;
     utils::div(edges, total_edges, multinomial_distribution);
     int proposal = choose_neighbor(multinomial_distribution);
-    assert(blockmodel.owns(proposal));
+    assert(blockmodel.stores(proposal));
     return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 

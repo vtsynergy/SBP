@@ -207,18 +207,20 @@ class TwoHopBlockmodel : public Blockmodel {
     /// Sets the _in_two_hop_radius for a 2-hop blockmodel.
     void build_two_hop_blockmodel(const NeighborList &neighbors);
     TwoHopBlockmodel copy();
-    /// Returns the _in_two_hop_radius vector.
-    const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
-    void initialize_edge_counts(const NeighborList &neighbors);
-    double log_posterior_probability() const;
-    /// Returns true if this blockmodel owns storage for the requested block.
-    bool owns(int block) const;
-    /// Returns true if this blockmodel owns the compute for the requested block.
-    bool owns_compute(int block) const;
     /// Distributes the blockmodel amongst MPI ranks. Needs to be called before the first call to
     /// initialize_edge_counts, since it sets the _in_two_hop_radius and _my_blocks vectors. After that, it only needs
     /// to be called to re-distribute the blockmodel (followed by initialize_edge_counts).
     void distribute(const NeighborList &neighbors);
+    /// Returns the _in_two_hop_radius vector.
+    const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
+    void initialize_edge_counts(const NeighborList &neighbors);
+    double log_posterior_probability() const;
+    /// Returns true if this blockmodel owns the compute for the requested block.
+    bool owns_block(int block) const;
+    /// Returns true if this blockmodel owns the compute for the requested vertex.
+    bool owns_vertex(int vertex) const;
+    /// Returns true if this blockmodel owns storage for the requested block.
+    bool stores(int block) const;
   private:
     // ===== Functions
     /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.

@@ -88,7 +88,7 @@ void DistDictMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
 std::vector<int> DistDictMatrix::getrow(int row) const {
     throw "Dense getrow used!";
     check_row_bounds(row);
-    if (this->owns(row)) {
+    if (this->stores(row)) {
         std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
         const MapVector<int> &matrix_row = this->_matrix[row];
         for (const std::pair<int, int> element : matrix_row) {
@@ -121,7 +121,7 @@ MapVector<int> DistDictMatrix::getrow_sparse(int row) const {
 
 void DistDictMatrix::getrow_sparse(int row, MapVector<int> &row_vector) const {
     check_row_bounds(row);
-    if (this->owns(row)) {
+    if (this->stores(row)) {
         row_vector = this->_matrix[row];
         return;
     }
@@ -193,7 +193,7 @@ EdgeWeights DistDictMatrix::outgoing_edges(int block) const {
     return EdgeWeights {indices, values};
 }
 
-bool DistDictMatrix::owns(int block) const {
+bool DistDictMatrix::stores(int block) const {
     return this->_ownership[block] == mpi.rank;
 }
 

@@ -313,7 +313,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     #pragma omp parallel for schedule(dynamic)  // reduction( + : num_avoided)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
     // for (int current_block = mpi.rank; current_block < num_blocks; current_block += mpi.num_processes) {
-        if (blockmodel.owns_compute(current_block) == false) continue;
+        if (blockmodel.owns_block(current_block) == false) continue;
         #pragma omp atomic update
         my_blocks++;
         std::unordered_map<int, bool> past_proposals;
