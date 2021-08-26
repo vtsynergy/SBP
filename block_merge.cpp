@@ -7,6 +7,32 @@
 
 namespace block_merge {
 
+PairIndexVector blockmodel_delta(int current_block, int proposal_block, const Blockmodel &blockmodel) {
+    PairIndexVector delta;
+    for (const std::pair<int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+        int col = entry.first;  // row = current_block
+        int value = entry.second;
+        if (col == current_block || col == proposal_block) {  // entry = current_block, current_block
+            delta[std::make_pair(proposal_block, proposal_block)] += value;
+        } else {
+            delta[std::make_pair(proposal_block, col)] += value;
+        }
+        delta[std::make_pair(current_block, col)] -= value;
+    }
+    for (const std::pair<int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+        int row = entry.first;  // col = current_block
+        if (row == current_block) continue;  // already handled above
+        int value = entry.second;
+        if (row == proposal_block) {  // entry = current_block, current_block
+            delta[std::make_pair(proposal_block, proposal_block)] += value;
+        } else {
+            delta[std::make_pair(row, proposal_block)] += value;
+        }
+        delta[std::make_pair(row, current_block)] -= value;
+    }
+    return delta;
+}
+
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
                                     const std::vector<int> &best_merge_for_each_block, int num_edges) {
     // The following code is modeled after the `merge_sweep` function in
@@ -165,6 +191,44 @@ double compute_delta_entropy_sparse(int current_block, int proposal, int num_edg
     return delta_entropy;
 }
 
+double compute_delta_entropy_sparse(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+                                    const PairIndexVector delta, common::NewBlockDegrees &block_degrees) {
+    // Blockmodel indexing
+    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    double delta_entropy = 0.0;
+    for (const std::pair<std::pair<int, int>, int> &cell_delta : delta) {
+        int row = cell_delta.first.first;
+        int col = cell_delta.first.second;
+        int change = cell_delta.second;
+        // delta += + E(old) - E(new)
+        delta_entropy += common::cell_entropy(matrix->get(row, col), blockmodel.getBlock_degrees_in()[col], blockmodel.getBlock_degrees_out()[row]);
+        if (row == current_block || col == current_block) continue;  // the "new" cell entropy == 0;
+        delta_entropy -= common::cell_entropy(matrix->get(row, col) + change, block_degrees.block_degrees_in[col], block_degrees.block_degrees_out[row]);
+    }
+    // const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
+    // const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
+    // const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
+    // const MapVector<int> &old_proposal_col = matrix->getcol_sparse(proposal);   // M_t2_s
+
+    // double delta_entropy = 0.0;
+    // delta_entropy -= common::delta_entropy_temp(updates.proposal_row, block_degrees.block_degrees_in,
+    //                                             block_degrees.block_degrees_out[proposal], num_edges);
+    // delta_entropy -= common::delta_entropy_temp(updates.proposal_col, block_degrees.block_degrees_out,
+    //                                             block_degrees.block_degrees_in[proposal], current_block, proposal,
+    //                                             num_edges);
+    // delta_entropy += common::delta_entropy_temp(old_block_row, blockmodel.getBlock_degrees_in(),
+    //                                             blockmodel.getBlock_degrees_out()[current_block], num_edges);
+    // delta_entropy += common::delta_entropy_temp(old_proposal_row, blockmodel.getBlock_degrees_in(),
+    //                                             blockmodel.getBlock_degrees_out()[proposal], num_edges);
+    // delta_entropy += common::delta_entropy_temp(old_block_col, blockmodel.getBlock_degrees_out(),
+    //                                             blockmodel.getBlock_degrees_in()[current_block], current_block,
+    //                                             proposal, num_edges);
+    // delta_entropy += common::delta_entropy_temp(old_proposal_col, blockmodel.getBlock_degrees_out(),
+    //                                             blockmodel.getBlock_degrees_in()[proposal], current_block, proposal,
+    //                                             num_edges);
+    return delta_entropy;
+}
+
 EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
@@ -281,13 +345,18 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
         common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
     if (past_proposals[proposal.proposal] == true)
         return ProposalEvaluation{ proposal.proposal, std::numeric_limits<double>::max() };
-    SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
-                              updates);
+    PairIndexVector delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
+    // SparseEdgeCountUpdates updates;
+    // edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
+    //                           updates);
+    // Note: if it becomes an issue, figuring out degrees on the fly could save some RAM. The
+    // only ones that change are the degrees for current_block and proposal anyway...
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(current_block, blockmodel, proposal);
-    double delta_entropy =
-        compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, updates,
-                                     new_block_degrees);
+    double delta_entropy = compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, delta,
+                                                        new_block_degrees);
+    // double delta_entropy =
+    //     compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, updates,
+    //                                  new_block_degrees);
     past_proposals[proposal.proposal] = true;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
@@ -306,6 +375,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     int num_blocks = blockmodel.getNum_blocks();
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     // int my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
+    // merge_buffer stores best Merges as if all blocks are owned by this MPI rank. Used to avoid locks
     std::vector<Merge> merge_buffer(num_blocks);
     // int num_avoided = 0;  // number of avoided/skipped calculations
     // int index = 0;
@@ -320,6 +390,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, block_assignment,
                                                                past_proposals);
+            // std::cout << "proposal = " << proposal.proposed_block << " with DE " << proposal.delta_entropy << std::endl;
             // TODO: find a way to do this without having a large merge buffer. Maybe store list of my blocks in
             // TwoHopBlockmodel?
             if (proposal.delta_entropy < merge_buffer[current_block].delta_entropy) {
@@ -327,14 +398,17 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
             }
         }
     }
-    // Get list of best merges
+    // Get list of best merges owned by this MPI rank. Used in Allgatherv.
     std::vector<Merge> best_merges(my_blocks);
     int index = 0;
+    // std::cout << "size of merge buffer: " << merge_buffer.size() << std::endl;
     for (const Merge & merge : merge_buffer) {
         if (merge.block == -1) continue;
+        // std::cout << "Merge : block " << merge.block << " proposal " << merge.proposal << " dE " << merge.delta_entropy << std::endl;
         best_merges[index] = merge;
         index++;
     }
+    // std::cout << "best merges size: " << best_merges.size() << " index = " << index << std::endl;
     // MPI COMMUNICATION
     int numblocks[mpi.num_processes];
     MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
@@ -345,16 +419,28 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     }
     int total_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
     // TODO: change the size of this to total_blocks? Otherwise when there is overlapping computation there may be a segfault
-    std::vector<Merge> all_best_merges(num_blocks);
+    std::vector<Merge> all_best_merges(total_blocks);
+    std::cout << mpi.rank << " best merges size: " << best_merges.size() << std::endl;
+    std::cout << mpi.rank << " my blocks number: " << my_blocks << std::endl;
+    std::cout << mpi.rank << " all best merges size: " << all_best_merges.size() << std::endl;
+    std::cout << mpi.rank << " numblocks: ";
+    utils::print<int>(numblocks);
+    std::cout << mpi.rank << " offsets: ";
+    utils::print<int>(offsets);
+    std::cout << "strategy == " << args.distribute << std::endl;
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
                    Merge_t, MPI_COMM_WORLD);
     // END MPI COMMUNICATION
     std::vector<int> best_merge_for_each_block = utils::constant<int>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block = utils::constant<double>(num_blocks, -1);
+    // TODO: use a more intelligent way to assign these when there is overlap?
     for (const Merge& m : all_best_merges) {
+        // std::cout << "block: " << m.block << " proposal: " << m.proposal << " dE: " << m.delta_entropy << std::endl;
         best_merge_for_each_block[m.block] = m.proposal;
         delta_entropy_for_each_block[m.block] = m.delta_entropy;
     }
+    // std::cout << mpi.rank << " best merges";
+    // utils::print<int>(best_merge_for_each_block);
     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     // else
         // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);

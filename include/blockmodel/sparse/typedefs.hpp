@@ -7,6 +7,13 @@
 #include <unordered_map>
 #include <vector>
 
+/// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
+struct IntPairHash {
+    size_t operator() (const std::pair<int, int> &pair) const {
+        return std::hash<long long>() (((long long) pair.first) ^ (((long long) pair.second) << 32));
+    }
+};
+
 typedef std::vector<std::vector<int>> NeighborList;
 
 template <typename T>
@@ -44,6 +51,8 @@ struct Membership {
     int vertex = -1;
     int block = -1;
 };
+
+typedef std::unordered_map<std::pair<int, int>, int, IntPairHash> PairIndexVector;
 
 // template<class T>
 // using SparseVector = std::vector
