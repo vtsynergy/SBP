@@ -146,6 +146,46 @@ template <typename T> inline int argmax(const std::vector<T> &vector) {
     return max_index;
 }
 
+/// Prints an array
+template <typename T> inline void print(const T vector[]) {
+    size_t vector_bytes = sizeof(vector);
+    if (vector_bytes == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    size_t elem_bytes = sizeof(vector[0]);
+    int vector_size = vector_bytes / elem_bytes;
+    std::cout << "[" << vector[0] << ", ";
+    for (int nprinted = 1; nprinted < vector_size - 1; nprinted++) {
+        if (nprinted % 25 == 0) {
+            std::cout << std::endl << " ";
+        }
+        std::cout << vector[nprinted] << ", ";
+    }
+    std::cout << vector[vector_size - 1] << "]" << std::endl;
+}
+
+/// Prints a sparse vector
+template <typename T> inline void print(const MapVector<T> vector) {
+    if (vector.size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    int i = 0;
+    for (const std::pair<int, T> &element : vector) {
+        if (i == 0) {
+            std::cout << "[" << element.first << ": " << element.second << ", ";
+        } else {
+            std::cout << element.first << ": " << element.second << ", ";
+        }
+        i += 1;
+        if (i % 25 == 0) {
+            std::cout << std::endl << " ";
+        }
+    }
+    std::cout << " ]" << std::endl;
+}
+
 /// Prints a vector
 template <typename T> inline void print(const std::vector<T> &vector) {
     if (vector.size() == 0) {
