@@ -18,6 +18,21 @@
 typedef struct edge_weights_t {
     std::vector<int> indices;
     std::vector<int> values;
+
+    void print() {
+        if (this->indices.size() == 0) {
+            std::cout << "[]" << std::endl;
+            return;
+        }
+        std::cout << "[" << this->indices[0] << ": " << this->values[0] << ", ";
+        for (int nprinted = 1; nprinted < this->indices.size() - 1; nprinted++) {
+            if (nprinted % 25 == 0) {
+                std::cout << std::endl << " ";
+            }
+            std::cout << this->indices[nprinted] << ": " << this->values[nprinted] << ", ";
+        }
+        std::cout << this->indices[this->indices.size() - 1] << ": " << this->values[this->indices.size() - 1] << "]" << std::endl;
+    }
     // void print() {
     //     std::cout << "indices: " << Eigen::Map<Vector>(this->indices.data(), this->indices.size()).transpose();
     //     std::cout << " with size: " << this->indices.size() << std::endl;
