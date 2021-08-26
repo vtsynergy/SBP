@@ -207,6 +207,15 @@ void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
         this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
         return;
     }
+    if (args.distribute == "2hop-snowball") {
+        this->_my_blocks = std::vector<bool>(this->num_blocks, false);
+        for (int v = 0; v < neighbors.size(); ++v) {
+            if (this->owns_vertex(v)) {
+                int b = this->block_assignment(v);
+                this->_my_blocks[b] = true;
+            }
+        }
+    }
     // I think there will be a missing block in mcmc phase vertex->neighbor->block->neighbor_block
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
@@ -404,13 +413,13 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
         // assign remaining vertices in round-robin fashion
         for (int i = mpi.rank; i < vertices_left.size(); i += mpi.num_processes) {
             int vertex = vertices_left[i];
-            this->_my_vertices[vertex] == 1;
+            this->_my_vertices[vertex] = 1;
             block = this->_block_assignment[vertex];
             this->_my_blocks[block] = true;
         }
     }
     // Step 2: find out which blocks are in the 2-hop radius of my blocks
-    build_two_hop_blockmodel(neighbors);
+    this->build_two_hop_blockmodel(neighbors);
 }
 
 void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
