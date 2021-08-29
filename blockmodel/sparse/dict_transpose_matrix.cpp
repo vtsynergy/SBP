@@ -283,6 +283,20 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
     }
 }
 
+void DictTransposeMatrix::update_edge_counts(const PairIndexVector &delta) {
+    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
+        int row = entry.first.first;
+        int col = entry.first.second;
+        int change = entry.second;
+        this->matrix[row][col] += change;
+        this->matrix_transpose[col][row] += change;
+        if (this->matrix[row][col] == 0) {
+            this->matrix[row].erase(col);
+            this->matrix_transpose[col].erase(row);
+        }
+    }
+}
+
 std::vector<int> DictTransposeMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;

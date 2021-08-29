@@ -13,12 +13,11 @@
 // #include <Eigen/Core>
 
 /**
- * C++ interface of the dictionary (map of maps) sparse matrix
+ * The basic list-of-maps sparse matrix.
  */
-// class DictMatrix : public CSparseMatrix {
 class DictMatrix : public ISparseMatrix {
   public:
-    DictMatrix() {}
+    DictMatrix() = default;
     DictMatrix(int nrows, int ncols) {  // : ncols(ncols), nrows(nrows) {
         this->ncols = ncols;
         this->nrows = nrows;
@@ -28,37 +27,38 @@ class DictMatrix : public ISparseMatrix {
         // int shape_array[2] = {this->nrows, this->ncols};
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
-    virtual void add(int row, int col, int val) override;
+    void add(int row, int col, int val) override;
     // virtual void add(int row, std::vector<int> cols, std::vector<int> values) override;
-    virtual void clearrow(int row) override;
-    virtual void clearcol(int col) override;
-    virtual ISparseMatrix* copy() const override;
-    virtual int get(int row, int col) const override;
-    virtual std::vector<int> getcol(int col) const override;
-    virtual MapVector<int> getcol_sparse(int col) const override;
-    virtual void getcol_sparse(int col, MapVector<int> &col_vector) const override;
+    void clearrow(int row) override;
+    void clearcol(int col) override;
+    ISparseMatrix* copy() const override;
+    int get(int row, int col) const override;
+    std::vector<int> getcol(int col) const override;
+    MapVector<int> getcol_sparse(int col) const override;
+    void getcol_sparse(int col, MapVector<int> &col_vector) const override;
     // virtual MapVector<int> getcol_sparse(int col) override;
     // virtual const MapVector<int>& getcol_sparse(int col) const override;
-    virtual std::vector<int> getrow(int row) const override;
-    virtual MapVector<int> getrow_sparse(int row) const override;
-    virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
+    std::vector<int> getrow(int row) const override;
+    MapVector<int> getrow_sparse(int row) const override;
+    void getrow_sparse(int row, MapVector<int> &row_vector) const override;
     // virtual MapVector<int> getrow_sparse(int row) override;
     // virtual const MapVector<int>& getrow_sparse(int row) const override;
-    virtual EdgeWeights incoming_edges(int block) const override;
-    virtual Indices nonzero() const override;
-    virtual EdgeWeights outgoing_edges(int block) const override;
+    EdgeWeights incoming_edges(int block) const override;
+    Indices nonzero() const override;
+    EdgeWeights outgoing_edges(int block) const override;
     /// Sets the values in a row equal to the input vector
-    virtual void setrow(int row, const MapVector<int> &vector) override;
+    void setrow(int row, const MapVector<int> &vector) override;
     /// Sets the values in a column equal to the input vector
-    virtual void setcol(int col, const MapVector<int> &vector) override;
-    virtual void sub(int row, int col, int val) override;
-    virtual int edges() const override;
-    virtual std::vector<int> sum(int axis = 0) const override;
-    virtual int trace() const override;
-    virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
+    void setcol(int col, const MapVector<int> &vector) override;
+    void sub(int row, int col, int val) override;
+    int edges() const override;
+    std::vector<int> sum(int axis) const override;
+    int trace() const override;
+    void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
-    virtual std::vector<int> values() const override;
+    void update_edge_counts(const PairIndexVector &delta) override;
+    std::vector<int> values() const override;
 
   private:
     // void check_row_bounds(int row);

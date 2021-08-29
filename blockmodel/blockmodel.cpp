@@ -47,7 +47,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
                     block_map[i] = merge_to;
                 }
             }
-            this->merge_blocks(merge_from, merge_to);
+            this->update_block_assignment(merge_from, merge_to);
             num_merged++;
         }
     }
@@ -200,7 +200,7 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
     return log_posterior_probability();
 }
 
-void Blockmodel::merge_blocks(int from_block, int to_block) {
+void Blockmodel::update_block_assignment(int from_block, int to_block) {
     for (int index = 0; index < this->_block_assignment.size(); ++index) {
         if (this->_block_assignment[index] == from_block) {
             this->_block_assignment[index] = to_block;

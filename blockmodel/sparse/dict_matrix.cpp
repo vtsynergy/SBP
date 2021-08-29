@@ -281,6 +281,17 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::
     }
 }
 
+void DictMatrix::update_edge_counts(const PairIndexVector &delta) {
+    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
+        int row = entry.first.first;
+        int col = entry.first.second;
+        int change = entry.second;
+        this->matrix[row][col] += change;
+        if (this->matrix[row][col] == 0)
+            this->matrix[row].erase(col);
+    }
+}
+
 std::vector<int> DictMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;

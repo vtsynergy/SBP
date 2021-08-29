@@ -87,7 +87,7 @@ class Blockmodel {
     /// TODO
     double log_posterior_probability(int num_edges) const;
     /// TODO
-    void merge_blocks(int from_block, int to_block);
+    void update_block_assignment(int from_block, int to_block);
     /// TODO
     void move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,

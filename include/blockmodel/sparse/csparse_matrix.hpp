@@ -20,25 +20,19 @@ typedef struct edge_weights_t {
     std::vector<int> values;
 
     void print() {
-        if (this->indices.size() == 0) {
+        if (this->indices.empty()) {
             std::cout << "[]" << std::endl;
             return;
         }
         std::cout << "[" << this->indices[0] << ": " << this->values[0] << ", ";
-        for (int nprinted = 1; nprinted < this->indices.size() - 1; nprinted++) {
-            if (nprinted % 25 == 0) {
+        for (int num_printed = 1; num_printed < this->indices.size() - 1; num_printed++) {
+            if (num_printed % 25 == 0) {
                 std::cout << std::endl << " ";
             }
-            std::cout << this->indices[nprinted] << ": " << this->values[nprinted] << ", ";
+            std::cout << this->indices[num_printed] << ": " << this->values[num_printed] << ", ";
         }
         std::cout << this->indices[this->indices.size() - 1] << ": " << this->values[this->indices.size() - 1] << "]" << std::endl;
     }
-    // void print() {
-    //     std::cout << "indices: " << Eigen::Map<Vector>(this->indices.data(), this->indices.size()).transpose();
-    //     std::cout << " with size: " << this->indices.size() << std::endl;
-    //     std::cout << "values: " << Eigen::Map<Vector>(this->values.data(), this->values.size()).transpose();
-    //     std::cout << " with size: " << this->values.size() << std::endl;
-    // }
 } EdgeWeights;
 
 typedef struct indices_t {
@@ -48,17 +42,17 @@ typedef struct indices_t {
 
 class IndexOutOfBoundsException: public std::exception {
 public:
-    IndexOutOfBoundsException(int index, int max) : index(index), max(max) {
+    IndexOutOfBoundsException(int index, int max) { // } : index(index), max(max) {
         std::ostringstream message_stream;
         message_stream << "Index " << index << " is out of bounds [0, " << max - 1 << "]";
         this->message = message_stream.str();
     }
-    virtual const char* what() const noexcept override {
+    const char* what() const noexcept override {
         return this->message.c_str();
     }
 private:
-    int index;
-    int max;
+//    int index;
+//    int max;
     std::string message;
 };
 
@@ -68,35 +62,53 @@ private:
 class ISparseMatrix {
 public:
     // ISparseMatrix() {}
-    virtual ~ISparseMatrix() {}
+    virtual ~ISparseMatrix() = default;
+    /// Add `val` to `matrix[row, col]`.
     virtual void add(int row, int col, int val) = 0;
     // virtual void add(int row, std::vector<int> cols, std::vector<int> values) = 0;
+    /// Set matrix row `row` to empty.
     virtual void clearrow(int row) = 0;
+    /// Set matrix column `col` to empty.
     virtual void clearcol(int col) = 0;
+    /// Returns a copy of this matrix.
     virtual ISparseMatrix* copy() const = 0;
+    /// Returns the value in `matrix[row, col]`.
     virtual int get(int row, int col) const = 0;
+    /// Returns the column `col` as a dense vector.
     virtual std::vector<int> getcol(int col) const = 0;
+    /// Returns the column `col` as a sparse vector.
     virtual MapVector<int> getcol_sparse(int col) const = 0;
+    /// Populates the values in `col_vector` with the values of column `col`.
     virtual void getcol_sparse(int col, MapVector<int> &col_vector) const = 0;
     // virtual const MapVector<int>& getcol_sparse(int col) const = 0;
+    /// Returns the row `row` as a dense vector.
     virtual std::vector<int> getrow(int row) const = 0;
+    /// Returns the row `row` as a sparse vector.
     virtual MapVector<int> getrow_sparse(int row) const = 0;
+    /// Populates the values in `row_vector` with the values of row `row`.
     virtual void getrow_sparse(int row, MapVector<int> &row_vector) const = 0;
     // virtual const MapVector<int>& getrow_sparse(int row) const = 0;
+    /// TODO: docstring
     virtual EdgeWeights incoming_edges(int block) const = 0;
+    /// TODO: docstring
     virtual Indices nonzero() const = 0;
+    /// TODO: docstring
     virtual EdgeWeights outgoing_edges(int block) const = 0;
-    /// Sets the values in a row equal to the input vector
+    /// Sets the values in a row equal to the input vector `vector`.
     virtual void setrow(int row, const MapVector<int> &vector) = 0;
-    /// Sets the values in a column equal to the input vector
+    /// Sets the values in a column equal to the input vector `vector`.
     virtual void setcol(int col, const MapVector<int> &vector) = 0;
+    /// Subtracts `val` from `matrix[row, col]`.
     virtual void sub(int row, int col, int val) = 0;
     virtual int edges() const = 0;
     virtual std::vector<int> sum(int axis = 0) const = 0;
     virtual int trace() const = 0;
+    /// Updates the blockmatrix values in the rows and columns corresponding to `current_block` and `proposed_block`.
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) = 0;
+    /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
+    virtual void update_edge_counts(const PairIndexVector &delta) = 0;
     virtual std::vector<int> values() const = 0;
     std::pair<int, int> shape;
 

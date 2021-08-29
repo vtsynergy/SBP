@@ -15,12 +15,12 @@
 // #include <Eigen/Core>
 
 /**
- * C++ interface of the dictionary (map of maps) sparse matrix, with a transpose for faster column indexing
+ * The list-of-maps sparse matrix, with a transpose for faster column indexing.
  * TODO: figure out where 0s are being added to the matrix, and whether or not we need to get rid of that
  */
 class DictTransposeMatrix : public ISparseMatrix {
   public:
-    DictTransposeMatrix() {}
+    DictTransposeMatrix() = default;
     DictTransposeMatrix(int nrows, int ncols) {  // : ncols(ncols), nrows(nrows) {
         this->ncols = ncols;
         this->nrows = nrows;
@@ -65,6 +65,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
+    void update_edge_counts(const PairIndexVector &delta) override;
     virtual std::vector<int> values() const override;
 
   private:
