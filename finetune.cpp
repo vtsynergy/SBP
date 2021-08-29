@@ -1,6 +1,6 @@
 #include "finetune.hpp"
 
-#include "../args.hpp"
+#include "args.hpp"
 #include "mpi_data.hpp"
 
 #include "assert.h"
