@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+option(DEBUG "If ON, executable will try to diagnose where failures occur." OFF)
+
 # set compilers
 set(CMAKE_C_COMPILER mpicc)
 set(CMAKE_CXX_COMPILER mpic++)
@@ -40,6 +42,10 @@ target_sources(DistributedSBP PUBLIC
     blockmodel/sparse/dict_transpose_matrix.cpp
     blockmodel/sparse/dist_dict_matrix.cpp)
 
-target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)  #  -lstdc++fs)
-
-target_link_libraries(DistributedSBP PUBLIC hungarian -fopenmp stdc++fs)
+if(DEBUG)
+    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp -g3 -fsanitize=address)
+    target_link_libraries(DistributedSBP PUBLIC hungarian -fopenmp stdc++fs -fsanitize=address)
+else(DEBUG)
+    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
+    target_link_libraries(DistributedSBP PUBLIC hungarian -fopenmp stdc++fs)
+endif(DEBUG)
