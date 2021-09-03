@@ -75,15 +75,12 @@ endif(DEBUG)
 # Google Test Suite
 enable_testing()
 add_subdirectory(extern/googletest)
-add_executable(Test test/finetune_test.cpp)
+add_executable(Test
+        test/blockmodel_test.cpp
+        test/common_test.cpp
+        test/finetune_test.cpp
+        test/toy_example.hpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
-#target_sources(Test PUBLIC test/finetune_test.cpp)
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian -fopenmp stdc++fs)
 gtest_discover_tests(Test)
-#find_package(GTest REQUIRED)
-#include(FetchContent)
-#FetchContent_Declare(
-#    googletest
-#    URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
-#)
