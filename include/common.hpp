@@ -40,7 +40,8 @@ typedef struct proposal_and_edge_counts_t {
 /// Calculates the entropy of a single blockmodel cell.
 inline double cell_entropy(double value, double degree_in, double degree_out) {
     if (value == 0) return 0.0;
-    double entropy = value * std::log(value / degree_in / degree_out);
+    std::cout << value << " " << degree_in << " " << degree_out << std::endl;
+    double entropy = value * std::log(value / (degree_in * degree_out));
     // if (std::isnan(entropy) || std::isinf(entropy)) {
     //     std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
     //     throw std::invalid_argument("something is wrong");
@@ -56,9 +57,10 @@ int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighb
 /// block to the neighboring blocks.
 int choose_neighbor(const SparseVector<double> &multinomial_distribution);
 
+/// TODO: computing current_block_self_edges is annoying af. Maybe use Updates and Deltas instead.
 /// Computes the block degrees under a proposed move
-NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel,
-                                          common::ProposalAndEdgeCounts &proposal);
+NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel, int current_block_self_edges,
+                                          int proposed_block_self_edges, common::ProposalAndEdgeCounts &proposal);
 
 /// Computes the entropy of one row or column of data.
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);

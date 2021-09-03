@@ -23,19 +23,19 @@ int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
     return multinomial_distribution.idx[index];
 }
 
-NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel,
-                                          ProposalAndEdgeCounts &proposal) {
-    // TODO: These are copy constructors. Maybe getting rid of them will speed things up?
-    std::vector<int> new_block_degrees_out(blockmodel.getBlock_degrees_out());
-    std::vector<int> new_block_degrees_in(blockmodel.getBlock_degrees_in());
-    std::vector<int> new_block_degrees_total(blockmodel.getBlock_degrees());
-    new_block_degrees_out[current_block] -= proposal.num_out_neighbor_edges;
-    new_block_degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
-    new_block_degrees_in[current_block] -= proposal.num_in_neighbor_edges;
-    new_block_degrees_in[proposal.proposal] += proposal.num_in_neighbor_edges;
-    new_block_degrees_total[current_block] -= proposal.num_neighbor_edges;
-    new_block_degrees_total[proposal.proposal] += proposal.num_neighbor_edges;
-    return NewBlockDegrees{new_block_degrees_out, new_block_degrees_in, new_block_degrees_total};
+NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel, int current_block_self_edges,
+                                          int proposed_block_self_edges, ProposalAndEdgeCounts &proposal) {
+    std::vector<int> degrees_out(blockmodel.getBlock_degrees_out());
+    std::vector<int> degrees_in(blockmodel.getBlock_degrees_in());
+    std::vector<int> degrees_total(blockmodel.getBlock_degrees());
+    degrees_out[current_block] -= proposal.num_out_neighbor_edges;
+    degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
+    degrees_in[current_block] -= proposal.num_in_neighbor_edges;
+    degrees_in[proposal.proposal] += proposal.num_in_neighbor_edges;
+    degrees_total[current_block] = degrees_out[current_block] + degrees_in[current_block] - current_block_self_edges;
+    degrees_total[proposal.proposal] = degrees_out[proposal.proposal] + degrees_in[proposal.proposal]
+            - proposed_block_self_edges;
+    return NewBlockDegrees{degrees_out, degrees_in, degrees_total};
 }
 
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges) {
@@ -159,7 +159,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     const ISparseMatrix *matrix = blockmodel.blockmatrix();
     const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
     MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
-    for (const std::pair<int, int> &pair : col) {
+    for (const std::pair<const int, int> &pair : col) {
         edges[pair.first] += pair.second;
     }
     if (block_merge) {  // Make sure proposal != current_block
