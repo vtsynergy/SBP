@@ -20,6 +20,7 @@ protected:
     std::vector<int> assignment;
     Blockmodel B;
     Graph graph;
+    common::NewBlockDegrees  new_block_degrees;
     void SetUp() override {
         std::vector<std::vector<int>> edges {
                 {0, 0},
@@ -59,6 +60,9 @@ protected:
         }
         graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
         B = Blockmodel(3, graph.out_neighbors(), 0.5, assignment);
+        new_block_degrees.block_degrees_out = { 10, 7, 6 };
+        new_block_degrees.block_degrees_in = { 12, 7, 4 };
+        new_block_degrees.block_degrees = { 14, 9, 7 };
     }
 //    virtual void TearDown() {
 //
