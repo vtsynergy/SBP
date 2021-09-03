@@ -39,8 +39,7 @@ typedef struct proposal_and_edge_counts_t {
 
 /// Calculates the entropy of a single blockmodel cell.
 inline double cell_entropy(double value, double degree_in, double degree_out) {
-    if (value == 0) return 0.0;
-    std::cout << value << " " << degree_in << " " << degree_out << std::endl;
+    if (value == 0.0) return 0.0;
     double entropy = value * std::log(value / (degree_in * degree_out));
     // if (std::isnan(entropy) || std::isinf(entropy)) {
     //     std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
