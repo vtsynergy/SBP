@@ -87,12 +87,18 @@ double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &
                            const common::NewBlockDegrees &new_block_degrees);
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+/// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
+ProposalEvaluation move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                               EdgeWeights &in_edges);
+/// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
+ProposalEvaluation move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                                       Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                       EdgeWeights &in_edges);
 /// Computes the overall entropy of the given blockmodel.
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 /// Proposes a new Metropolis-Hastings vertex move.
 ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
-/// Propose a new Metropolis-Hastings vertex move without using blockmodel deltas.
-ProposalEvaluation propose_move_nodelta(Blockmodel &blockmodel, int vertex, const Graph &graph);
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
 /// Proposes a new Asynchronous Gibbs vertex move.

@@ -22,6 +22,66 @@ bool accept(double delta_entropy, double hastings_correction) {
     return random_probability <= accept_probability;
 }
 
+ProposalEvaluation move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                               EdgeWeights &in_edges) {
+    if (args.nodelta)
+        return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
+    PairIndexVector delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
+                                             blockmodel);
+    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
+                                   + get(delta, std::make_pair(current_block, current_block));
+    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
+                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
+
+    double hastings = hastings_correction(blockmodel, delta, current_block, proposal, new_block_degrees);
+    double delta_entropy = compute_delta_entropy(blockmodel, delta, new_block_degrees);
+
+    if (accept(delta_entropy, hastings)) {
+        blockmodel.move_vertex(vertex, proposal.proposal, delta, new_block_degrees.block_degrees_out,
+                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+        return ProposalEvaluation{ delta_entropy, true };
+    }
+    return ProposalEvaluation{delta_entropy, false};
+}
+
+ProposalEvaluation move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                                       Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                       EdgeWeights &in_edges) {
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
+    int self_edge_weight = 0;
+    for (uint i = 0; i < out_edges.indices.size(); ++i) {
+        if (out_edges.indices[i] == vertex) {
+            self_edge_weight = out_edges.values[i];
+            break;
+        }
+    }
+
+    // TODO: change this to sparse_edge_count_updates
+    EdgeCountUpdates updates = edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal,
+                                                  blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
+    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
+                                   + updates.block_row[current_block];
+    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
+                                    + updates.proposal_row[proposal.proposal];
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
+    double hastings =
+            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+    double delta_entropy =
+            compute_delta_entropy(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
+                                  new_block_degrees);
+    if (accept(delta_entropy, hastings)) {
+        blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
+                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+        return ProposalEvaluation { delta_entropy, true };
+    }
+    return ProposalEvaluation { delta_entropy, false };
+}
+
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
@@ -534,12 +594,9 @@ double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &
         block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
         // TODO: does this introduce extra 0s in blockmodel_delta?
         block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
-//                delta.at(std::make_pair(current_block, entry.first)) +
                 get(delta, std::make_pair(current_block, entry.first)) +
                 blockmodel.blockmatrix()->get(entry.first, current_block) +
-//                delta.at(std::make_pair(entry.first, current_block)) + 1.0;
                 get(delta, std::make_pair(entry.first, current_block)) + 1.0;
-//        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
         proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
         index++;
     }
@@ -556,8 +613,6 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
 }
 
 ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
-    if (args.nodelta)
-        return propose_move_nodelta(blockmodel, vertex, graph);
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
@@ -569,68 +624,7 @@ ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph 
         return ProposalEvaluation{0.0, did_move};
     }
 
-    PairIndexVector delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
-                                             blockmodel);
-    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + get(delta, std::make_pair(current_block, current_block));
-    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-
-    double hastings = hastings_correction(blockmodel, delta, current_block, proposal, new_block_degrees);
-    double delta_entropy = compute_delta_entropy(blockmodel, delta, new_block_degrees);
-
-    if (accept(delta_entropy, hastings)) {
-        blockmodel.move_vertex(vertex, proposal.proposal, delta, new_block_degrees.block_degrees_out,
-                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-        did_move = true;
-    }
-    return ProposalEvaluation{delta_entropy, did_move};
-}
-
-ProposalEvaluation propose_move_nodelta(Blockmodel &blockmodel, int vertex, const Graph &graph) {
-    bool did_move = false;
-    int current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
-    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
-    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors(), vertex);
-
-    common::ProposalAndEdgeCounts proposal = common::propose_new_block(
-            current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
-    if (proposal.proposal == current_block) {
-        return ProposalEvaluation{0.0, did_move};
-    }
-
-    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_out_neighbors);
-    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_in_neighbors);
-    int self_edge_weight = 0;
-    for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
-        if (vertex_out_neighbors.indices[i] == vertex) {
-            self_edge_weight = vertex_out_neighbors.values[i];
-            break;
-        }
-    }
-
-    // TODO: change this to sparse_edge_count_updates
-    EdgeCountUpdates updates = edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal,
-                                                  blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
-    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + updates.block_row[current_block];
-    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + updates.proposal_row[proposal.proposal];
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-    double hastings =
-            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
-    double delta_entropy =
-            compute_delta_entropy(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-                                  new_block_degrees);
-    if (accept(delta_entropy, hastings)) {
-        blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
-                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-        did_move = true;
-    }
-    return ProposalEvaluation{delta_entropy, did_move};
+    return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph) {
