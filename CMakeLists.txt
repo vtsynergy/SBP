@@ -24,7 +24,7 @@ set(INCLUDE_DIRS
     extern/hungarian)
 
 # add the executable
-add_library(SBP SHARED
+add_library(SBP STATIC
     graph.cpp
     utils.cpp
     sbp.cpp
