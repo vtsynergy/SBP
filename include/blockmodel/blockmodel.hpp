@@ -88,13 +88,21 @@ class Blockmodel {
     double log_posterior_probability(int num_edges) const;
     /// TODO
     void update_block_assignment(int from_block, int to_block);
-    /// TODO
+    /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
+    /// `updates`, and updates the block degrees.
+    /// TODO: update block degrees on the fly.
     void move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
+                     std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                     std::vector<int> &new_block_degrees);
+    /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new blockmodel values from
+    /// `delta`, and updates the block degrees.
+    /// TODO: update block degrees on the fly.
+    void move_vertex(int vertex, int new_block, const PairIndexVector &delta,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                      std::vector<int> &new_block_degrees);
     /// TODO
     void set_block_membership(int vertex, int block);
-    /// TODO
+    /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// TODO: Get rid of getters and setters?
     ISparseMatrix *blockmatrix() const { return this->_blockmatrix; }
@@ -102,6 +110,10 @@ class Blockmodel {
     const std::vector<int> &block_assignment() const { return this->_block_assignment; }
     /// Returns the block assignment for `vertex`.
     int block_assignment(int vertex) const { return this->_block_assignment[vertex]; }
+    /// Prints blockmatrix to file (should not be used for large blockmatrices)
+    void print_blockmatrix() const;
+    /// Prints the blockmodel with some additional information.
+    void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
     bool stores(int block) const { return true; }
     /// Sets the block assignment for this `vertex` to `block`.

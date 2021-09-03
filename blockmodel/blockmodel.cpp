@@ -127,7 +127,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
 }
 
 void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
-    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
+//    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
     /// TODO: this recreates the matrix (possibly unnecessary)
     if (args.transpose) {
         this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
@@ -137,11 +137,12 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
     this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    this->block_degrees = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.size() == 0) {
+        if (vertex_neighbors.empty()) {
             continue;
         }
         int block = this->_block_assignment[vertex];
@@ -157,13 +158,10 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             // Update degrees
             this->block_degrees_out[block] += weight;
             this->block_degrees_in[neighbor_block] += weight;
+            this->block_degrees[block] += weight;
+            if (block != neighbor_block)
+                this->block_degrees[neighbor_block] += weight;
         }
-    }
-    // Count block degrees
-    if (args.undirected) {
-        this->block_degrees = std::vector<int>(this->block_degrees_out);
-    } else {
-        this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
     }
 }
 
@@ -206,7 +204,7 @@ void Blockmodel::update_block_assignment(int from_block, int to_block) {
             this->_block_assignment[index] = to_block;
         }
     }
-};
+}
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
                              std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
@@ -216,7 +214,37 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
     this->block_degrees_out = new_block_degrees_out;
     this->block_degrees_in = new_block_degrees_in;
     this->block_degrees = new_block_degrees;
-};
+}
+
+void Blockmodel::move_vertex(int vertex, int new_block, const PairIndexVector &delta,
+                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                             std::vector<int> &new_block_degrees) {
+    this->_block_assignment[vertex] = new_block;
+    this->_blockmatrix->update_edge_counts(delta);
+    this->block_degrees_out = new_block_degrees_out;
+    this->block_degrees_in = new_block_degrees_in;
+    this->block_degrees = new_block_degrees;
+}
+
+void Blockmodel::print_blockmatrix() const {
+    for (int row = 0; row < this->num_blocks; ++row) {
+        for (int col = 0; col < this->num_blocks; ++col) {
+            std::cout << this->_blockmatrix->get(row, col) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void Blockmodel::print_blockmodel() const {
+    std::cout << "Blockmodel: " << std::endl;
+    this->print_blockmatrix();
+    std::cout << "Block degrees out: ";
+    utils::print<int>(this->block_degrees_out);
+    std::cout << "Block degrees in: ";
+    utils::print<int>(this->block_degrees_in);
+    std::cout << "Block degrees: ";
+    utils::print<int>(this->block_degrees);
+}
 
 void Blockmodel::set_block_membership(int vertex, int block) { this->_block_assignment[vertex] = block; }
 

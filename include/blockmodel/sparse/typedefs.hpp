@@ -54,6 +54,14 @@ struct Membership {
 
 typedef std::unordered_map<std::pair<int, int>, int, IntPairHash> PairIndexVector;
 
+/// Returns either 0, or the value stored in `vector[key]` if it exists.
+inline int get(const PairIndexVector &vector, const std::pair<int, int> &key) {
+    const auto iterator = vector.find(key);
+    if (iterator == vector.end())
+        return 0;
+    return iterator->second;
+}
+
 // template<class T>
 // using SparseVector = std::vector
 // typedef struct proposal_evaluation_t {

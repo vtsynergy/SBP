@@ -48,11 +48,19 @@ static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is 
 static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning iterations
 
 bool accept(double delta_entropy, double hastings_correction);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
+/// Returns the potential changes to the blockmodel if the vertex with `out_edges` and `in_edges` moves from
+/// `current_block` into `proposed_block`.
+/// NOTE: assumes that any self edges are present in exactly one of `out_edges` and `in_edges`.
+PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
+                                 const EdgeWeights &in_edges, const Blockmodel &blockmodel);
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+double compute_delta_entropy(const Blockmodel &blockmodel, const PairIndexVector &delta,
+                             const common::NewBlockDegrees &block_degrees);
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
@@ -61,26 +69,34 @@ EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block
 void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
                                SparseEdgeCountUpdates &updates);
-EdgeWeights edge_weights(const NeighborList &neighbors, int vertex);
+/// Returns the edge weights in `neighbors[vertex]` as an `EdgeWeights` struct. If `ignore_self` is `true`, then
+/// self-edges will not be added to EdgeWeights.
+EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self = false);
+Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+/// Computes the Hastings correction using dense vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
+/// Computes the Hastings correction using sparse vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
+/// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
+double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &delta, int current_block,
+                           const common::ProposalAndEdgeCounts &proposal,
+                           const common::NewBlockDegrees &new_block_degrees);
+/// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 /// Computes the overall entropy of the given blockmodel.
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 /// Proposes a new Metropolis-Hastings vertex move.
 ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
-//NeighborList &out_neighbors,
-//                                const NeighborList &in_neighbors);
+/// Propose a new Metropolis-Hastings vertex move without using blockmodel deltas.
+ProposalEvaluation propose_move_nodelta(Blockmodel &blockmodel, int vertex, const Graph &graph);
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
-//NeighborList &out_neighbors,
-//                              const NeighborList &in_neighbors);
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
-Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+/// Proposes a new Asynchronous Gibbs vertex move.
+VertexMove propose_gibbs_move_nodelta(const Blockmodel &blockmodel, int vertex, const Graph &graph);
 
 namespace directed {
 
@@ -114,8 +130,14 @@ double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int
 /// Proposes an asynchronous Gibbs move in a distributed setting.
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
 
+/// Proposes an asynchronous Gibbs move in a distributed setting without using blockmodel deltas.
+VertexMove propose_gibbs_move_nodelta(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
+
 /// Proposes a metropolis hastings move in a distributed setting.
 VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
+
+/// Proposes a metropolis hastings move in a distributed setting without using blockmodel deltas.
+VertexMove propose_mh_move_nodelta(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
 
 namespace directed {
 

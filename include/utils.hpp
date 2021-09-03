@@ -126,7 +126,7 @@ template <typename T> inline std::vector<double> nat_log(const std::vector<T> &v
     std::vector<double> result;
     for (const T &value : vector) {
         // vector[i] returns a reference, but log can only take a value
-        result.push_back(log(value));
+        result.push_back(std::log(value));
     }
     return result;
 }
