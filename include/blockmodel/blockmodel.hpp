@@ -128,7 +128,7 @@ class Blockmodel {
     float &getBlock_reduction_rate() { return this->block_reduction_rate; }
     void setBlock_reduction_rate(float block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
     float &getOverall_entropy() { return this->overall_entropy; }
-    void setOverall_entropy(float overall_entropy) { this->overall_entropy = overall_entropy; }
+    void setOverall_entropy(double overall_entropy) { this->overall_entropy = overall_entropy; }
     int &getNum_blocks_to_merge() { return this->num_blocks_to_merge; }
     void setNum_blocks_to_merge(int num_blocks_to_merge) { this->num_blocks_to_merge = num_blocks_to_merge; }
     int getNum_blocks() const { return this->num_blocks; }

@@ -3,11 +3,8 @@
 #include "args.hpp"
 #include "mpi_data.hpp"
 
-#include "assert.h"
-#include <fstream>
+#include <cassert>
 #include <iostream>
-
-#define MPI_WTIME_IS_GLOBAL true
 
 namespace finetune {
 
@@ -191,7 +188,7 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
     delta_entropy += common::delta_entropy_temp(old_proposal_col, old_proposal_col_degrees_out,
                                                 blockmodel.getBlock_degrees_in()[proposal], num_edges);
     if (std::isnan(delta_entropy)) {
-        std::cout << "===================ARGAGDJAKLJDAJFKLDJA" << std::endl;
+        std::cout << "Error: Dense delta entropy is NaN" << std::endl;
         exit(-142321);
     }
     return delta_entropy;
@@ -236,7 +233,7 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
                                                 num_edges);
     assert(!std::isnan(delta_entropy));
     if (std::isnan(delta_entropy)) {
-        std::cout << "ARGAGDJAKLJDAJFKLDJA" << std::endl;
+        std::cerr << "Error: Sparse delta entropy is NaN" << std::endl;
         exit(-142321);
     }
     return delta_entropy;
@@ -261,7 +258,7 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const PairIndexVector
 
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies) {
-    int last_index = delta_entropies.size() - 1;
+    size_t last_index = delta_entropies.size() - 1;
     if (delta_entropies[last_index] == 0.0) {
         return true;
     }
@@ -276,18 +273,18 @@ bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_en
     } else {
         threshold = 1e-4 * initial_entropy;
     }
-    return (average < threshold) ? true : false;
+    return average < threshold;
 }
 
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies) {
     if (iteration < 3) {
         return false;
     }
-    int last_index = delta_entropies.size() - 1;
+    size_t last_index = delta_entropies.size() - 1;
     double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
     average /= -3.0;
     double threshold = 1e-4 * initial_entropy;
-    return (average < threshold) ? true : false;
+    return average < threshold;
 }
 
 EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
@@ -472,7 +469,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
         block_counts[block] += weight; // block_count[new block] should initialize to 0
     }
     // Create Arrays using unique blocks
-    int num_unique_blocks = block_counts.size();
+    size_t num_unique_blocks = block_counts.size();
     std::vector<double> counts(num_unique_blocks, 0);
     std::vector<double> proposal_weights(num_unique_blocks, 0);
     std::vector<double> block_weights(num_unique_blocks, 0);
@@ -494,8 +491,8 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
         index++;
     }
     // Compute p_forward and p_backward
-    double p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
-    double p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
     return p_backward / p_forward;
 }
 
@@ -518,7 +515,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
         block_counts[block] += weight; // block_count[new block] should initialize to 0
     }
     // Create Arrays using unique blocks
-    int num_unique_blocks = block_counts.size();
+    size_t num_unique_blocks = block_counts.size();
     std::vector<double> counts(num_unique_blocks, 0);
     std::vector<double> proposal_weights(num_unique_blocks, 0);
     std::vector<double> block_weights(num_unique_blocks, 0);
@@ -540,8 +537,8 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
         index++;
     }
     // Compute p_forward and p_backward
-    double p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
-    double p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
     return p_backward / p_forward;
 }
 
@@ -726,7 +723,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
     return blockmodel;
 }
 
-Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
+[[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     int total_vertex_moves = 0;
@@ -809,7 +806,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     my_file.open(args.csv, std::ios::out | std::ios::app);
     // MPI Datatype init
     MPI_Datatype Membership_t;
-    int membership_blocklengths[2] = { 1, 1 };
+    int membership_blocklengths[2] = { 1, 1 };  // Number of items in each field of Membership_t
     MPI_Aint membership_displacements[2] = { 0, sizeof(int) };
     MPI_Datatype membership_types[2] = { MPI_INT, MPI_INT };
     MPI_Type_create_struct(2, membership_blocklengths, membership_displacements, membership_types, &Membership_t);
@@ -822,10 +819,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     int total_vertex_moves = 0;
     double old_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
-    double initial_entropy = blockmodel.getOverall_entropy();
+//    double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
-    double t0 = MPI_Wtime();
-    double t1;
+    double t0, t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         t0 = MPI_Wtime();
         // Block assignment used to re-create the Blockmodel after each iteration to incorporate moves from other ranks
@@ -834,7 +830,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         num_iterations++;
         int vertex_moves = 0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            if (blockmodel.owns_vertex(vertex) == false) continue;
+            if (!blockmodel.owns_vertex(vertex)) continue;
             VertexMove proposal = dist::propose_mh_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
@@ -842,7 +838,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
                 membership_updates.push_back(Membership { vertex, proposal.proposed_block });
             }
         }
-        int num_moves = membership_updates.size();
+        int num_moves = (int)membership_updates.size();
         // MPI COMMUNICATION
         int rank_moves[mpi.num_processes];
         t1 = MPI_Wtime();
@@ -902,9 +898,9 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     int total_vertex_moves = 0;
     double old_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
-    double initial_entropy = blockmodel.getOverall_entropy();
+//    double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
-    double t0 = MPI_Wtime();
+    double t0;
     double t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         num_iterations++;
@@ -914,27 +910,28 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         std::vector<int> block_assignment(blockmodel.block_assignment());
-        int my_vertices = 0;
+//        int my_vertices = 0;
         for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
             t0 = MPI_Wtime();
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
-            #pragma omp parallel for schedule(dynamic)
+            #pragma omp parallel for schedule(dynamic) default(none) \
+            shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
             for (int vertex = 0; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
                 // TODO: batch by % of my vertices? Can be calculated same time as load balancing
-                if (blockmodel.owns_vertex(vertex) == false) continue;
+                if (!blockmodel.owns_vertex(vertex)) continue;
                 VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
-                    assert(blockmodel.stores(proposal.proposed_block));
+//                    assert(blockmodel.stores(proposal.proposed_block));  // assert no work with default(none) until gcc 9.3.0
                     #pragma omp critical (updates)
                     {
                     membership_updates.push_back(Membership { vertex, proposal.proposed_block });
                     }
                 }
             }
-            int num_moves = membership_updates.size();
+            int num_moves = (int)membership_updates.size();
             // MPI COMMUNICATION
             int rank_moves[mpi.num_processes];
             t1 = MPI_Wtime();
@@ -983,7 +980,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 
 bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies) {
-    int last_index = delta_entropies.size() - 1;
+    size_t last_index = delta_entropies.size() - 1;
     if (delta_entropies[last_index] == 0.0) {
         return true;
     }
@@ -998,7 +995,7 @@ bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initia
     } else {
         threshold = 1e-4 * initial_entropy;
     }
-    return (average < threshold) ? true : false;
+    return average < threshold;
 }
 
 double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {

@@ -4,12 +4,10 @@
 #ifndef SBP_FINETUNE_HPP
 #define SBP_FINETUNE_HPP
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 
 #include <omp.h>
-
-// #include <boost/variant.hpp>
 
 #include "common.hpp"
 #include "graph.hpp"
@@ -81,7 +79,8 @@ VertexMove eval_vertex_move(int vertex, int current_block, common::ProposalAndEd
 VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
                                     const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                     EdgeWeights &in_edges);
-Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
+[[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 /// Computes the Hastings correction using dense vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
@@ -172,4 +171,4 @@ double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int
 
 } // namespace finetune
 
-#endif // CPPSBP_FINETUNE_HPP
+#endif // SBP_FINETUNE_HPP
