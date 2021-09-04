@@ -72,6 +72,15 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int
 /// Returns the edge weights in `neighbors[vertex]` as an `EdgeWeights` struct. If `ignore_self` is `true`, then
 /// self-edges will not be added to EdgeWeights.
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self = false);
+/// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
+VertexMove eval_vertex_move(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                            const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                            EdgeWeights &in_edges);
+/// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
+/// blockmodel deltas.
+VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                    EdgeWeights &in_edges);
 Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 /// Computes the Hastings correction using dense vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
