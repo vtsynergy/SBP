@@ -23,11 +23,6 @@ namespace finetune {
 
 extern int num_iterations;
 
-typedef struct proposal_evaluation_t {
-    double delta_entropy;
-    bool did_move;
-} ProposalEvaluation;
-
 typedef struct vertex_move_t {
     double delta_entropy;
     bool did_move;
@@ -35,14 +30,9 @@ typedef struct vertex_move_t {
     int proposed_block;
 } VertexMove;
 
-struct Proposal {
-    ProposalEvaluation eval;
-    VertexMove move;
-};
-
-static const int MOVING_AVG_WINDOW = 3;      // Window for calculating change in entropy
-static const double SEARCH_THRESHOLD = 5e-4; // Threshold before golden ratio is established
-static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is established
+//static const int MOVING_AVG_WINDOW = 3;      // Window for calculating change in entropy
+//static const double SEARCH_THRESHOLD = 5e-4; // Threshold before golden ratio is established
+//static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is established
 static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning iterations
 
 bool accept(double delta_entropy, double hastings_correction);
@@ -96,21 +86,18 @@ double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
-ProposalEvaluation move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
+                       const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges);
+/// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
+VertexMove move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
                                Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                EdgeWeights &in_edges);
-/// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
-ProposalEvaluation move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
-                                       Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                                       EdgeWeights &in_edges);
 /// Computes the overall entropy of the given blockmodel.
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 /// Proposes a new Metropolis-Hastings vertex move.
-ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
+VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
-/// Proposes a new Asynchronous Gibbs vertex move.
-VertexMove propose_gibbs_move_nodelta(const Blockmodel &blockmodel, int vertex, const Graph &graph);
 
 namespace directed {
 

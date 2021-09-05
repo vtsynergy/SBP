@@ -594,9 +594,8 @@ double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &
     return p_backward / p_forward;
 }
 
-ProposalEvaluation move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
-                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                               EdgeWeights &in_edges) {
+VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
+                       const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges) {
     if (args.nodelta)
         return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     PairIndexVector delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
@@ -614,14 +613,14 @@ ProposalEvaluation move_vertex(int vertex, int current_block, common::ProposalAn
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, proposal.proposal, delta, new_block_degrees.block_degrees_out,
                                new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-        return ProposalEvaluation{ delta_entropy, true };
+        return VertexMove{delta_entropy, true, vertex, proposal.proposal };
     }
-    return ProposalEvaluation{delta_entropy, false};
+    return VertexMove{delta_entropy, false, vertex, proposal.proposal };
 }
 
-ProposalEvaluation move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
-                                       Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                                       EdgeWeights &in_edges) {
+VertexMove move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                               EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
     int self_edge_weight = 0;
@@ -649,9 +648,9 @@ ProposalEvaluation move_vertex_nodelta(int vertex, int current_block, common::Pr
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                                new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-        return ProposalEvaluation { delta_entropy, true };
+        return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     }
-    return ProposalEvaluation { delta_entropy, false };
+    return VertexMove{delta_entropy, false, -1, -1};
 }
 
 double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
@@ -660,7 +659,7 @@ double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_e
     return directed::overall_entropy(blockmodel, num_vertices, num_edges);
 }
 
-ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
+VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
@@ -669,7 +668,7 @@ ProposalEvaluation propose_move(Blockmodel &blockmodel, int vertex, const Graph 
     common::ProposalAndEdgeCounts proposal = common::propose_new_block(
             current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
-        return ProposalEvaluation{0.0, did_move};
+        return VertexMove{0.0, did_move, -1, -1 };
     }
 
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
@@ -702,7 +701,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph);
+            VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
@@ -732,7 +731,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
         int vertex_moves = 0;
         double delta_entropy = 0.0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            ProposalEvaluation proposal = propose_move(blockmodel, vertex, graph);
+            VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
@@ -1008,11 +1007,11 @@ double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);
-    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
-    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors(), vertex);
+    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex);
+    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex);
 
     common::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
-        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
+        current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
@@ -1021,12 +1020,12 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, co
         return VertexMove{0.0, did_move, -1, -1};
     }
 
-    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_out_neighbors);
-    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_in_neighbors);
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
     int self_edge_weight = 0;
-    for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
-        if (vertex_out_neighbors.indices[i] == vertex) {
-            self_edge_weight = vertex_out_neighbors.values[i];
+    for (uint i = 0; i < out_edges.indices.size(); ++i) {
+        if (out_edges.indices[i] == vertex) {
+            self_edge_weight = out_edges.values[i];
             break;
         }
     }
@@ -1055,25 +1054,25 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, co
 VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
-    EdgeWeights vertex_out_neighbors = edge_weights(graph.out_neighbors(), vertex);
-    EdgeWeights vertex_in_neighbors = edge_weights(graph.in_neighbors(), vertex);
+    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex);
+    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex);
 
     common::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
-        current_block, vertex_out_neighbors, vertex_in_neighbors, blockmodel.block_assignment(), blockmodel, false);
+        current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
     }
     if (proposal.proposal == current_block) {
-        return VertexMove{ 0.0, did_move, -1, -1 };
+        return VertexMove{0.0, did_move, -1, -1 };
     }
 
-    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_out_neighbors);
-    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), vertex_in_neighbors);
+    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
+    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
     int self_edge_weight = 0;
-    for (uint i = 0; i < vertex_out_neighbors.indices.size(); ++i) {
-        if (vertex_out_neighbors.indices[i] == vertex) {
-            self_edge_weight = vertex_out_neighbors.values[i];
+    for (uint i = 0; i < out_edges.indices.size(); ++i) {
+        if (out_edges.indices[i] == vertex) {
+            self_edge_weight = out_edges.values[i];
             break;
         }
     }
@@ -1096,9 +1095,9 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
         blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
         did_move = true;
-        return VertexMove{ delta_entropy, did_move, vertex, proposal.proposal };
+        return VertexMove{delta_entropy, did_move, vertex, proposal.proposal };
     }
-    return VertexMove{ delta_entropy, did_move, -1, -1 };
+    return VertexMove{delta_entropy, did_move, -1, -1 };
 }
 
 namespace directed {
