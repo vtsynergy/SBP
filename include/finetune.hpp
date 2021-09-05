@@ -131,14 +131,8 @@ double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int
 /// Proposes an asynchronous Gibbs move in a distributed setting.
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
 
-/// Proposes an asynchronous Gibbs move in a distributed setting without using blockmodel deltas.
-VertexMove propose_gibbs_move_nodelta(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
-
 /// Proposes a metropolis hastings move in a distributed setting.
 VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
-
-/// Proposes a metropolis hastings move in a distributed setting without using blockmodel deltas.
-VertexMove propose_mh_move_nodelta(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
 
 namespace directed {
 
