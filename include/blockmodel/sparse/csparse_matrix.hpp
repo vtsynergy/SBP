@@ -25,7 +25,7 @@ typedef struct edge_weights_t {
             return;
         }
         std::cout << "[" << this->indices[0] << ": " << this->values[0] << ", ";
-        for (int num_printed = 1; num_printed < this->indices.size() - 1; num_printed++) {
+        for (size_t num_printed = 1; num_printed < this->indices.size() - 1; num_printed++) {
             if (num_printed % 25 == 0) {
                 std::cout << std::endl << " ";
             }

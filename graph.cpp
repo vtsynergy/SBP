@@ -4,25 +4,26 @@
 
 Graph Graph::load(Args &args) {
     // TODO: Add capability to process multiple "streaming" graph parts
-    std::string basepath = utils::build_filepath(args);
-    fs::path graphpath = basepath + ".tsv";
-    fs::path truthpath = basepath + "_truePartition.tsv";
+    std::string base_path = utils::build_filepath();
+    fs::path graph_path = base_path + ".tsv";
+    fs::path truth_path = base_path + "_truePartition.tsv";
     // TODO: Handle weighted graphs
-    std::vector<std::vector<std::string>> csv_contents = utils::read_csv(graphpath);
+    std::vector<std::vector<std::string>> csv_contents = utils::read_csv(graph_path);
     NeighborList out_neighbors;
     NeighborList in_neighbors;
-    int num_edges = csv_contents.size();
+//    size_t num_edges = csv_contents.size();
     int num_vertices = 0;
     if (args.undirected)
         Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, csv_contents);
     else
         Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, csv_contents);
     // std::cout << "num_edges before: " << num_edges << std::endl;
-    num_edges = 0;  // TODO: unnecessary re-counting of edges?
+    int num_edges = 0;  // TODO: unnecessary re-counting of edges?
     for (const std::vector<int> &neighborhood : out_neighbors) {
-        for (int neighbor : neighborhood) {
-            num_edges++;
-        }
+        num_edges += (int)neighborhood.size();
+//        for (int neighbor : neighborhood) {
+//            num_edges++;
+//        }
     }
     if (args.undirected) {
         num_edges /= 2;
@@ -31,13 +32,15 @@ Graph Graph::load(Args &args) {
     if (mpi.rank == 0)
         std::cout << "V: " << num_vertices << " E: " << num_edges << std::endl;
 
-    csv_contents = utils::read_csv(truthpath);
+    csv_contents = utils::read_csv(truth_path);
     std::vector<int> assignment;
+    // TODO: vertices, communities should be size_t or uint. Will need to make sure -1 returns are properly handled
+    // elsewhere.
     if (!csv_contents.empty()) {
         for (std::vector<std::string> &assign: csv_contents) {
             int vertex = std::stoi(assign[0]) - 1;
             int community = std::stoi(assign[1]) - 1;
-            if (vertex >= assignment.size()) {
+            if (vertex >= (int)assignment.size()) {
                 std::vector<int> padding(vertex - assignment.size() + 1, -1);
                 assignment.insert(assignment.end(), padding.begin(), padding.end());
             }

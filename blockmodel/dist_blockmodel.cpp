@@ -1,206 +1,205 @@
 #include "dist_blockmodel.hpp"
 
-#include <time.h>
 #include <unordered_set>
 
-std::vector<int> DistBlockmodel::build_mapping(std::vector<int> &values) {
-    std::map<int, bool> unique_map;
-    for (int i = 0; i < values.size(); ++i) {
-        unique_map[values[i]] = true;
-    }
-    std::vector<int> mapping = utils::constant<int>(values.size(), -1);
-    int counter = 0;
-    for (std::pair<int, bool> element : unique_map) {
-        mapping[element.first] = counter;
-        counter++;
-    }
-    return mapping;
-}
-
-// TODO: move to block_merge.cpp
-void DistBlockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
-                                       const std::vector<int> &best_merge_for_each_block) {
-    std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
-    std::vector<int> block_map = utils::range<int>(0, this->_num_blocks);
-    int num_merged = 0;
-    int counter = 0;
-    while (num_merged < this->_num_blocks_to_merge) {
-        int merge_from = best_merges[counter];
-        int merge_to = block_map[best_merge_for_each_block[merge_from]];
-        counter++;
-        if (merge_to != merge_from) {
-            for (int i = 0; i < block_map.size(); ++i) {
-                int block = block_map[i];
-                if (block == merge_from) {
-                    block_map[i] = merge_to;
-                }
-            }
-            this->merge_blocks(merge_from, merge_to);
-            num_merged++;
-        }
-    }
-    std::vector<int> mapping = build_mapping(this->_assignment);
-    for (int i = 0; i < this->_assignment.size(); ++i) {
-        int block = this->_assignment[i];
-        int new_block = mapping[block];
-        this->_assignment[i] = new_block;
-    }
-    this->_num_blocks -= this->_num_blocks_to_merge;
-}
-
-// DistBlockmodel DistBlockmodel::clone_with_true_block_membership(NeighborList &neighbors,
-//                                                                 std::vector<int> &true_block_membership) {
-//     int num_blocks = 0;
-//     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
-//     for (uint i = 0; i < true_block_membership.size(); ++i) {
-//         int membership = true_block_membership[i];
-//         uniques[membership] = 1; // mark as used
-//     }
-//     for (uint block = 0; block < uniques.size(); ++block) {
-//         if (uniques[block] == 1) {
-//             num_blocks++;
-//         }
-//     }
-//     return DistBlockmodel(num_blocks, neighbors, true_block_membership);
-// }
-
-DistBlockmodel DistBlockmodel::copy() {
-    DistBlockmodel blockmodel_copy = DistBlockmodel();
-    blockmodel_copy._num_blocks = this->_num_blocks;
-    blockmodel_copy._global_num_blocks = this->_global_num_blocks;
-    blockmodel_copy._assignment = std::vector<int>(this->_assignment);
-    blockmodel_copy._overall_entropy = this->_overall_entropy;
-    blockmodel_copy._blockmatrix = this->_blockmatrix->copyDistSparseMatrix();
-    blockmodel_copy._degrees = std::vector<int>(this->_degrees);
-    blockmodel_copy._degrees_out = std::vector<int>(this->_degrees_out);
-    blockmodel_copy._degrees_in = std::vector<int>(this->_degrees_in);
-    blockmodel_copy._num_blocks_to_merge = 0;
-    blockmodel_copy.empty = false;
-    return blockmodel_copy;
-}
-
-// DistBlockmodel DistBlockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
-//                                  std::map<int, int> &mapping, float block_reduction_rate) {
-//     // Fill in initial block assignment
-//     std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
-//     for (const auto &item : mapping) {
-//         block_assignment[item.first] = sample_block_membership[item.second];
-//     }
-//     // Every unassigned block gets assigned to the next block number
-//     int next_block = num_blocks;
-//     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-//         if (block_assignment[vertex] >= 0) {
-//             continue;
-//         }
-//         block_assignment[vertex] = next_block;
-//         next_block++;
-//     }
-//     // Every previously unassigned block gets assigned to the block it's most connected to
-//     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-//         if (block_assignment[vertex] < num_blocks) {
-//             continue;
-//         }
-//         std::vector<int> block_counts = utils::constant<int>(num_blocks, 0);
-//         // TODO: this can only handle unweighted graphs
-//         std::vector<int> vertex_neighbors = neighbors[vertex];
-//         for (uint i = 0; i < vertex_neighbors.size(); ++i) {
-//             int neighbor = vertex_neighbors[i];
-//             int neighbor_block = block_assignment[neighbor];
-//             if (neighbor_block < num_blocks) {
-//                 block_counts[neighbor_block]++;
-//             }
-//         }
-//         int new_block = utils::argmax<int>(block_counts);
-//         // block_counts.maxCoeff(&new_block);
-//         block_assignment[vertex] = new_block;
-//     }
-//     return DistBlockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
-// }
-
-void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const std::vector<int> &myblocks) {
-    /// TODO: this recreates the matrix (possibly unnecessary)
-    // this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, mpi, myblocks);
-    this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, myblocks);
-    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->_degrees_in = utils::constant<int>(this->_num_blocks, 0);
-    this->_degrees_out = utils::constant<int>(this->_num_blocks, 0);
-    // Initialize the blockmodel
-    // TODO: find a way to parallelize the matrix filling step
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.size() == 0) {
-            continue;
-        }
-        int block = this->_assignment[vertex];
-        for (int i = 0; i < vertex_neighbors.size(); ++i) {
-            // Get count
-            int neighbor = vertex_neighbors[i];
-            int neighbor_block = this->_assignment[neighbor];
-            // TODO: change this once code is updated to support weighted graphs
-            int weight = 1;
-            // int weight = vertex_neighbors[i];
-            // Update blockmodel
-            if (this->_blockmatrix->stores(block))
-                this->_blockmatrix->add(block, neighbor_block, weight);
-            // Update degrees
-            this->_degrees_out[block] += weight;
-            this->_degrees_in[neighbor_block] += weight;
-        }
-    }
-    // Count block degrees
-    this->_degrees = this->_degrees_out + this->_degrees_in;
-    exit(-10);
-}
-
-double DistBlockmodel::log_posterior_probability() {
-    Indices nonzero_indices = this->_blockmatrix->nonzero();
-    std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
-    std::vector<double> degrees_in;
-    std::vector<double> degrees_out;
-    for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
-        degrees_in.push_back(this->_degrees_in[nonzero_indices.cols[i]]);
-        degrees_out.push_back(this->_degrees_out[nonzero_indices.rows[i]]);
-    }
-    std::vector<double> temp = values * utils::nat_log<double>(
-        values / (degrees_out * degrees_in));
-    return utils::sum<double>(temp);
-}
-
-void DistBlockmodel::merge_blocks(int from_block, int to_block) {
-    for (int index = 0; index < this->_assignment.size(); ++index) {
-        if (this->_assignment[index] == from_block) {
-            this->_assignment[index] = to_block;
-        }
-    }
-};
-
-void DistBlockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
-                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
-                            std::vector<int> &new_block_degrees) {
-    this->_assignment[vertex] = new_block;
-    this->update_edge_counts(current_block, new_block, updates);
-    this->_degrees_out = new_block_degrees_out;
-    this->_degrees_in = new_block_degrees_in;
-    this->_degrees = new_block_degrees;
-};
-
-void DistBlockmodel::set_block_membership(int vertex, int block) { this->_assignment[vertex] = block; }
-
-std::vector<int> DistBlockmodel::sort_indices(const std::vector<double> &unsorted) {
-    // initialize original index locations
-    std::vector<int> indices = utils::range<int>(0, unsorted.size());
-
-    // sort indexes based on comparing values in unsorted
-    std::sort(indices.data(), indices.data() + indices.size(),
-              [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
-
-    return indices;
-}
-
-void DistBlockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
-    this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
-                                         updates.block_col, updates.proposal_col);
-}
+//std::vector<int> DistBlockmodel::build_mapping(std::vector<int> &values) {
+//    std::map<int, bool> unique_map;
+//    for (int i = 0; i < values.size(); ++i) {
+//        unique_map[values[i]] = true;
+//    }
+//    std::vector<int> mapping = utils::constant<int>(values.size(), -1);
+//    int counter = 0;
+//    for (std::pair<int, bool> element : unique_map) {
+//        mapping[element.first] = counter;
+//        counter++;
+//    }
+//    return mapping;
+//}
+//
+//// TODO: move to block_merge.cpp
+//void DistBlockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
+//                                       const std::vector<int> &best_merge_for_each_block) {
+//    std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
+//    std::vector<int> block_map = utils::range<int>(0, this->_num_blocks);
+//    int num_merged = 0;
+//    int counter = 0;
+//    while (num_merged < this->_num_blocks_to_merge) {
+//        int merge_from = best_merges[counter];
+//        int merge_to = block_map[best_merge_for_each_block[merge_from]];
+//        counter++;
+//        if (merge_to != merge_from) {
+//            for (int i = 0; i < block_map.size(); ++i) {
+//                int block = block_map[i];
+//                if (block == merge_from) {
+//                    block_map[i] = merge_to;
+//                }
+//            }
+//            this->merge_blocks(merge_from, merge_to);
+//            num_merged++;
+//        }
+//    }
+//    std::vector<int> mapping = build_mapping(this->_assignment);
+//    for (int i = 0; i < this->_assignment.size(); ++i) {
+//        int block = this->_assignment[i];
+//        int new_block = mapping[block];
+//        this->_assignment[i] = new_block;
+//    }
+//    this->_num_blocks -= this->_num_blocks_to_merge;
+//}
+//
+//// DistBlockmodel DistBlockmodel::clone_with_true_block_membership(NeighborList &neighbors,
+////                                                                 std::vector<int> &true_block_membership) {
+////     int num_blocks = 0;
+////     std::vector<int> uniques = utils::constant<int>(true_block_membership.size(), 0);
+////     for (uint i = 0; i < true_block_membership.size(); ++i) {
+////         int membership = true_block_membership[i];
+////         uniques[membership] = 1; // mark as used
+////     }
+////     for (uint block = 0; block < uniques.size(); ++block) {
+////         if (uniques[block] == 1) {
+////             num_blocks++;
+////         }
+////     }
+////     return DistBlockmodel(num_blocks, neighbors, true_block_membership);
+//// }
+//
+//DistBlockmodel DistBlockmodel::copy() {
+//    DistBlockmodel blockmodel_copy = DistBlockmodel();
+//    blockmodel_copy._num_blocks = this->_num_blocks;
+//    blockmodel_copy._global_num_blocks = this->_global_num_blocks;
+//    blockmodel_copy._assignment = std::vector<int>(this->_assignment);
+//    blockmodel_copy._overall_entropy = this->_overall_entropy;
+//    blockmodel_copy._blockmatrix = this->_blockmatrix->copyDistSparseMatrix();
+//    blockmodel_copy._degrees = std::vector<int>(this->_degrees);
+//    blockmodel_copy._degrees_out = std::vector<int>(this->_degrees_out);
+//    blockmodel_copy._degrees_in = std::vector<int>(this->_degrees_in);
+//    blockmodel_copy._num_blocks_to_merge = 0;
+//    blockmodel_copy.empty = false;
+//    return blockmodel_copy;
+//}
+//
+//// DistBlockmodel DistBlockmodel::from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
+////                                  std::map<int, int> &mapping, float block_reduction_rate) {
+////     // Fill in initial block assignment
+////     std::vector<int> block_assignment = utils::constant<int>(neighbors.size(), -1);
+////     for (const auto &item : mapping) {
+////         block_assignment[item.first] = sample_block_membership[item.second];
+////     }
+////     // Every unassigned block gets assigned to the next block number
+////     int next_block = num_blocks;
+////     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+////         if (block_assignment[vertex] >= 0) {
+////             continue;
+////         }
+////         block_assignment[vertex] = next_block;
+////         next_block++;
+////     }
+////     // Every previously unassigned block gets assigned to the block it's most connected to
+////     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+////         if (block_assignment[vertex] < num_blocks) {
+////             continue;
+////         }
+////         std::vector<int> block_counts = utils::constant<int>(num_blocks, 0);
+////         // TODO: this can only handle unweighted graphs
+////         std::vector<int> vertex_neighbors = neighbors[vertex];
+////         for (uint i = 0; i < vertex_neighbors.size(); ++i) {
+////             int neighbor = vertex_neighbors[i];
+////             int neighbor_block = block_assignment[neighbor];
+////             if (neighbor_block < num_blocks) {
+////                 block_counts[neighbor_block]++;
+////             }
+////         }
+////         int new_block = utils::argmax<int>(block_counts);
+////         // block_counts.maxCoeff(&new_block);
+////         block_assignment[vertex] = new_block;
+////     }
+////     return DistBlockmodel(num_blocks, neighbors, block_reduction_rate, block_assignment);
+//// }
+//
+//void DistBlockmodel::initialize_edge_counts(const NeighborList &neighbors, const std::vector<int> &myblocks) {
+//    /// TODO: this recreates the matrix (possibly unnecessary)
+//    // this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, mpi, myblocks);
+//    this->_blockmatrix = new DistDictMatrix(this->_global_num_blocks, this->_global_num_blocks, myblocks);
+//    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
+//    this->_degrees_in = utils::constant<int>(this->_num_blocks, 0);
+//    this->_degrees_out = utils::constant<int>(this->_num_blocks, 0);
+//    // Initialize the blockmodel
+//    // TODO: find a way to parallelize the matrix filling step
+//    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+//        std::vector<int> vertex_neighbors = neighbors[vertex];
+//        if (vertex_neighbors.size() == 0) {
+//            continue;
+//        }
+//        int block = this->_assignment[vertex];
+//        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+//            // Get count
+//            int neighbor = vertex_neighbors[i];
+//            int neighbor_block = this->_assignment[neighbor];
+//            // TODO: change this once code is updated to support weighted graphs
+//            int weight = 1;
+//            // int weight = vertex_neighbors[i];
+//            // Update blockmodel
+//            if (this->_blockmatrix->stores(block))
+//                this->_blockmatrix->add(block, neighbor_block, weight);
+//            // Update degrees
+//            this->_degrees_out[block] += weight;
+//            this->_degrees_in[neighbor_block] += weight;
+//        }
+//    }
+//    // Count block degrees
+//    this->_degrees = this->_degrees_out + this->_degrees_in;
+//    exit(-10);
+//}
+//
+//double DistBlockmodel::log_posterior_probability() {
+//    Indices nonzero_indices = this->_blockmatrix->nonzero();
+//    std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
+//    std::vector<double> degrees_in;
+//    std::vector<double> degrees_out;
+//    for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
+//        degrees_in.push_back(this->_degrees_in[nonzero_indices.cols[i]]);
+//        degrees_out.push_back(this->_degrees_out[nonzero_indices.rows[i]]);
+//    }
+//    std::vector<double> temp = values * utils::nat_log<double>(
+//        values / (degrees_out * degrees_in));
+//    return utils::sum<double>(temp);
+//}
+//
+//void DistBlockmodel::merge_blocks(int from_block, int to_block) {
+//    for (int index = 0; index < this->_assignment.size(); ++index) {
+//        if (this->_assignment[index] == from_block) {
+//            this->_assignment[index] = to_block;
+//        }
+//    }
+//};
+//
+//void DistBlockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
+//                            std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+//                            std::vector<int> &new_block_degrees) {
+//    this->_assignment[vertex] = new_block;
+//    this->update_edge_counts(current_block, new_block, updates);
+//    this->_degrees_out = new_block_degrees_out;
+//    this->_degrees_in = new_block_degrees_in;
+//    this->_degrees = new_block_degrees;
+//};
+//
+//void DistBlockmodel::set_block_membership(int vertex, int block) { this->_assignment[vertex] = block; }
+//
+//std::vector<int> DistBlockmodel::sort_indices(const std::vector<double> &unsorted) {
+//    // initialize original index locations
+//    std::vector<int> indices = utils::range<int>(0, unsorted.size());
+//
+//    // sort indexes based on comparing values in unsorted
+//    std::sort(indices.data(), indices.data() + indices.size(),
+//              [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
+//
+//    return indices;
+//}
+//
+//void DistBlockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
+//    this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
+//                                         updates.block_col, updates.proposal_col);
+//}
 
 void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     if (args.distribute == "none") {
@@ -209,7 +208,7 @@ void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     }
     if (args.distribute == "2hop-snowball") {
         this->_my_blocks = std::vector<bool>(this->num_blocks, false);
-        for (int v = 0; v < neighbors.size(); ++v) {
+        for (int v = 0; v < (int) neighbors.size(); ++v) {
             if (this->owns_vertex(v)) {
                 int b = this->block_assignment(v);
                 this->_my_blocks[b] = true;
@@ -220,14 +219,14 @@ void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, false);
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.size() == 0) {
+        if (vertex_neighbors.empty()) {
             continue;
         }
         int block = this->_block_assignment[vertex];
-        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
-            if ((this->_my_blocks[block] == true) || (this->_my_blocks[neighbor_block] == true)) {
+            if (this->_my_blocks[block] || this->_my_blocks[neighbor_block]) {
             // if ((block % mpi.num_processes == mpi.rank) || (neighbor_block % mpi.num_processes == mpi.rank)) {
                 this->_in_two_hop_radius[block] = true;
                 this->_in_two_hop_radius[neighbor_block] = true;
@@ -236,7 +235,7 @@ void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     }
     int two_hop_radius_size = 0;
     for (const bool val : this->_in_two_hop_radius) {
-        if (val == true) two_hop_radius_size++;
+        if (val) two_hop_radius_size++;
     }
     if (mpi.rank == 0) std::cout << "rank 0: num blocks in 2-hop radius == " << two_hop_radius_size << " / " << this->num_blocks << std::endl;
 }
@@ -342,7 +341,7 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
     // std::cout << "my vertices size: " << this->_my_vertices.size() << " neighbors size: " << neighbors.size() << std::endl;
     if (this->_my_vertices.size() == neighbors.size()) {  // if already done sampling, no need to do it again
         std::cout << "already done sampling, now just re-assigning blocks based on sampled vertices" << std::endl;
-        for (int vertex = 0; vertex < neighbors.size(); ++vertex) {
+        for (size_t vertex = 0; vertex < neighbors.size(); ++vertex) {
             if (this->_my_vertices[vertex] == 0) continue;
             int block = this->_block_assignment[vertex];
             this->_my_blocks[block] = true;
@@ -377,7 +376,7 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
             }
             if (num_vertices < target && frontier.size() == 0) {  // restart with a new vertex that isn't already selected
                 std::unordered_set<int> candidates;
-                for (int i = 0; i < neighbors.size(); ++i) {
+                for (int i = 0; i < (int) neighbors.size(); ++i) {
                     if (this->_my_vertices[i] == 0) candidates.insert(i);
                 }
                 int index = rand() % candidates.size();
@@ -405,13 +404,13 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
             // utils::print<int>(global_selected);
         // }
         std::vector<int> vertices_left;
-        for (int vertex = 0; vertex < global_selected.size(); ++vertex) {
+        for (int vertex = 0; vertex < (int) global_selected.size(); ++vertex) {
             if (global_selected[vertex] == 0) {
                 vertices_left.push_back(vertex);
             }
         }
         // assign remaining vertices in round-robin fashion
-        for (int i = mpi.rank; i < vertices_left.size(); i += mpi.num_processes) {
+        for (size_t i = mpi.rank; i < vertices_left.size(); i += mpi.num_processes) {
             int vertex = vertices_left[i];
             this->_my_vertices[vertex] = 1;
             block = this->_block_assignment[vertex];
@@ -435,18 +434,18 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
 
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.size() == 0) {
+        if (vertex_neighbors.empty()) {
             continue;
         }
         int block = this->_block_assignment[vertex];
-        if (this->_in_two_hop_radius[block] == false) {
+        if (!this->_in_two_hop_radius[block]) {
             continue;
         }
-        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
             // Get count
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
-            if (this->_in_two_hop_radius[neighbor_block] == false) {
+            if (!this->_in_two_hop_radius[neighbor_block]) {
                 continue;
             }
             // TODO: change this once code is updated to support weighted graphs

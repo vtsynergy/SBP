@@ -69,7 +69,7 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
         }
     }
     std::vector<int> true_assignment(graph.assignment());
-    for (int i = 0; i < true_assignment.size(); ++i) {
+    for (size_t i = 0; i < true_assignment.size(); ++i) {
         true_assignment[i] = translator[true_assignment[i]];
     }
     std::cout << "Blockmodel correctness evaluation" << std::endl;
@@ -105,10 +105,10 @@ Hungarian::Matrix evaluate::hungarian(const Graph &graph, Blockmodel &blockmodel
     }
 
     std::vector<int> assignment(result.assignment.size(), 0);
-    for (int row = 0; row < result.assignment.size(); ++row) {
-        for (int col = 0; col < result.assignment[0].size(); ++col) {
+    for (size_t row = 0; row < result.assignment.size(); ++row) {
+        for (size_t col = 0; col < result.assignment[0].size(); ++col) {
             if (result.assignment[row][col] == 1) {
-                assignment[row] = col;
+                assignment[row] = (int) col;
             }
         }
     }

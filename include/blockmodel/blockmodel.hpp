@@ -19,7 +19,7 @@
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 
-static const float BLOCK_REDUCTION_RATE = 0.5;
+static const double BLOCK_REDUCTION_RATE = 0.5;
 
 // typedef py::EigenDRef<Eigen::Matrix<int, Eigen::Dynamic, 2>> Matrix2Column;
 
@@ -68,7 +68,7 @@ class Blockmodel {
         this->initialize_edge_counts(out_neighbors);
     }
     /// TODO
-    std::vector<int> build_mapping(const std::vector<int> &values) const;
+    static std::vector<int> build_mapping(const std::vector<int> &values) ;
     /// Performs the block merges with the highest change in entropy/MDL
     void carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                const std::vector<int> &best_merge_for_each_block);

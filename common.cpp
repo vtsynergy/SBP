@@ -59,9 +59,9 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 }
 
 std::vector<int> exclude_indices(const std::vector<int> &in, int index1, int index2) {
-    std::vector<int> out = utils::constant<int>(in.size() - 1, 0);
+    std::vector<int> out = utils::constant<int>((int) in.size() - 1, 0);
     int count = 0;
-    for (int i = 0; i < in.size(); ++i) {
+    for (int i = 0; i < (int) in.size(); ++i) {
         if (i == index1 || i == index2) {
             continue;
         }
@@ -80,7 +80,7 @@ MapVector<int>& exclude_indices(MapVector<int> &in, int index1, int index2) {
 
 std::vector<int> index_nonzero(const std::vector<int> &values, std::vector<int> &indices) {
     std::vector<int> results;
-    for (int i = 0; i < indices.size(); ++i) {
+    for (size_t i = 0; i < indices.size(); ++i) {
         int index = indices[i];
         if (index != 0) {
             int value = values[i];
@@ -106,7 +106,7 @@ std::vector<int> index_nonzero(const std::vector<int> &values, MapVector<int> &i
 
 std::vector<int> nonzeros(std::vector<int> &in) {
     std::vector<int> values;
-    for (int i = 0; i < in.size(); ++i) {
+    for (size_t i = 0; i < in.size(); ++i) {
         int value = in[i];
         if (value != 0) {
             values.push_back(value);
@@ -117,7 +117,7 @@ std::vector<int> nonzeros(std::vector<int> &in) {
 
 std::vector<int> nonzeros(MapVector<int> &in) {
     std::vector<int> values;
-    for (const std::pair<int, int> &element : in) {
+    for (const std::pair<const int, int> &element : in) {
         if (element.second != 0) {
             values.push_back(element.second);
         }

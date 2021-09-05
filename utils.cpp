@@ -2,13 +2,13 @@
 
 #include "mpi_data.hpp"
 
-std::string utils::build_filepath(Args &args) {
-    std::ostringstream filepathstream;
-    filepathstream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
-    filepathstream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
-    filepathstream << "BlockSizeVar_" << args.numvertices << "_nodes";
+std::string utils::build_filepath() {
+    std::ostringstream filepath_stream;
+    filepath_stream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
+    filepath_stream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
+    filepath_stream << "BlockSizeVar_" << args.numvertices << "_nodes";
     // TODO: Add capability to process multiple "streaming" graph parts
-    std::string filepath = filepathstream.str();
+    std::string filepath = filepath_stream.str();
     if (!fs::exists(filepath + ".tsv")) {
         std::cerr << "File doesn't exist: " << filepath + ".tsv" << std::endl;
         exit(-1);
@@ -28,9 +28,9 @@ std::vector<std::vector<std::string>> utils::read_csv(fs::path &filepath) {
     int items = 0;
     while (std::getline(file, line)) {
         std::vector<std::string> row;
-        std::stringstream linestream(line);
+        std::stringstream line_stream(line);
         std::string value;
-        while (linestream >> value) {
+        while (line_stream >> value) {
             row.push_back(value);
             items++;
         }
@@ -42,7 +42,7 @@ std::vector<std::vector<std::string>> utils::read_csv(fs::path &filepath) {
 }
 
 void utils::insert(NeighborList &neighbors, int from, int to) {
-    if (from >= neighbors.size()) {
+    if (from >= (int)neighbors.size()) {
         std::vector<std::vector<int>> padding(from - neighbors.size() + 1, std::vector<int>());
         neighbors.insert(neighbors.end(), padding.begin(), padding.end());
     }
@@ -50,7 +50,7 @@ void utils::insert(NeighborList &neighbors, int from, int to) {
 }
 
 void utils::insert_nodup(NeighborList &neighbors, int from, int to) {
-    if (from >= neighbors.size()) {
+    if (from >= (int)neighbors.size()) {
         std::vector<std::vector<int>> padding(from - neighbors.size() + 1, std::vector<int>());
         neighbors.insert(neighbors.end(), padding.begin(), padding.end());
     }

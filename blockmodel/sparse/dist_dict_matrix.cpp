@@ -204,7 +204,7 @@ void DistDictMatrix::setrow(int row, const MapVector<int> &vector) {
 
 void DistDictMatrix::setcol(int col, const MapVector<int> &vector) {
     check_col_bounds(col);
-    for (int row = 0; row < this->_matrix.size(); ++row) {
+    for (int row = 0; row < (int) this->_matrix.size(); ++row) {
         MapVector<int>::const_iterator value = vector.find(row);
         if (value == vector.end())  // value is not in vector
             this->_matrix[row].erase(col);

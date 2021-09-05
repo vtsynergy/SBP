@@ -174,7 +174,7 @@ void DictMatrix::setrow(int row, const MapVector<int> &vector) {
 
 void DictMatrix::setcol(int col, const MapVector<int> &vector) {
     check_col_bounds(col);
-    for (int row = 0; row < this->matrix.size(); ++row) {
+    for (int row = 0; row < (int) this->matrix.size(); ++row) {
         MapVector<int>::const_iterator value = vector.find(row);
         if (value == vector.end())  // value is not in vector
             this->matrix[row].erase(col);

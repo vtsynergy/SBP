@@ -108,7 +108,7 @@ PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_blo
     // other_block --> current_block == other_block --> proposed_block
     // current_block --> proposed_block == proposed_block --> proposed_block
     // proposed_block --> current_block == proposed_block --> proposed_block
-    for (int i = 0; i < out_edges.indices.size(); ++i) {
+    for (size_t i = 0; i < out_edges.indices.size(); ++i) {
         int out_vertex = out_edges.indices[i];
         int out_block = blockmodel.block_assignment(out_vertex);
         int edge_weight = out_edges.values[i];
@@ -119,7 +119,7 @@ PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_blo
         }
         delta[std::make_pair(current_block, out_block)] -= edge_weight;
     }
-    for (int i = 0; i < in_edges.indices.size(); ++i) {
+    for (size_t i = 0; i < in_edges.indices.size(); ++i) {
         int in_vertex = in_edges.indices[i];
         int in_block = blockmodel.block_assignment(in_vertex);
         int edge_weight = in_edges.values[i];
@@ -902,7 +902,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         num_iterations++;
         int vertex_moves = 0;
-        int num_batches = args.batches;
+        double num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices() / num_batches));
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
@@ -915,7 +915,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             std::vector<Membership> membership_updates;
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
-            for (int vertex = 0; vertex < end; ++vertex) {
+            for (int vertex = start; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
                 // TODO: batch by % of my vertices? Can be calculated same time as load balancing
                 if (!blockmodel.owns_vertex(vertex)) continue;

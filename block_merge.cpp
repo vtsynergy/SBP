@@ -125,9 +125,9 @@ PairIndexVector blockmodel_delta(int current_block, int proposed_block, const Bl
      typedef std::tuple<int, int, double> merge_t;
      auto cmp_fxn = [](merge_t left, merge_t right) { return std::get<2>(left) > std::get<2>(right); };
      std::priority_queue<merge_t, std::vector<merge_t>, decltype(cmp_fxn)> queue(cmp_fxn);
-     for (int i = 0; i < delta_entropy_for_each_block.size(); ++i)
+     for (int i = 0; i < (int) delta_entropy_for_each_block.size(); ++i)
          queue.push(std::make_tuple(i, best_merge_for_each_block[i], delta_entropy_for_each_block[i]));
-     double delta_entropy = 0.0;
+//     double delta_entropy = 0.0;
      int num_merged = 0;
      // Block map is here so that, if you move merge block A to block C, and then block B to block A, all three blocks
      // end up with the same block assignment (C)
@@ -137,7 +137,7 @@ PairIndexVector blockmodel_delta(int current_block, int proposed_block, const Bl
          queue.pop();
          int merge_from = std::get<0>(merge);
          int merge_to = block_map[std::get<1>(merge)];
-         double delta_entropy_hint = std::get<2>(merge);
+//         double delta_entropy_hint = std::get<2>(merge);
          if (merge_from != merge_to) {
              // Calculate the delta entropy given the current block assignment
              EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(merge_from);
@@ -176,7 +176,7 @@ PairIndexVector blockmodel_delta(int current_block, int proposed_block, const Bl
              }
              // Perform the merge
              // 1. Update the assignment
-             for (int i = 0; i < block_map.size(); ++i) {
+             for (size_t i = 0; i < block_map.size(); ++i) {
                  int block = block_map[i];
                  if (block == merge_from) {
                      block_map[i] = merge_to;
@@ -192,7 +192,7 @@ PairIndexVector blockmodel_delta(int current_block, int proposed_block, const Bl
          }
      }
      std::vector<int> mapping = blockmodel.build_mapping(blockmodel.block_assignment());
-     for (int i = 0; i < blockmodel.block_assignment().size(); ++i) {
+     for (int i = 0; i < (int) blockmodel.block_assignment().size(); ++i) {
          int block = blockmodel.block_assignment(i);
          int new_block_index = mapping[block];
          blockmodel.set_block_assignment(i, new_block_index);
@@ -499,9 +499,9 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList 
     std::cout << mpi.rank << " my blocks number: " << my_blocks << std::endl;
     std::cout << mpi.rank << " all best merges size: " << all_best_merges.size() << std::endl;
     std::cout << mpi.rank << " numblocks: ";
-    utils::print<int>(numblocks);
+    utils::print<int>(numblocks, mpi.num_processes);
     std::cout << mpi.rank << " offsets: ";
-    utils::print<int>(offsets);
+    utils::print<int>(offsets, mpi.num_processes);
     std::cout << "strategy == " << args.distribute << std::endl;
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
                    Merge_t, MPI_COMM_WORLD);

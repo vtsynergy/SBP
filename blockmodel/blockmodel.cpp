@@ -4,12 +4,12 @@
 
 #include "../args.hpp"
 
-std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) const {
+std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) {
     std::map<int, bool> unique_map;
-    for (int i = 0; i < values.size(); ++i) {
+    for (size_t i = 0; i < values.size(); ++i) {
         unique_map[values[i]] = true;
     }
-    std::vector<int> mapping = utils::constant<int>(values.size(), -1);
+    std::vector<int> mapping = utils::constant<int>((int) values.size(), -1);
     int counter = 0;
     for (std::pair<int, bool> element : unique_map) {
         mapping[element.first] = counter;
@@ -41,7 +41,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         int merge_to = block_map[best_merge_for_each_block[merge_from]];
         counter++;
         if (merge_to != merge_from) {
-            for (int i = 0; i < block_map.size(); ++i) {
+            for (size_t i = 0; i < block_map.size(); ++i) {
                 int block = block_map[i];
                 if (block == merge_from) {
                     block_map[i] = merge_to;
@@ -52,7 +52,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         }
     }
     std::vector<int> mapping = build_mapping(this->_block_assignment);
-    for (int i = 0; i < this->_block_assignment.size(); ++i) {
+    for (size_t i = 0; i < this->_block_assignment.size(); ++i) {
         int block = this->_block_assignment[i];
         int new_block = mapping[block];
         this->_block_assignment[i] = new_block;
@@ -146,7 +146,7 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             continue;
         }
         int block = this->_block_assignment[vertex];
-        for (int i = 0; i < vertex_neighbors.size(); ++i) {
+        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
             // Get count
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
@@ -199,7 +199,7 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
 }
 
 void Blockmodel::update_block_assignment(int from_block, int to_block) {
-    for (int index = 0; index < this->_block_assignment.size(); ++index) {
+    for (size_t index = 0; index < this->_block_assignment.size(); ++index) {
         if (this->_block_assignment[index] == from_block) {
             this->_block_assignment[index] = to_block;
         }
