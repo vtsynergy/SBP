@@ -136,22 +136,26 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
                             const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
     Delta delta(current_block, proposed_block);
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
-        int col = entry.first;
-        delta.add(current_block, col, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
-        int row = entry.first;
-        delta.add(row, current_block, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
-        int col = entry.first;
-        delta.add(proposed_block, col, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
-        int row = entry.first;
-        delta.add(row, proposed_block, 0);
-    }
+    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    delta.zero_init(matrix->getrow_sparse(current_block), matrix->getcol_sparse(current_block),
+                    matrix->getrow_sparse(proposed_block), matrix->getcol_sparse(proposed_block));
+//    delta.zero_init(blockmodel.blockmatrix());
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+//        int col = entry.first;
+//        delta.add(current_block, col, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+//        int row = entry.first;
+//        delta.add(row, current_block, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+//        int col = entry.first;
+//        delta.add(proposed_block, col, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+//        int row = entry.first;
+//        delta.add(row, proposed_block, 0);
+//    }
     // current_block -> current_block == proposed_block --> proposed_block  (this includes self edges)
     // current_block --> other_block == proposed_block --> other_block
     // other_block --> current_block == other_block --> proposed_block

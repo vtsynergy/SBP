@@ -9,22 +9,26 @@ namespace block_merge {
 
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
     Delta delta(current_block, proposed_block);
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
-        int col = entry.first;
-        delta.add(current_block, col, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
-        int row = entry.first;
-        delta.add(row, current_block, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
-        int col = entry.first;
-        delta.add(proposed_block, col, 0);
-    }
-    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
-        int row = entry.first;
-        delta.add(row, proposed_block, 0);
-    }
+    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    delta.zero_init(matrix->getrow_sparse(current_block), matrix->getcol_sparse(current_block),
+                    matrix->getrow_sparse(proposed_block), matrix->getcol_sparse(proposed_block));
+//    delta.zero_init(blockmodel.blockmatrix());
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+//        int col = entry.first;
+//        delta.add(current_block, col, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+//        int row = entry.first;
+//        delta.add(row, current_block, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+//        int col = entry.first;
+//        delta.add(proposed_block, col, 0);
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+//        int row = entry.first;
+//        delta.add(row, proposed_block, 0);
+//    }
     for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         int col = entry.first;  // row = current_block
         int value = entry.second;
