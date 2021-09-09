@@ -21,7 +21,7 @@
 #include "mpi_data.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "sparse/dist_dict_matrix.hpp"
+//#include "sparse/dist_dict_matrix.hpp"
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 

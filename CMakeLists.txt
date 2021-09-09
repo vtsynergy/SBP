@@ -38,7 +38,8 @@ add_library(SBP STATIC
     blockmodel/dist_blockmodel.cpp
     blockmodel/sparse/dict_matrix.cpp
     blockmodel/sparse/dict_transpose_matrix.cpp
-    blockmodel/sparse/dist_dict_matrix.cpp)
+#    blockmodel/sparse/dist_dict_matrix.cpp
+        )
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(DistributedSBP main.cpp)
@@ -77,6 +78,7 @@ enable_testing()
 add_subdirectory(extern/googletest)
 add_executable(Test
         test/blockmodel_test.cpp
+        test/block_merge_test.cpp
         test/common_test.cpp
         test/finetune_test.cpp
         test/toy_example.hpp)

@@ -17,7 +17,7 @@ class FinetuneTest : public ToyExample {
 protected:
     common::ProposalAndEdgeCounts Proposal;
     EdgeCountUpdates Updates;
-    PairIndexVector Delta;
+    DictMatrix Delta;
     void SetUp() override {
         ToyExample::SetUp();
         Proposal = {0, 2, 3, 5};
@@ -25,14 +25,23 @@ protected:
         Updates.block_col = { 1, 0, 3 };
         Updates.proposal_row = { 8, 1, 1 };
         Updates.proposal_col = { 8, 2, 2 };
-        Delta[std::make_pair(0, 0)] = 1;
-        Delta[std::make_pair(0, 1)] = 0;
-        Delta[std::make_pair(0, 2)] = 1;
-        Delta[std::make_pair(1, 0)] = 1;
-        Delta[std::make_pair(1, 2)] = -1;
-        Delta[std::make_pair(2, 0)] = 1;
-        Delta[std::make_pair(2, 1)] = 0;
-        Delta[std::make_pair(2, 2)] = -3;
+        Delta = DictMatrix(3, 3);
+        Delta.add(0,0,1);
+        Delta.add(0,1,0);
+        Delta.add(0,2,1);
+        Delta.add(1,0,1);
+        Delta.add(1,2,-1);
+        Delta.add(2,0,1);
+        Delta.add(2,1,0);
+        Delta.add(2,2,-3);
+//        Delta[std::make_pair(0, 0)] = 1;
+//        Delta[std::make_pair(0, 1)] = 0;
+//        Delta[std::make_pair(0, 2)] = 1;
+//        Delta[std::make_pair(1, 0)] = 1;
+//        Delta[std::make_pair(1, 2)] = -1;
+//        Delta[std::make_pair(2, 0)] = 1;
+//        Delta[std::make_pair(2, 1)] = 0;
+//        Delta[std::make_pair(2, 2)] = -3;
     }
 };
 
@@ -69,16 +78,16 @@ TEST_F(FinetuneTest, BlockmodelDeltasAreCorrect) {
     int current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
-    PairIndexVector delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
-    EXPECT_EQ(delta.size(), 8) << "blockmodel deltas are the wrong size. Expected 6 but got " << delta.size();
-    EXPECT_EQ(delta[std::make_pair(0, 0)], 1);
-    EXPECT_EQ(delta[std::make_pair(0, 1)], 0);
-    EXPECT_EQ(delta[std::make_pair(0, 2)], 1);
-    EXPECT_EQ(delta[std::make_pair(1, 0)], 1);
-    EXPECT_EQ(delta[std::make_pair(1, 2)], -1);
-    EXPECT_EQ(delta[std::make_pair(2, 0)], 1);
-    EXPECT_EQ(delta[std::make_pair(2, 1)], 0);
-    EXPECT_EQ(delta[std::make_pair(2, 2)], -3);
+    DictMatrix delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
+    EXPECT_EQ(delta.entries().size(), 8) << "blockmodel deltas are the wrong size. Expected 8 but got " << delta.entries().size();
+    EXPECT_EQ(delta.get(0,0), 1);
+    EXPECT_EQ(delta.get(0,1), 0);
+    EXPECT_EQ(delta.get(0,2), 1);
+    EXPECT_EQ(delta.get(1,0), 1);
+    EXPECT_EQ(delta.get(1,2), -1);
+    EXPECT_EQ(delta.get(2,0), 1);
+    EXPECT_EQ(delta.get(2,1), 0);
+    EXPECT_EQ(delta.get(2,2), -3);
 }
 
 /// TODO: same test but using a vertex with a self edge
@@ -87,10 +96,10 @@ TEST_F(FinetuneTest, BlockmodelDeltasShouldSumUpToZero) {
     int current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
-    PairIndexVector delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
+    DictMatrix delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
     int sum = 0;
-    for (const auto &entry : delta) {
-        sum += entry.second;
+    for (const auto &entry : delta.entries()) {
+        sum += std::get<2>(entry);
     }
     EXPECT_EQ(sum, 0);
     vertex = 10;  // has a self-edge
@@ -99,8 +108,8 @@ TEST_F(FinetuneTest, BlockmodelDeltasShouldSumUpToZero) {
     in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
     delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
     sum = 0;
-    for (const auto &entry : delta) {
-        sum += entry.second;
+    for (const auto &entry : delta.entries()) {
+        sum += std::get<2>(entry);
     }
     EXPECT_EQ(sum, 0);
 }
@@ -110,12 +119,15 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
     int current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
+    B.print_blockmatrix();
     Blockmodel B1 = B.copy();
     B1.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B1.print_blockmatrix();
     Blockmodel B2 = B.copy();
     B2.move_vertex(vertex, Proposal.proposal, Delta, new_block_degrees.block_degrees_out,
                    new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B2.print_blockmatrix();
     for (int row = 0; row < B.getNum_blocks(); ++row) {
         for (int col = 0; col < B.getNum_blocks(); ++col) {
             int val1 = B1.blockmatrix()->get(row, col);

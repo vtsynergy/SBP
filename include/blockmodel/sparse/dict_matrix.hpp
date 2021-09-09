@@ -32,6 +32,7 @@ class DictMatrix : public ISparseMatrix {
     void clearrow(int row) override;
     void clearcol(int col) override;
     ISparseMatrix* copy() const override;
+    std::vector<std::tuple<int, int, int>> entries() const override;
     int get(int row, int col) const override;
     std::vector<int> getcol(int col) const override;
     MapVector<int> getcol_sparse(int col) const override;
@@ -57,7 +58,7 @@ class DictMatrix : public ISparseMatrix {
     void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
-    void update_edge_counts(const PairIndexVector &delta) override;
+    void update_edge_counts(const ISparseMatrix *delta) override;
     std::vector<int> values() const override;
 
   private:

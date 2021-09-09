@@ -41,13 +41,13 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
 /// Returns the potential changes to the blockmodel if the vertex with `out_edges` and `in_edges` moves from
 /// `current_block` into `proposed_block`.
 /// NOTE: assumes that any self edges are present in exactly one of `out_edges` and `in_edges`.
-PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
+DictMatrix blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
                                  const EdgeWeights &in_edges, const Blockmodel &blockmodel);
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
-double compute_delta_entropy(const Blockmodel &blockmodel, const PairIndexVector &delta,
+double compute_delta_entropy(const Blockmodel &blockmodel, const DictMatrix &delta,
                              const common::NewBlockDegrees &block_degrees);
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
@@ -80,7 +80,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 /// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
-double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const PairIndexVector &delta,
+double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const DictMatrix &delta,
                            int current_block, const common::ProposalAndEdgeCounts &proposal,
                            const common::NewBlockDegrees &new_block_degrees);
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.

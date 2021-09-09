@@ -60,6 +60,10 @@ ISparseMatrix* DictTransposeMatrix::copy() const {
     return new DictTransposeMatrix(dict_matrix);
 }
 
+std::vector<std::tuple<int, int, int>> DictTransposeMatrix::entries() const {
+    throw std::logic_error("entries() is not implemented for DictTransposeMatrix!");
+}
+
 int DictTransposeMatrix::get(int row, int col) const {
     check_row_bounds(row);
     check_col_bounds(col);
@@ -283,11 +287,15 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
     }
 }
 
-void DictTransposeMatrix::update_edge_counts(const PairIndexVector &delta) {
-    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
-        int row = entry.first.first;
-        int col = entry.first.second;
-        int change = entry.second;
+void DictTransposeMatrix::update_edge_counts(const ISparseMatrix *delta) {
+//    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
+//        int row = entry.first.first;
+//        int col = entry.first.second;
+//        int change = entry.second;
+    for (const std::tuple<int, int, int> &entry : delta->entries()) {
+        int row = std::get<0>(entry);
+        int col = std::get<1>(entry);
+        int change = std::get<2>(entry);
         this->matrix[row][col] += change;
         this->matrix_transpose[col][row] += change;
         if (this->matrix[row][col] == 0) {
@@ -302,7 +310,7 @@ std::vector<int> DictTransposeMatrix::values() const {
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        for (const std::pair<const int, int> &element : matrix_row) {
             values.push_back(element.second);
         }
     }

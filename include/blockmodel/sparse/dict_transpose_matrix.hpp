@@ -36,6 +36,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void clearcol(int col) override;
     /// Returns a copy of the current matrix.
     virtual ISparseMatrix* copy() const override;
+    std::vector<std::tuple<int, int, int>> entries() const override;
     virtual int get(int row, int col) const override;
     /// Returns all values in the requested column as a dense vector.
     virtual std::vector<int> getcol(int col) const override;
@@ -65,7 +66,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
-    void update_edge_counts(const PairIndexVector &delta) override;
+    void update_edge_counts(const ISparseMatrix *delta) override;
     virtual std::vector<int> values() const override;
 
   private:

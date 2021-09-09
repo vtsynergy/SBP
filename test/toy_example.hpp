@@ -22,6 +22,7 @@ protected:
     Graph graph;
     common::NewBlockDegrees  new_block_degrees;
     void SetUp() override {
+        args.transpose = true;
         std::vector<std::vector<int>> edges {
                 {0, 0},
                 {0, 1},

@@ -97,7 +97,7 @@ class Blockmodel {
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new blockmodel values from
     /// `delta`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
-    void move_vertex(int vertex, int new_block, const PairIndexVector &delta,
+    void move_vertex(int vertex, int new_block, const DictMatrix &delta,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                      std::vector<int> &new_block_degrees);
     /// TODO

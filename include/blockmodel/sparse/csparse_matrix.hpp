@@ -72,6 +72,8 @@ public:
     virtual void clearcol(int col) = 0;
     /// Returns a copy of this matrix.
     virtual ISparseMatrix* copy() const = 0;
+    /// Returns matrix entries in the form `std::tuple<int, int, int`.
+    virtual std::vector<std::tuple<int, int, int>> entries() const = 0;
     /// Returns the value in `matrix[row, col]`.
     virtual int get(int row, int col) const = 0;
     /// Returns the column `col` as a dense vector.
@@ -108,7 +110,7 @@ public:
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) = 0;
     /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
-    virtual void update_edge_counts(const PairIndexVector &delta) = 0;
+    virtual void update_edge_counts(const ISparseMatrix *delta) = 0;
     virtual std::vector<int> values() const = 0;
     std::pair<int, int> shape;
 

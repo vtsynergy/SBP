@@ -38,6 +38,19 @@ ISparseMatrix* DictMatrix::copy() const {
     return new DictMatrix(dict_matrix);
 }
 
+std::vector<std::tuple<int, int, int>> DictMatrix::entries() const {
+    std::vector<std::tuple<int, int, int>> result;
+    for (int row_index = 0; row_index < this->nrows; ++row_index) {
+        const MapVector<int> &row = this->matrix[row_index];
+        for (const std::pair<const int, int> &entry : row) {
+            int col_index = entry.first;
+            int value = entry.second;
+            result.emplace_back(row_index, col_index, value);
+        }
+    }
+    return result;
+}
+
 int DictMatrix::get(int row, int col) const {
     check_row_bounds(row);
     check_col_bounds(col);
@@ -281,15 +294,16 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::
     }
 }
 
-void DictMatrix::update_edge_counts(const PairIndexVector &delta) {
-    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
-        int row = entry.first.first;
-        int col = entry.first.second;
-        int change = entry.second;
-        this->matrix[row][col] += change;
-        if (this->matrix[row][col] == 0)
-            this->matrix[row].erase(col);
-    }
+void DictMatrix::update_edge_counts(const ISparseMatrix *delta) {
+    throw std::logic_error("update_edge_counts with ISparseMatrix not yet implemented for DictMatrix!");
+//    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
+//        int row = entry.first.first;
+//        int col = entry.first.second;
+//        int change = entry.second;
+//        this->matrix[row][col] += change;
+//        if (this->matrix[row][col] == 0)
+//            this->matrix[row].erase(col);
+//    }
 }
 
 std::vector<int> DictMatrix::values() const {

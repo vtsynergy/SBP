@@ -84,24 +84,73 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
     return EdgeWeights{blocks, weights};
 }
 
-PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
-                                 const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
-    PairIndexVector delta;
+//PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
+//                                 const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
+//    PairIndexVector delta;
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+//        int col = entry.first;
+//        delta[std::make_pair(current_block, col)];
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+//        int row = entry.first;
+//        delta[std::make_pair(row, current_block)];
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+//        int col = entry.first;
+//        delta[std::make_pair(proposed_block, col)];
+//    }
+//    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+//        int row = entry.first;
+//        delta[std::make_pair(row, proposed_block)];
+//    }
+//    // current_block -> current_block == proposed_block --> proposed_block  (this includes self edges)
+//    // current_block --> other_block == proposed_block --> other_block
+//    // other_block --> current_block == other_block --> proposed_block
+//    // current_block --> proposed_block == proposed_block --> proposed_block
+//    // proposed_block --> current_block == proposed_block --> proposed_block
+//    for (size_t i = 0; i < out_edges.indices.size(); ++i) {
+//        int out_vertex = out_edges.indices[i];
+//        int out_block = blockmodel.block_assignment(out_vertex);
+//        int edge_weight = out_edges.values[i];
+//        if (vertex == out_vertex) {
+//            delta[std::make_pair(proposed_block, proposed_block)] += edge_weight;
+//        } else {
+//            delta[std::make_pair(proposed_block, out_block)] += edge_weight;
+//        }
+//        delta[std::make_pair(current_block, out_block)] -= edge_weight;
+//    }
+//    for (size_t i = 0; i < in_edges.indices.size(); ++i) {
+//        int in_vertex = in_edges.indices[i];
+//        int in_block = blockmodel.block_assignment(in_vertex);
+//        int edge_weight = in_edges.values[i];
+//        if (vertex == in_vertex) {
+//            delta[std::make_pair(proposed_block, proposed_block)] += edge_weight;
+//        } else {
+//            delta[std::make_pair(in_block, proposed_block)] += edge_weight;
+//        }
+//        delta[std::make_pair(in_block, current_block)] -= edge_weight;
+//    }
+//    return delta;
+//}
+
+DictMatrix blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
+                            const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
+    DictMatrix delta(blockmodel.getNum_blocks(), blockmodel.getNum_blocks());
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         int col = entry.first;
-        delta[std::make_pair(current_block, col)];
+        delta.add(current_block, col, 0);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         int row = entry.first;
-        delta[std::make_pair(row, current_block)];
+        delta.add(row, current_block, 0);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         int col = entry.first;
-        delta[std::make_pair(proposed_block, col)];
+        delta.add(proposed_block, col, 0);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         int row = entry.first;
-        delta[std::make_pair(row, proposed_block)];
+        delta.add(row, proposed_block, 0);
     }
     // current_block -> current_block == proposed_block --> proposed_block  (this includes self edges)
     // current_block --> other_block == proposed_block --> other_block
@@ -113,22 +162,22 @@ PairIndexVector blockmodel_delta(int vertex, int current_block, int proposed_blo
         int out_block = blockmodel.block_assignment(out_vertex);
         int edge_weight = out_edges.values[i];
         if (vertex == out_vertex) {
-            delta[std::make_pair(proposed_block, proposed_block)] += edge_weight;
+            delta.add(proposed_block, proposed_block, edge_weight);
         } else {
-            delta[std::make_pair(proposed_block, out_block)] += edge_weight;
+            delta.add(proposed_block, out_block, edge_weight);
         }
-        delta[std::make_pair(current_block, out_block)] -= edge_weight;
+        delta.sub(current_block, out_block, edge_weight);
     }
     for (size_t i = 0; i < in_edges.indices.size(); ++i) {
         int in_vertex = in_edges.indices[i];
         int in_block = blockmodel.block_assignment(in_vertex);
         int edge_weight = in_edges.values[i];
         if (vertex == in_vertex) {
-            delta[std::make_pair(proposed_block, proposed_block)] += edge_weight;
+            delta.add(proposed_block, proposed_block, edge_weight);
         } else {
-            delta[std::make_pair(in_block, proposed_block)] += edge_weight;
+            delta.add(in_block, proposed_block, edge_weight);
         }
-        delta[std::make_pair(in_block, current_block)] -= edge_weight;
+        delta.sub(in_block, current_block, edge_weight);
     }
     return delta;
 }
@@ -237,14 +286,18 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
     return delta_entropy;
 }
 
-double compute_delta_entropy(const Blockmodel &blockmodel, const PairIndexVector &delta,
+double compute_delta_entropy(const Blockmodel &blockmodel, const DictMatrix &delta,
                              const common::NewBlockDegrees &block_degrees) {
     const ISparseMatrix *matrix = blockmodel.blockmatrix();
     double delta_entropy = 0.0;
-    for (const std::pair<const std::pair<int, int>, int> &cell_delta : delta) {
-        int row = cell_delta.first.first;
-        int col = cell_delta.first.second;
-        int change = cell_delta.second;
+    for (const std::tuple<int, int, int> &entry : delta.entries()) {
+        int row = std::get<0>(entry);
+        int col = std::get<1>(entry);
+        int change = std::get<2>(entry);
+//    for (const std::pair<const std::pair<int, int>, int> &cell_delta : delta) {
+//        int row = cell_delta.first.first;
+//        int col = cell_delta.first.second;
+//        int change = cell_delta.second;
         // delta += + E(old) - E(new)
         delta_entropy += common::cell_entropy((double) matrix->get(row, col), (double) blockmodel.getBlock_degrees_in()[col],
                                               (double) blockmodel.getBlock_degrees_out()[row]);
@@ -402,11 +455,13 @@ VertexMove eval_vertex_move(int vertex, int current_block, common::ProposalAndEd
                             EdgeWeights &in_edges) {
     if (args.nodelta)
         return eval_vertex_move_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
-    PairIndexVector delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
+    const DictMatrix delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + get(delta, std::make_pair(current_block, current_block));
+                                   + delta.get(current_block, current_block);
+//                                   + get(delta, std::make_pair(current_block, current_block));
     int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
+                                    + delta.get(proposal.proposal, proposal.proposal);
+//                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings = hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal, new_block_degrees);
@@ -541,7 +596,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
     return p_backward / p_forward;
 }
 
-double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const PairIndexVector &delta,
+double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const DictMatrix &delta,
                            int current_block, const common::ProposalAndEdgeCounts &proposal,
                            const common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
@@ -578,9 +633,11 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
         proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
         block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
         block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
-                get(delta, std::make_pair(current_block, entry.first)) +
+                delta.get(current_block, entry.first) +
+//                get(delta, std::make_pair(current_block, entry.first)) +
                 blockmodel.blockmatrix()->get(entry.first, current_block) +
-                get(delta, std::make_pair(entry.first, current_block)) + 1.0;
+                delta.get(entry.first, current_block) + 1.0;
+//                get(delta, std::make_pair(entry.first, current_block)) + 1.0;
         proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
         index++;
     }
@@ -594,12 +651,14 @@ VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCou
                        const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges) {
     if (args.nodelta)
         return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
-    PairIndexVector delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
+    DictMatrix delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
                                              blockmodel);
     int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + get(delta, std::make_pair(current_block, current_block));
+                                   + delta.get(current_block, current_block);
+//                                   + get(delta, std::make_pair(current_block, current_block));
     int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
+                                    + delta.get(proposal.proposal, proposal.proposal);
+//                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
 
