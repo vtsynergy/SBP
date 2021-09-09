@@ -7,9 +7,8 @@
 
 namespace block_merge {
 
-// TODO: test this
-DictMatrix blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
-    DictMatrix delta(blockmodel.getNum_blocks(), blockmodel.getNum_blocks());
+Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
+    Delta delta(current_block, proposed_block);
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         int col = entry.first;
         delta.add(current_block, col, 0);
@@ -162,7 +161,7 @@ DictMatrix blockmodel_delta(int current_block, int proposed_block, const Blockmo
                 int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
                 int k = k_out + k_in;
                 common::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
-                DictMatrix delta = blockmodel_delta(merge_from, proposal.proposal, blockmodel);
+                Delta delta = blockmodel_delta(merge_from, proposal.proposal, blockmodel);
 //             common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
 //                     merge_from, blockmodel, blockmodel.blockmatrix()->get(merge_from, merge_from), proposal);
                 int current_block_self_edges = blockmodel.blockmatrix()->get(merge_from, merge_from)
@@ -201,7 +200,7 @@ DictMatrix blockmodel_delta(int current_block, int proposed_block, const Blockmo
                 }
                 blockmodel.update_block_assignment(merge_from, merge_to);
                 // 2. Update the matrix
-                blockmodel.blockmatrix()->update_edge_counts(&delta);
+                blockmodel.blockmatrix()->update_edge_counts(delta);
                 blockmodel.setBlock_degrees_out(new_block_degrees.block_degrees_out);
                 blockmodel.setBlock_degrees_in(new_block_degrees.block_degrees_in);
                 blockmodel.setBlock_degrees(new_block_degrees.block_degrees);
@@ -297,7 +296,7 @@ DictMatrix blockmodel_delta(int current_block, int proposed_block, const Blockmo
         return delta_entropy;
     }
 
-    double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmodel, const DictMatrix &delta,
+    double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmodel, const Delta &delta,
                                         common::NewBlockDegrees &block_degrees) {
         const ISparseMatrix *matrix = blockmodel.blockmatrix();
         double delta_entropy = 0.0;
@@ -442,7 +441,7 @@ DictMatrix blockmodel_delta(int current_block, int proposed_block, const Blockmo
                 common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
         if (past_proposals[proposal.proposal])
             return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};
-        DictMatrix delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
+        Delta delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
         // SparseEdgeCountUpdates updates;
         // edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
         //                           updates);

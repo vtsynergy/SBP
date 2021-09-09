@@ -9,6 +9,7 @@
 
 #include "csparse_matrix.hpp"
 // TODO: figure out where to put utils.hpp so this never happens
+#include "delta.hpp"
 #include "typedefs.hpp"
 #include "../../utils.hpp"
 
@@ -66,7 +67,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
-    void update_edge_counts(const ISparseMatrix *delta) override;
+    void update_edge_counts(const Delta &delta) override;
     virtual std::vector<int> values() const override;
 
   private:

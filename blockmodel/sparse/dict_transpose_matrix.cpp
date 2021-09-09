@@ -287,12 +287,12 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
     }
 }
 
-void DictTransposeMatrix::update_edge_counts(const ISparseMatrix *delta) {
+void DictTransposeMatrix::update_edge_counts(const Delta &delta) {
 //    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
 //        int row = entry.first.first;
 //        int col = entry.first.second;
 //        int change = entry.second;
-    for (const std::tuple<int, int, int> &entry : delta->entries()) {
+    for (const std::tuple<int, int, int> &entry : delta.entries()) {
         int row = std::get<0>(entry);
         int col = std::get<1>(entry);
         int change = std::get<2>(entry);

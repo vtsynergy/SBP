@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "blockmodel.hpp"
+#include "blockmodel/sparse/delta.hpp"
 #include "finetune.hpp"
 #include "graph.hpp"
 #include "utils.hpp"
@@ -17,7 +18,7 @@ class FinetuneTest : public ToyExample {
 protected:
     common::ProposalAndEdgeCounts Proposal;
     EdgeCountUpdates Updates;
-    DictMatrix Delta;
+    Delta Deltas;
     void SetUp() override {
         ToyExample::SetUp();
         Proposal = {0, 2, 3, 5};
@@ -25,23 +26,23 @@ protected:
         Updates.block_col = { 1, 0, 3 };
         Updates.proposal_row = { 8, 1, 1 };
         Updates.proposal_col = { 8, 2, 2 };
-        Delta = DictMatrix(3, 3);
-        Delta.add(0,0,1);
-        Delta.add(0,1,0);
-        Delta.add(0,2,1);
-        Delta.add(1,0,1);
-        Delta.add(1,2,-1);
-        Delta.add(2,0,1);
-        Delta.add(2,1,0);
-        Delta.add(2,2,-3);
-//        Delta[std::make_pair(0, 0)] = 1;
-//        Delta[std::make_pair(0, 1)] = 0;
-//        Delta[std::make_pair(0, 2)] = 1;
-//        Delta[std::make_pair(1, 0)] = 1;
-//        Delta[std::make_pair(1, 2)] = -1;
-//        Delta[std::make_pair(2, 0)] = 1;
-//        Delta[std::make_pair(2, 1)] = 0;
-//        Delta[std::make_pair(2, 2)] = -3;
+        Deltas = Delta(2, 0);
+        Deltas.add(0, 0, 1);
+        Deltas.add(0, 1, 0);
+        Deltas.add(0, 2, 1);
+        Deltas.add(1, 0, 1);
+        Deltas.add(1, 2, -1);
+        Deltas.add(2, 0, 1);
+        Deltas.add(2, 1, 0);
+        Deltas.add(2, 2, -3);
+//        Deltas[std::make_pair(0, 0)] = 1;
+//        Deltas[std::make_pair(0, 1)] = 0;
+//        Deltas[std::make_pair(0, 2)] = 1;
+//        Deltas[std::make_pair(1, 0)] = 1;
+//        Deltas[std::make_pair(1, 2)] = -1;
+//        Deltas[std::make_pair(2, 0)] = 1;
+//        Deltas[std::make_pair(2, 1)] = 0;
+//        Deltas[std::make_pair(2, 2)] = -3;
     }
 };
 
@@ -78,7 +79,7 @@ TEST_F(FinetuneTest, BlockmodelDeltasAreCorrect) {
     int current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
-    DictMatrix delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
+    Delta delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
     EXPECT_EQ(delta.entries().size(), 8) << "blockmodel deltas are the wrong size. Expected 8 but got " << delta.entries().size();
     EXPECT_EQ(delta.get(0,0), 1);
     EXPECT_EQ(delta.get(0,1), 0);
@@ -96,7 +97,7 @@ TEST_F(FinetuneTest, BlockmodelDeltasShouldSumUpToZero) {
     int current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
-    DictMatrix delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
+    Delta delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
     int sum = 0;
     for (const auto &entry : delta.entries()) {
         sum += std::get<2>(entry);
@@ -125,7 +126,7 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B1.print_blockmatrix();
     Blockmodel B2 = B.copy();
-    B2.move_vertex(vertex, Proposal.proposal, Delta, new_block_degrees.block_degrees_out,
+    B2.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
                    new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B2.print_blockmatrix();
     for (int row = 0; row < B.getNum_blocks(); ++row) {
@@ -143,8 +144,8 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
 TEST_F(FinetuneTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
     int vertex = 7;
     double E_before = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
-    double delta_entropy = finetune::compute_delta_entropy(B, Delta, new_block_degrees);
-    B.move_vertex(vertex, Proposal.proposal, Delta, new_block_degrees.block_degrees_out,
+    double delta_entropy = finetune::compute_delta_entropy(B, Deltas, new_block_degrees);
+    B.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     int blockmodel_edges = utils::sum<int>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges()) << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
@@ -193,7 +194,7 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
 TEST_F(FinetuneTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
     int vertex = 7;
     int current_block = B.block_assignment(vertex);
-    double hastings1 = finetune::hastings_correction(vertex, graph, B, Delta, current_block, Proposal, new_block_degrees);
+    double hastings1 = finetune::hastings_correction(vertex, graph, B, Deltas, current_block, Proposal, new_block_degrees);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);

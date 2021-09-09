@@ -138,7 +138,7 @@ EdgeWeights DictMatrix::incoming_edges(int block) const {
     std::vector<int> values;
     for (int row = 0; row < this->nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        for (const std::pair<const int, int> &element : matrix_row) {
             if (element.first == block) {
                 indices.push_back(row);
                 values.push_back(element.second);
@@ -294,7 +294,7 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::
     }
 }
 
-void DictMatrix::update_edge_counts(const ISparseMatrix *delta) {
+void DictMatrix::update_edge_counts(const Delta &delta) {
     throw std::logic_error("update_edge_counts with ISparseMatrix not yet implemented for DictMatrix!");
 //    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
 //        int row = entry.first.first;
@@ -311,7 +311,7 @@ std::vector<int> DictMatrix::values() const {
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {
         const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        for (const std::pair<const int, int> &element : matrix_row) {
             values.push_back(element.second);
         }
         // for (int col = 0; col < ncols; ++col) {

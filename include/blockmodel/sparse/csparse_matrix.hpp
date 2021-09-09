@@ -10,7 +10,7 @@
 #include <sstream>
 
 // #include <Eigen/Core>
-
+#include "delta.hpp"
 #include "typedefs.hpp"
 
 // typedef Eigen::VectorXi Vector;
@@ -110,7 +110,7 @@ public:
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) = 0;
     /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
-    virtual void update_edge_counts(const ISparseMatrix *delta) = 0;
+    virtual void update_edge_counts(const Delta &delta) = 0;
     virtual std::vector<int> values() const = 0;
     std::pair<int, int> shape;
 
