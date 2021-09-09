@@ -8,10 +8,13 @@
 namespace block_merge {
 
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
-    Delta delta(current_block, proposed_block);
+//    Delta delta(current_block, proposed_block);
     const ISparseMatrix *matrix = blockmodel.blockmatrix();
-    delta.zero_init(matrix->getrow_sparse(current_block), matrix->getcol_sparse(current_block),
-                    matrix->getrow_sparse(proposed_block), matrix->getcol_sparse(proposed_block));
+    Delta delta(current_block, proposed_block,matrix->getrow_sparse(current_block),
+                matrix->getcol_sparse(current_block),matrix->getrow_sparse(proposed_block),
+                matrix->getcol_sparse(proposed_block));
+//    delta.zero_init(matrix->getrow_sparse(current_block), matrix->getcol_sparse(current_block),
+//                    matrix->getrow_sparse(proposed_block), matrix->getcol_sparse(proposed_block));
 //    delta.zero_init(blockmodel.blockmatrix());
 //    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(current_block)) {
 //        int col = entry.first;

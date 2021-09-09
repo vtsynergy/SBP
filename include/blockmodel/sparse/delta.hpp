@@ -36,6 +36,12 @@ public:
         this->_current_block = current_block;
         this->_proposed_block = proposed_block;
     }
+    Delta(int current_block, int proposed_block, const MapVector<int> &block_row, const MapVector<int> &block_col,
+          const MapVector<int> &proposed_row, const MapVector<int> &proposed_col) {
+        this->_current_block = current_block;
+        this->_proposed_block = proposed_block;
+        this->zero_init(block_row, block_col, proposed_row, proposed_col);
+    }
     void add(int row, int col, int value) {
         if (row == this->_current_block)
             this->_current_block_row[col] += value;
