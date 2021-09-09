@@ -80,8 +80,8 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
                            common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 /// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
-double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &delta, int current_block,
-                           const common::ProposalAndEdgeCounts &proposal,
+double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const PairIndexVector &delta,
+                           int current_block, const common::ProposalAndEdgeCounts &proposal,
                            const common::NewBlockDegrees &new_block_degrees);
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);

@@ -130,7 +130,6 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
 /// TODO: same test but using a vertex with a self edge
 TEST_F(FinetuneTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
     int vertex = 7;
-    B.print_blockmodel();
     double E_before = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
     double delta_entropy = finetune::compute_delta_entropy(B, Delta, new_block_degrees);
     B.move_vertex(vertex, Proposal.proposal, Delta, new_block_degrees.block_degrees_out,
@@ -138,7 +137,55 @@ TEST_F(FinetuneTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
     int blockmodel_edges = utils::sum<int>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges()) << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
     double E_after = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
-    B.print_blockmodel();
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before) << "calculated dE was " << delta_entropy
             << " but actual dE was " << E_after << " - " << E_before << " = " << E_after - E_before;
+}
+
+TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmodelDeltas) {
+    int vertex = 7;
+    std::unordered_map<int, int> block_counts1;
+    for (const int neighbor : graph.out_neighbors(vertex)) {
+        int neighbor_block = B.block_assignment(neighbor);
+        block_counts1[neighbor_block] += 1;
+    }
+    for (const int neighbor : graph.in_neighbors(vertex)) {
+        if (neighbor == vertex) continue;
+        int neighbor_block = B.block_assignment(neighbor);
+        block_counts1[neighbor_block] += 1;
+    }
+    utils::print(block_counts1);
+    EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
+    EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
+    EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
+    EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
+    std::unordered_map<int, int> block_counts2;
+    for (uint i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
+        int block = blocks_out_neighbors.indices[i];
+        int weight = blocks_out_neighbors.values[i];
+        block_counts2[block] += weight; // block_count[new block] should initialize to 0
+    }
+    for (uint i = 0; i < blocks_in_neighbors.indices.size(); ++i) {
+        int block = blocks_in_neighbors.indices[i];
+        int weight = blocks_in_neighbors.values[i];
+        block_counts2[block] += weight; // block_count[new block] should initialize to 0
+    }
+    utils::print(block_counts2);
+    for (const auto entry : block_counts1) {
+        EXPECT_EQ(entry.second, block_counts2[entry.first]);
+    }
+    for (const auto entry : block_counts2) {
+        EXPECT_EQ(entry.second, block_counts1[entry.first]);
+    }
+}
+
+TEST_F(FinetuneTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
+    int vertex = 7;
+    int current_block = B.block_assignment(vertex);
+    double hastings1 = finetune::hastings_correction(vertex, graph, B, Delta, current_block, Proposal, new_block_degrees);
+    EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
+    EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
+    EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
+    EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
+    double hastings2 = finetune::hastings_correction(B, blocks_out_neighbors, blocks_in_neighbors, Proposal, Updates, new_block_degrees);
+    EXPECT_FLOAT_EQ(hastings1, hastings2);
 }

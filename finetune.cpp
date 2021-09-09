@@ -409,7 +409,7 @@ VertexMove eval_vertex_move(int vertex, int current_block, common::ProposalAndEd
                                     + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-    double hastings = hastings_correction(blockmodel, delta, current_block, proposal, new_block_degrees);
+    double hastings = hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal, new_block_degrees);
     double delta_entropy = compute_delta_entropy(blockmodel, delta, new_block_degrees);
 
     if (accept(delta_entropy, hastings))
@@ -439,7 +439,8 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::Propo
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings =
-            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
+                                new_block_degrees);
     double delta_entropy =
             compute_delta_entropy(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
                                   new_block_degrees);
@@ -540,25 +541,23 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
     return p_backward / p_forward;
 }
 
-double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &delta, int current_block,
-                           const common::ProposalAndEdgeCounts &proposal,
+double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const PairIndexVector &delta,
+                           int current_block, const common::ProposalAndEdgeCounts &proposal,
                            const common::NewBlockDegrees &new_block_degrees) {
     if (proposal.num_neighbor_edges == 0) {
         return 1.0;
     }
     // Compute block weights
+    // TODO: change to unordered_map?
     std::map<int, int> block_counts;
-    for (const std::pair<const std::pair<int, int>, int> &cell_delta : delta) {
-        // Original edge shows up in delta as [row, col] = -weight
-        int weight = -cell_delta.second;
-        if (weight <= 0) continue;
-        int from = cell_delta.first.first;
-        int to = cell_delta.first.second;
-        if (from == current_block) {
-            block_counts[to] += weight;
-        } else {
-            block_counts[from] += weight;
-        }
+    for (const int neighbor : graph.out_neighbors(vertex)) {
+        int neighbor_block = blockmodel.block_assignment(neighbor);
+        block_counts[neighbor_block] += 1;
+    }
+    for (const int neighbor : graph.in_neighbors(vertex)) {
+        if (neighbor == vertex) continue;
+        int neighbor_block = blockmodel.block_assignment(neighbor);
+        block_counts[neighbor_block] += 1;
     }
     // Create Arrays using unique blocks
     size_t num_unique_blocks = block_counts.size();
@@ -578,7 +577,6 @@ double hastings_correction(const Blockmodel &blockmodel, const PairIndexVector &
         counts[index] = entry.second;
         proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
         block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
-        // TODO: does this introduce extra 0s in blockmodel_delta?
         block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
                 get(delta, std::make_pair(current_block, entry.first)) +
                 blockmodel.blockmatrix()->get(entry.first, current_block) +
@@ -605,7 +603,7 @@ VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCou
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
 
-    double hastings = hastings_correction(blockmodel, delta, current_block, proposal, new_block_degrees);
+    double hastings = hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal, new_block_degrees);
     double delta_entropy = compute_delta_entropy(blockmodel, delta, new_block_degrees);
 
     if (accept(delta_entropy, hastings)) {
