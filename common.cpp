@@ -198,11 +198,11 @@ namespace directed {
 
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree) {
     // std::cout << "dE_temp_directed_dense!" << std::endl;
-    std::vector<double> row_or_col_double = utils::to_double<int>(row_or_col);
-    std::vector<double> block_degrees_double = utils::to_double<int>(block_degrees);
-    std::vector<double> result = row_or_col_double / block_degrees_double / degree;
-    result = row_or_col_double * utils::nat_log<double>(result);
-    return utils::sum<double>(result);
+    std::vector<float> row_or_col_double = utils::to_float<int>(row_or_col);
+    std::vector<float> block_degrees_double = utils::to_float<int>(block_degrees);
+    std::vector<float> result = row_or_col_double / block_degrees_double / float(degree);
+    result = row_or_col_double * utils::nat_log<float>(result);
+    return (double)utils::sum<float>(result);
 }
 
 double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree) {

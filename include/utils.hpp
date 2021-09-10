@@ -111,6 +111,12 @@ template <typename T> inline std::vector<double> to_double(const std::vector<T> 
     return std::vector<double>(vector.begin(), vector.end());
 }
 
+/// Casts the values in vector to type float.
+/// Relies on an implicit cast from vector type T to float.
+template <typename T> inline std::vector<float> to_float(const std::vector<T> &vector) {
+    return std::vector<float>(vector.begin(), vector.end());
+}
+
 /// Casts the values in vector to type int.
 /// Relies on an implicit cast from vector type T to int.
 template <typename T> inline std::vector<int> to_int(const std::vector<T> &vector) {
@@ -119,11 +125,10 @@ template <typename T> inline std::vector<int> to_int(const std::vector<T> &vecto
 
 /// Returns the natural log of every value in vector.
 /// Relies on an implicit conversion from type T to double.
-template <typename T> inline std::vector<double> nat_log(const std::vector<T> &vector) {
-    std::vector<double> result;
+template <typename T> inline std::vector<T> nat_log(const std::vector<T> &vector) {
+    std::vector<T> result;
     for (const T &value : vector) {
-        // vector[i] returns a reference, but log can only take a value
-        result.push_back(std::log(value));
+        result.push_back(logf(value));
     }
     return result;
 }
@@ -234,11 +239,38 @@ template <typename T> inline void print_short(const std::vector<T> &vector) {
 
 }
 
+/// Allows elementwise multiplication of two std::vector<float> objects.
+inline std::vector<float> operator*(const std::vector<float> &lhs, const std::vector<float> &rhs) {
+    std::vector<float> result(lhs.size());
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        result[i] = lhs[i] * rhs[i];
+    }
+    return result;
+}
+
 /// Allows elementwise multiplication of two std::vector<double> objects.
 inline std::vector<double> operator*(const std::vector<double> &lhs, const std::vector<double> &rhs) {
     std::vector<double> result(lhs.size());
     for (size_t i = 0; i < lhs.size(); ++i) {
         result[i] = lhs[i] * rhs[i];
+    }
+    return result;
+}
+
+/// Allows elementwise division of two std::vector<double> objects.
+inline std::vector<float> operator/(const std::vector<float> &lhs, const std::vector<float> &rhs) {
+    std::vector<float> result(lhs.size());
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        result[i] = lhs[i] / rhs[i];
+    }
+    return result;
+}
+
+/// Allows elementwise division of a std::vector<double> and a scalar.
+inline std::vector<float> operator/(const std::vector<float> &lhs, const float &rhs) {
+    std::vector<float> result(lhs.size());
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        result[i] = lhs[i] / rhs;
     }
     return result;
 }
@@ -266,6 +298,15 @@ inline std::vector<double> operator*(const std::vector<double> &lhs, const doubl
     std::vector<double> result(lhs.size());
     for (size_t i = 0; i < lhs.size(); ++i) {
         result[i] = lhs[i] * rhs;
+    }
+    return result;
+}
+
+/// Allows elementwise addition of two std::vector<double> objects.
+inline std::vector<float> operator+(const std::vector<float> &lhs, const std::vector<float> &rhs) {
+    std::vector<float> result(lhs.size());
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        result[i] = lhs[i] + rhs[i];
     }
     return result;
 }
