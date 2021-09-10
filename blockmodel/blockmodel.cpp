@@ -216,6 +216,16 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
     this->block_degrees = new_block_degrees;
 }
 
+void Blockmodel::move_vertex(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &updates,
+                             std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                             std::vector<int> &new_block_degrees) {
+    this->_block_assignment[vertex] = new_block;
+    this->update_edge_counts(current_block, new_block, updates);
+    this->block_degrees_out = new_block_degrees_out;
+    this->block_degrees_in = new_block_degrees_in;
+    this->block_degrees = new_block_degrees;
+}
+
 void Blockmodel::move_vertex(int vertex, int new_block, const Delta &delta,
                              std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                              std::vector<int> &new_block_degrees) {
@@ -249,6 +259,11 @@ void Blockmodel::print_blockmodel() const {
 void Blockmodel::set_block_membership(int vertex, int block) { this->_block_assignment[vertex] = block; }
 
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates) {
+    this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
+                                           updates.block_col, updates.proposal_col);
+}
+
+void Blockmodel::update_edge_counts(int current_block, int proposed_block, SparseEdgeCountUpdates &updates) {
     this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                            updates.block_col, updates.proposal_col);
 }

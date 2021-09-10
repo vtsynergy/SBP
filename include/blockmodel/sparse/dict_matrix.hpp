@@ -57,8 +57,11 @@ class DictMatrix : public ISparseMatrix {
     std::vector<int> sum(int axis) const override;
     int trace() const override;
     void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
-                                    std::vector<int> proposed_row, std::vector<int> current_col,
-                                    std::vector<int> proposed_col) override;
+                            std::vector<int> proposed_row, std::vector<int> current_col,
+                            std::vector<int> proposed_col) override;
+    void update_edge_counts(int current_block, int proposed_block, MapVector<int> current_row,
+                            MapVector<int> proposed_row, MapVector<int> current_col,
+                            MapVector<int> proposed_col) override;
     void update_edge_counts(const Delta &delta) override;
     std::vector<int> values() const override;
 

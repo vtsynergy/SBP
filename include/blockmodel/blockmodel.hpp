@@ -87,12 +87,16 @@ class Blockmodel {
     double log_posterior_probability() const;
     /// TODO
     double log_posterior_probability(int num_edges) const;
-    /// TODO
-    void update_block_assignment(int from_block, int to_block);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
     void move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,
+                     std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
+                     std::vector<int> &new_block_degrees);
+    /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
+    /// `updates`, and updates the block degrees.
+    /// TODO: update block degrees on the fly.
+    void move_vertex(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &updates,
                      std::vector<int> &new_block_degrees_out, std::vector<int> &new_block_degrees_in,
                      std::vector<int> &new_block_degrees);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new blockmodel values from
@@ -102,8 +106,6 @@ class Blockmodel {
                      std::vector<int> &new_block_degrees_in, std::vector<int> &new_block_degrees);
     /// TODO
     void set_block_membership(int vertex, int block);
-    /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
-    void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// TODO: Get rid of getters and setters?
     ISparseMatrix *blockmatrix() const { return this->_blockmatrix; }
     /// Returns an immutable copy of the vertex-to-block assignment vector.
@@ -116,6 +118,12 @@ class Blockmodel {
     void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
     bool stores(int block) const { return true; }
+    /// TODO
+    void update_block_assignment(int from_block, int to_block);
+    /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
+    void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
+    /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
+    void update_edge_counts(int current_block, int proposed_block, SparseEdgeCountUpdates &updates);
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(int vertex, int block) { this->_block_assignment[vertex] = block; }
     void set_block_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }

@@ -294,6 +294,29 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, std::
     }
 }
 
+void DictMatrix::update_edge_counts(int current_block, int proposed_block, MapVector<int> current_row,
+                                    MapVector<int> proposed_row, MapVector<int> current_col,
+                                    MapVector<int> proposed_col) {
+    check_row_bounds(current_block);
+    check_col_bounds(current_block);
+    check_row_bounds(proposed_block);
+    check_col_bounds(proposed_block);
+    this->matrix[current_block] = MapVector<int>(current_row);
+    this->matrix[proposed_block] = MapVector<int>(proposed_row);
+    for (int row = 0; row < nrows; ++row) {
+        int current_val = current_col[row];
+        if (current_val == 0)
+            this->matrix[row].erase(current_block);
+        else
+            this->matrix[row][current_block] = current_val;
+        int proposed_val = proposed_col[row];
+        if (proposed_val == 0)
+            this->matrix[row].erase(proposed_block);
+        else
+            this->matrix[row][proposed_block] = proposed_val;
+    }
+}
+
 void DictMatrix::update_edge_counts(const Delta &delta) {
     throw std::logic_error("update_edge_counts with ISparseMatrix not yet implemented for DictMatrix!");
 //    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {

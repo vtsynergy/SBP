@@ -109,6 +109,10 @@ public:
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) = 0;
+    /// Updates the blockmatrix values in the rows and columns corresponding to `current_block` and `proposed_block`.
+    virtual void update_edge_counts(int current_block, int proposed_block, MapVector<int> current_row,
+                                    MapVector<int> proposed_row, MapVector<int> current_col,
+                                    MapVector<int> proposed_col) = 0;
     /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
     virtual void update_edge_counts(const Delta &delta) = 0;
     virtual std::vector<int> values() const = 0;
