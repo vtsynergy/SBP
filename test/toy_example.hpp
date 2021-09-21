@@ -117,10 +117,10 @@ protected:
         Updates.proposal_row = { 4, 1, 1, 0, 0, 0 };
         Updates.proposal_col = { 4, 2, 2, 1, 0, 0 };
         SparseUpdates = SparseEdgeCountUpdates();
+        SparseUpdates.block_row[0] = 1;
         SparseUpdates.block_row[2] = 1;
         SparseUpdates.block_row[3] = 1;
         SparseUpdates.block_row[4] = 1;
-        SparseUpdates.block_col[0] = 1;
         SparseUpdates.block_col[1] = 1;
         SparseUpdates.block_col[3] = 1;
         SparseUpdates.block_col[5] = 1;
