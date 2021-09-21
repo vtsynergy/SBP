@@ -436,10 +436,8 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::Propo
 //    }
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
-    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + updates.block_row[current_block];
-    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + updates.proposal_row[proposal.proposal];
+    int current_block_self_edges = updates.block_row[current_block];
+    int proposed_block_self_edges = updates.proposal_row[proposal.proposal];
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings =
@@ -604,10 +602,8 @@ VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCou
                                              blockmodel);
     int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
                                    + delta.get(current_block, current_block);
-//                                   + get(delta, std::make_pair(current_block, current_block));
     int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
                                     + delta.get(proposal.proposal, proposal.proposal);
-//                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
 
@@ -636,10 +632,8 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, common::ProposalAn
 //    }
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
-    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + updates.block_row[current_block];
-    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + updates.proposal_row[proposal.proposal];
+    int current_block_self_edges = updates.block_row[current_block];
+    int proposed_block_self_edges = updates.proposal_row[proposal.proposal];
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings =

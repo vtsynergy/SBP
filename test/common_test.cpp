@@ -9,6 +9,9 @@
 class CommonTest : public ToyExample {
 };
 
+class CommonComplexTest : public ComplexExample {
+};
+
 TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
     int vertex = 7;
     int current_block = B.block_assignment(vertex);
@@ -30,8 +33,45 @@ TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
     EXPECT_EQ(nbd.block_degrees[2], 7);
 }
 
-TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed2) {
-    // TODO: look at complex case, the block_degrees are wrong even though the degrees_out and degrees_in sound right
+TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithBlockmodelDeltas) {
+    int current_block = 3;
+    int current_block_self_edges = B.blockmatrix()->get(current_block, current_block)
+                                   + Deltas.get(current_block, current_block);
+    int proposed_block_self_edges = B.blockmatrix()->get(Proposal.proposal, Proposal.proposal)
+                                    + Deltas.get(Proposal.proposal, Proposal.proposal);
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+            current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
+    for (int block = 0; block < 6; ++block) {
+        EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);
+    }
+}
+
+TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithDenseEdgeCountUpdates) {
+    int current_block = 3;
+    int current_block_self_edges = Updates.block_row[current_block];
+    int proposed_block_self_edges = Updates.proposal_row[Proposal.proposal];
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+            current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
+    for (int block = 0; block < 6; ++block) {
+        EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);
+    }
+}
+
+TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithSparseEdgeCountUpdates) {
+    int current_block = 3;
+    int current_block_self_edges = SparseUpdates.block_row[current_block];
+    int proposed_block_self_edges = SparseUpdates.proposal_row[Proposal.proposal];
+    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+            current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
+    for (int block = 0; block < 6; ++block) {
+        EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
+        EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);
+    }
 }
 
 // TODO: new test to make sure proposal has the correct value for `num_neighbor_edges`
