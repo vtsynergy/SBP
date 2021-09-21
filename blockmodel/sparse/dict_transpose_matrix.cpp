@@ -195,6 +195,23 @@ int DictTransposeMatrix::edges() const {
     return total;
 }
 
+void DictTransposeMatrix::print() const {
+    std::cout << "Matrix: " << std::endl;
+    for (int row = 0; row < this->nrows; ++row) {
+        for (int col = 0; col < this->ncols; ++col) {
+            std::cout << map_vector::get(this->matrix[row], col) << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "Transpose: " << std::endl;
+    for (int col = 0; col < this->ncols; ++col) {
+        for (int row = 0; row < this->nrows; ++row) {
+            std::cout << map_vector::get(this->matrix_transpose[col], row) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 std::vector<int> DictTransposeMatrix::sum(int axis) const {
     if (axis < 0 || axis > 1) {
         throw IndexOutOfBoundsException(axis, 2);
@@ -294,45 +311,70 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
     check_col_bounds(current_block);
     check_row_bounds(proposed_block);
     check_col_bounds(proposed_block);
-    this->matrix[current_block] = MapVector<int>(current_row);
-    this->matrix[proposed_block] = MapVector<int>(proposed_row);
-    this->matrix_transpose[current_block] = MapVector<int>(current_col);
-    this->matrix_transpose[proposed_block] = MapVector<int>(proposed_col);
-    for (int block = 0; block < nrows; ++block) {
-        // TODO: try using get function (retrieve without modifying)
-        int current_val = current_col[block];
-        if (current_val == 0)
-            this->matrix[block].erase(current_block);
-        else
-            this->matrix[block][current_block] = current_val;
-        int proposed_val = proposed_col[block];
-        if (proposed_val == 0)
-            this->matrix[block].erase(proposed_block);
-        else
-            this->matrix[block][proposed_block] = proposed_val;
-        current_val = current_row[block];  // matrix(current_block, block)
-        if (current_val == 0)
-            this->matrix_transpose[block].erase(current_block);
-        else
-            this->matrix_transpose[block][current_block] = current_val;
-        proposed_val = proposed_row[block];  // matrix(proposed_block, block)
-        if (proposed_val == 0)
-            this->matrix_transpose[block].erase(proposed_block);
-        else
-            this->matrix_transpose[block][proposed_block] = current_val;
+    for (int col = 0; col < ncols; ++col) {
+        int current_val = current_row[col];
+        if (current_val == 0) {
+            this->matrix[current_block].erase(col);
+            this->matrix_transpose[col].erase(current_block);
+        } else {
+            this->matrix[current_block][col] = current_val;
+            this->matrix_transpose[col][current_block] = current_val;
+        }
+        int proposed_val = proposed_row[col];
+        if (proposed_val == 0) {
+            this->matrix[proposed_block].erase(col);
+            this->matrix_transpose[col].erase(proposed_block);
+        } else {
+            this->matrix[proposed_block][col] = proposed_val;
+            this->matrix_transpose[col][proposed_block] = proposed_val;
+        }
     }
-//    for (int row = 0; row < nrows; ++row) {
-//        int current_val = current_col[row];
+    for (int row = 0; row < nrows; ++row) {
+        int current_val = current_col[row];
+        if (current_val == 0) {
+            this->matrix[row].erase(current_block);
+            this->matrix_transpose[current_block].erase(row);
+        } else {
+            this->matrix[row][current_block] = current_val;
+            this->matrix_transpose[current_block][row] = current_val;
+        }
+        int proposed_val = proposed_col[row];
+        if (proposed_val == 0) {
+            this->matrix[row].erase(proposed_block);
+            this->matrix_transpose[proposed_block].erase(row);
+        } else {
+            this->matrix[row][proposed_block] = proposed_val;
+            this->matrix_transpose[proposed_block][row] = proposed_val;
+        }
+    }
+//    this->matrix[current_block] = MapVector<int>(current_row);
+//    this->matrix[proposed_block] = MapVector<int>(proposed_row);
+//    this->matrix_transpose[current_block] = MapVector<int>(current_col);
+//    this->matrix_transpose[proposed_block] = MapVector<int>(proposed_col);
+//    for (int block = 0; block < nrows; ++block) {
+//        // TODO: try using get function (retrieve without modifying)
+//        int current_val = current_col[block];  // matrix(block, current_block)
 //        if (current_val == 0)
-//            this->matrix[row].erase(current_block);
+//            this->matrix[block].erase(current_block);
 //        else
-//            this->matrix[row][current_block] = current_val;
-//        int proposed_val = proposed_col[row];
+//            this->matrix[block][current_block] = current_val;
+//        int proposed_val = proposed_col[block];  // matrix(block, proposed_block)
 //        if (proposed_val == 0)
-//            this->matrix[row].erase(proposed_block);
+//            this->matrix[block].erase(proposed_block);
 //        else
-//            this->matrix[row][proposed_block] = proposed_val;
+//            this->matrix[block][proposed_block] = proposed_val;
+//        current_val = current_row[block];  // matrix(current_block, block)
+//        if (current_val == 0)
+//            this->matrix_transpose[block].erase(current_block);
+//        else
+//            this->matrix_transpose[block][current_block] = current_val;
+//        proposed_val = proposed_row[block];  // matrix(proposed_block, block)
+//        if (proposed_val == 0)
+//            this->matrix_transpose[block].erase(proposed_block);
+//        else
+//            this->matrix_transpose[block][proposed_block] = current_val;
 //    }
+
 }
 
 void DictTransposeMatrix::update_edge_counts(const Delta &delta) {
@@ -351,6 +393,17 @@ void DictTransposeMatrix::update_edge_counts(const Delta &delta) {
             this->matrix_transpose[col].erase(row);
         }
     }
+}
+
+bool DictTransposeMatrix::validate(int row, int col, int val) const {
+    int matrix_value = this->getrow_sparse(row)[col];
+    int transpose_value = this->getcol_sparse(col)[row];
+    if (val != matrix_value || val != transpose_value) {
+        std::cout << "matrix[" << row << "," << col << "] = " << matrix_value << ", matrixT[" << col << "," << row
+        << "] = " << transpose_value << " while actual value = " << val << std::endl;
+        return false;
+    }
+    return true;
 }
 
 std::vector<int> DictTransposeMatrix::values() const {

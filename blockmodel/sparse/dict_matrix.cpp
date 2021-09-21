@@ -217,6 +217,15 @@ int DictMatrix::edges() const {
     return total;
 }
 
+void DictMatrix::print() const {
+    for (int row = 0; row < this->nrows; ++row) {
+        for (int col = 0; col < this->ncols; ++col) {
+            std::cout << this->get(row, col) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 std::vector<int> DictMatrix::sum(int axis) const {
     if (axis < 0 || axis > 1) {
         throw IndexOutOfBoundsException(axis, 2);
@@ -327,6 +336,11 @@ void DictMatrix::update_edge_counts(const Delta &delta) {
 //        if (this->matrix[row][col] == 0)
 //            this->matrix[row].erase(col);
 //    }
+}
+
+bool DictMatrix::validate(int row, int col, int val) const {
+    int value = this->get(row, col);
+    return val == value;
 }
 
 std::vector<int> DictMatrix::values() const {

@@ -62,6 +62,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void setcol(int col, const MapVector<int> &vector) override;
     virtual void sub(int row, int col, int val) override;
     virtual int edges() const override;
+    void print() const override;
     virtual std::vector<int> sum(int axis = 0) const override;
     virtual int trace() const override;
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
@@ -71,6 +72,7 @@ class DictTransposeMatrix : public ISparseMatrix {
                             MapVector<int> proposed_row, MapVector<int> current_col,
                             MapVector<int> proposed_col) override;
     void update_edge_counts(const Delta &delta) override;
+    bool validate(int row, int col, int val) const override;
     virtual std::vector<int> values() const override;
 
   private:

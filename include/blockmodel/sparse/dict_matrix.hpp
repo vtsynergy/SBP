@@ -54,6 +54,7 @@ class DictMatrix : public ISparseMatrix {
     void setcol(int col, const MapVector<int> &vector) override;
     void sub(int row, int col, int val) override;
     int edges() const override;
+    void print() const override;
     std::vector<int> sum(int axis) const override;
     int trace() const override;
     void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
@@ -63,6 +64,7 @@ class DictMatrix : public ISparseMatrix {
                             MapVector<int> proposed_row, MapVector<int> current_col,
                             MapVector<int> proposed_col) override;
     void update_edge_counts(const Delta &delta) override;
+    bool validate(int row, int col, int val) const override;
     std::vector<int> values() const override;
 
   private:

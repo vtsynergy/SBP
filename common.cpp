@@ -209,7 +209,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     // std::cout << "dE_temp_directed_sparse!" << std::endl;
     // throw std::runtime_error("SHOULD BE UNDIRECTED");
     double result = 0.0;
-    for (const std::pair<int, int> &pair : row_or_col) {
+    for (const std::pair<const int, int> &pair : row_or_col) {
         if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
             continue;
         double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
@@ -224,7 +224,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     // std::cout << "dE_temp_directed_sparse_ignore!" << std::endl;
     // throw std::runtime_error("SHOULD BE UNDIRECTED");
     double result = 0.0;
-    for (const std::pair<int, int> &pair : row_or_col) {
+    for (const std::pair<const int, int> &pair : row_or_col) {
         // 0s sometimes get inserted into the sparse matrix
         if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
             continue;

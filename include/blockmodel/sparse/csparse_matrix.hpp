@@ -103,6 +103,7 @@ public:
     /// Subtracts `val` from `matrix[row, col]`.
     virtual void sub(int row, int col, int val) = 0;
     virtual int edges() const = 0;
+    virtual void print() const = 0;
     virtual std::vector<int> sum(int axis = 0) const = 0;
     virtual int trace() const = 0;
     /// Updates the blockmatrix values in the rows and columns corresponding to `current_block` and `proposed_block`.
@@ -115,6 +116,8 @@ public:
                                     MapVector<int> proposed_col) = 0;
     /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
     virtual void update_edge_counts(const Delta &delta) = 0;
+    /// Returns true if the value in matrix[`row`, `col`] == `val`.
+    virtual bool validate(int row, int col, int val) const = 0;
     virtual std::vector<int> values() const = 0;
     std::pair<int, int> shape;
 
