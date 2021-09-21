@@ -23,7 +23,6 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         }
         blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
         std::cout << "Starting MCMC vertex moves" << std::endl;
-        blockmodel.print_blockmodel();
         if (args.algorithm == "async_gibbs")
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else  // args.algorithm == "metropolis_hastings"
