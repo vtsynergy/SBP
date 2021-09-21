@@ -124,6 +124,8 @@ class Blockmodel {
     void update_edge_counts(int current_block, int proposed_block, EdgeCountUpdates &updates);
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
     void update_edge_counts(int current_block, int proposed_block, SparseEdgeCountUpdates &updates);
+    /// Validates the blockmatrix entries given the current block assignment.
+    bool validate(const NeighborList &out_neighbors);
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(int vertex, int block) { this->_block_assignment[vertex] = block; }
     void set_block_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }

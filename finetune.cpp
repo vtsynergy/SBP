@@ -198,6 +198,13 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
     delta_entropy -= common::delta_entropy_temp(updates.block_col, block_degrees.block_degrees_out,
                                                 block_degrees.block_degrees_in[current_block], current_block, proposal,
                                                 num_edges);
+    if (std::isnan(delta_entropy)) {
+        std::cout << "block_col: ";
+        utils::print<int>(updates.block_col);
+        std::cout << "block_degrees_out: ";
+        utils::print<int>(block_degrees.block_degrees_out);
+        std::cout << "block_degree in: " << block_degrees.block_degrees_in[current_block] << std::endl;
+    }
     assert(!std::isnan(delta_entropy));
     delta_entropy -= common::delta_entropy_temp(updates.proposal_col, block_degrees.block_degrees_out,
                                                 block_degrees.block_degrees_in[proposal], current_block, proposal,
@@ -276,8 +283,9 @@ bool early_stop(int iteration, double initial_entropy, std::vector<double> &delt
     return average < threshold;
 }
 
-EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
-                                    EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight) {
+[[maybe_unused]] EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
+                                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                                     int self_edge_weight) {
     std::vector<int> block_row = blockmodel->getrow(current_block);
     std::vector<int> block_col = blockmodel->getcol(current_block);
     std::vector<int> proposal_row = blockmodel->getrow(proposed_block);
@@ -324,51 +332,55 @@ EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block
     return EdgeCountUpdates{block_row, proposal_row, block_col, proposal_col};
 }
 
-void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int proposed_block,
-                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
-                               SparseEdgeCountUpdates &updates) {
-    updates.block_row = blockmodel->getrow_sparse(current_block);
-    updates.block_col = blockmodel->getcol_sparse(current_block);
-    updates.proposal_row = blockmodel->getrow_sparse(proposed_block);
-    updates.proposal_col = blockmodel->getcol_sparse(proposed_block);
+// TODO: remove double counts from the edge count updates? But then we'll have to figure out how to correctly update
+// the blockmodel since we won't be able to do bm.column[block/proposal] = updates.block/proposal_col
+void edge_count_updates_sparse(const Blockmodel &blockmodel, int vertex, int current_block, int proposed_block,
+                               EdgeWeights &out_edges, EdgeWeights &in_edges, SparseEdgeCountUpdates &updates) {
+    updates.block_row = blockmodel.blockmatrix()->getrow_sparse(current_block);
+    updates.block_col = blockmodel.blockmatrix()->getcol_sparse(current_block);
+    updates.proposal_row = blockmodel.blockmatrix()->getrow_sparse(proposed_block);
+    updates.proposal_col = blockmodel.blockmatrix()->getcol_sparse(proposed_block);
 
-    int count_in_block = 0, count_out_block = 0;
-    int count_in_proposal = self_edge_weight, count_out_proposal = self_edge_weight;
-
-    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
-        int index = in_blocks.indices[i];
-        int value = in_blocks.values[i];
-        if (index == current_block) {
-            count_in_block += value;
+    for (size_t i = 0; i < out_edges.indices.size(); ++i) {
+        int out_vertex = out_edges.indices[i];
+        int out_block = blockmodel.block_assignment(out_vertex);
+        int edge_weight = out_edges.values[i];
+        if (vertex == out_vertex) {
+            updates.proposal_row[proposed_block] += edge_weight;
+            updates.proposal_col[proposed_block] += edge_weight;
+        } else {
+            updates.proposal_row[out_block] += edge_weight;
+            if (out_block == proposed_block)
+                updates.proposal_col[proposed_block] += edge_weight;
+            if (out_block == current_block)
+                updates.block_col[proposed_block] += edge_weight;
         }
-        if (index == proposed_block) {
-            count_in_proposal += value;
-        }
-        updates.block_col[index] -= value;
-        updates.proposal_col[index] += value;
+        updates.block_row[out_block] -= edge_weight;
+        if (out_block == current_block)
+            updates.block_col[current_block] -= edge_weight;
+        if (out_block == proposed_block)
+            updates.proposal_col[current_block] -= edge_weight;
     }
-    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
-        int index = out_blocks.indices[i];
-        int value = out_blocks.values[i];
-        if (index == current_block) {
-            count_out_block += value;
+    for (size_t i = 0; i < in_edges.indices.size(); ++i) {
+        int in_vertex = in_edges.indices[i];
+        int in_block = blockmodel.block_assignment(in_vertex);
+        int edge_weight = in_edges.values[i];
+        if (vertex == in_vertex) {
+            updates.proposal_col[proposed_block] += edge_weight;
+            updates.proposal_row[proposed_block] += edge_weight;
+        } else {
+            updates.proposal_col[in_block] += edge_weight;
+            if (in_block == proposed_block)
+                updates.proposal_row[proposed_block] += edge_weight;
+            if (in_block == current_block)
+                updates.block_row[proposed_block] += edge_weight;
         }
-        if (index == proposed_block) {
-            count_out_proposal += value;
-        }
-        updates.block_row[index] -= value;
-        updates.proposal_row[index] += value;
+        updates.block_col[in_block] -= edge_weight;
+        if (in_block == current_block)
+            updates.block_row[current_block] -= edge_weight;
+        if (in_block == proposed_block)
+            updates.proposal_row[current_block] -= edge_weight;
     }
-
-    updates.proposal_row[current_block] -= count_in_proposal;
-    updates.proposal_row[proposed_block] += count_in_proposal;
-    updates.proposal_col[current_block] -= count_out_proposal;
-    updates.proposal_col[proposed_block] += count_out_proposal;
-
-    updates.block_row[current_block] -= count_in_block;
-    updates.block_row[proposed_block] += count_in_block;
-    updates.block_col[current_block] -= count_out_block;
-    updates.block_col[proposed_block] += count_out_block;
 }
 
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self) {
@@ -415,16 +427,15 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::Propo
                                     EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-    int self_edge_weight = 0;
-    for (uint i = 0; i < out_edges.indices.size(); ++i) {
-        if (out_edges.indices[i] == vertex) {
-            self_edge_weight = out_edges.values[i];
-            break;
-        }
-    }
+//    int self_edge_weight = 0;
+//    for (uint i = 0; i < out_edges.indices.size(); ++i) {
+//        if (out_edges.indices[i] == vertex) {
+//            self_edge_weight = out_edges.values[i];
+//            break;
+//        }
+//    }
     SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, blocks_out_neighbors,
-                              blocks_in_neighbors, self_edge_weight, updates);
+    edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
     int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
                                    + updates.block_row[current_block];
     int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
@@ -616,19 +627,15 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, common::ProposalAn
                                EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-    int self_edge_weight = 0;
-    for (uint i = 0; i < out_edges.indices.size(); ++i) {
-        if (out_edges.indices[i] == vertex) {
-            self_edge_weight = out_edges.values[i];
-            break;
-        }
-    }
+//    int self_edge_weight = 0;
+//    for (uint i = 0; i < out_edges.indices.size(); ++i) {
+//        if (out_edges.indices[i] == vertex) {
+//            self_edge_weight = out_edges.values[i];
+//            break;
+//        }
+//    }
     SparseEdgeCountUpdates updates;
-    edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, blocks_out_neighbors,
-                              blocks_in_neighbors, self_edge_weight, updates);
-    // TODO: change this to sparse_edge_count_updates
-//    EdgeCountUpdates updates = edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal,
-//                                                  blocks_out_neighbors, blocks_in_neighbors, self_edge_weight);
+    edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
     int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
                                    + updates.block_row[current_block];
     int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
@@ -673,8 +680,8 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Gr
     bool did_move = false;
     int current_block = blockmodel.block_assignment(vertex);
 
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex);
+    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
     common::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, out_edges, in_edges,
                                                                        blockmodel.block_assignment(), blockmodel,

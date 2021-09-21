@@ -30,4 +30,8 @@ TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
     EXPECT_EQ(nbd.block_degrees[2], 7);
 }
 
+TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed2) {
+    // TODO: look at complex case, the block_degrees are wrong even though the degrees_out and degrees_in sound right
+}
+
 // TODO: new test to make sure proposal has the correct value for `num_neighbor_edges`

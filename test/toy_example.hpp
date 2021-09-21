@@ -18,9 +18,13 @@ class ToyExample : public ::testing::Test {
 protected:
     // My variables
     std::vector<int> assignment;
-    Blockmodel B;
+    Blockmodel B, B2;
+    common::ProposalAndEdgeCounts Proposal;
     Graph graph;
     common::NewBlockDegrees  new_block_degrees;
+    EdgeCountUpdates Updates;
+    SparseEdgeCountUpdates SparseUpdates;
+    Delta Deltas;
     void SetUp() override {
         args.transpose = true;
         std::vector<std::vector<int>> edges {
@@ -64,6 +68,93 @@ protected:
         new_block_degrees.block_degrees_out = { 10, 7, 6 };
         new_block_degrees.block_degrees_in = { 12, 7, 4 };
         new_block_degrees.block_degrees = { 14, 9, 7 };
+        Updates.block_row = { 2, 1, 3 };
+        Updates.block_col = { 1, 0, 3 };
+        Updates.proposal_row = { 8, 1, 1 };
+        Updates.proposal_col = { 8, 2, 2 };
+        SparseUpdates.block_row[0] = 2;
+        SparseUpdates.block_row[1] = 1;
+        SparseUpdates.block_row[2] = 3;
+        SparseUpdates.block_col[0] = 1;
+        SparseUpdates.block_col[2] = 3;
+        SparseUpdates.proposal_row[0] = 8;
+        SparseUpdates.proposal_row[1] = 1;
+        SparseUpdates.proposal_row[2] = 1;
+        SparseUpdates.proposal_col[0] = 8;
+        SparseUpdates.proposal_col[1] = 2;
+        SparseUpdates.proposal_col[2] = 2;
+        Deltas = Delta(2, 0);
+        Deltas.add(0, 0, 1);
+        Deltas.add(0, 1, 0);
+        Deltas.add(0, 2, 1);
+        Deltas.add(1, 0, 1);
+        Deltas.add(1, 2, -1);
+        Deltas.add(2, 0, 1);
+        Deltas.add(2, 1, 0);
+        Deltas.add(2, 2, -3);
+        Proposal = {0, 2, 3, 5};
+        std::vector<int> assignment2(assignment);
+        assignment2[7] = Proposal.proposal;
+        B2 = Blockmodel(3, graph.out_neighbors(), 0.5, assignment2);
+    }
+//    virtual void TearDown() {
+//
+//    }
+};
+
+class ComplexExample : public ToyExample {
+protected:
+    void SetUp() override {
+        ToyExample::SetUp();
+        Proposal = { 0, 1, 2, 3 };
+        assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
+        B = Blockmodel(6, graph.out_neighbors(), 0.5, assignment);
+        std::vector<int> assignment2(assignment);
+        assignment2[6] = Proposal.proposal;
+        B2 = Blockmodel(6, graph.out_neighbors(), 0.5, assignment2);
+        Updates.block_row = { 1, 0, 1, 1, 1, 0 };
+        Updates.block_col = { 0, 1, 0, 1, 0, 1 };
+        Updates.proposal_row = { 4, 1, 1, 0, 0, 0 };
+        Updates.proposal_col = { 4, 2, 2, 1, 0, 0 };
+        SparseUpdates = SparseEdgeCountUpdates();
+        SparseUpdates.block_row[2] = 1;
+        SparseUpdates.block_row[3] = 1;
+        SparseUpdates.block_row[4] = 1;
+        SparseUpdates.block_col[0] = 1;
+        SparseUpdates.block_col[1] = 1;
+        SparseUpdates.block_col[3] = 1;
+        SparseUpdates.block_col[5] = 1;
+        SparseUpdates.proposal_row[0] = 4;
+        SparseUpdates.proposal_row[1] = 1;
+        SparseUpdates.proposal_row[2] = 1;
+        SparseUpdates.proposal_col[0] = 4;
+        SparseUpdates.proposal_col[1] = 2;
+        SparseUpdates.proposal_col[2] = 2;
+        SparseUpdates.proposal_col[3] = 1;
+        Deltas = Delta(3, 0);
+        Deltas.add(3, 1, 0);
+        Deltas.add(3, 4, 0);
+        Deltas.add(3, 5, 0);
+        Deltas.add(3, 0, 1);
+        Deltas.add(3, 2, -1);
+        Deltas.add(3, 3, -1);
+        Deltas.add(0, 3, 0);
+        Deltas.add(0, 1, 0);
+        Deltas.add(0, 4, 0);
+        Deltas.add(0, 5, 0);
+        Deltas.add(2, 3, -1);
+        Deltas.add(0, 2, 1);
+        Deltas.add(0, 0, 0);
+        Deltas.add(1, 0, 0);
+        Deltas.add(2, 0, 1);
+        Deltas.add(4, 0, 0);
+        Deltas.add(5, 0, 0);
+        Deltas.add(1, 3, 0);
+        Deltas.add(4, 3, 0);
+        Deltas.add(5, 3, 0);
+        new_block_degrees.block_degrees_out = { 7, 3, 1, 4, 0, 1 };
+        new_block_degrees.block_degrees_in = { 8, 1, 2, 4, 1, 0 };
+        new_block_degrees.block_degrees = { 11, 4, 3, 7, 1, 1 };
     }
 //    virtual void TearDown() {
 //

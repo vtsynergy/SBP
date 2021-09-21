@@ -237,12 +237,7 @@ void Blockmodel::move_vertex(int vertex, int new_block, const Delta &delta,
 }
 
 void Blockmodel::print_blockmatrix() const {
-    for (int row = 0; row < this->num_blocks; ++row) {
-        for (int col = 0; col < this->num_blocks; ++col) {
-            std::cout << this->_blockmatrix->get(row, col) << " ";
-        }
-        std::cout << std::endl;
-    }
+    this->_blockmatrix->print();
 }
 
 void Blockmodel::print_blockmodel() const {
@@ -254,6 +249,8 @@ void Blockmodel::print_blockmodel() const {
     utils::print<int>(this->block_degrees_in);
     std::cout << "Block degrees: ";
     utils::print<int>(this->block_degrees);
+    std::cout << "Assignment: ";
+    utils::print<int>(this->_block_assignment);
 }
 
 void Blockmodel::set_block_membership(int vertex, int block) { this->_block_assignment[vertex] = block; }
@@ -266,4 +263,18 @@ void Blockmodel::update_edge_counts(int current_block, int proposed_block, EdgeC
 void Blockmodel::update_edge_counts(int current_block, int proposed_block, SparseEdgeCountUpdates &updates) {
     this->_blockmatrix->update_edge_counts(current_block, proposed_block, updates.block_row, updates.proposal_row,
                                            updates.block_col, updates.proposal_col);
+}
+
+bool Blockmodel::validate(const NeighborList &out_neighbors) {
+    Blockmodel correct(this->num_blocks, out_neighbors, this->block_reduction_rate, this->_block_assignment);
+
+    for (int row = 0; row < this->num_blocks; ++row) {
+        for (int col = 0; col < this->num_blocks; ++col) {
+//            int this_val = this->blockmatrix()->get(row, col);
+            int correct_val = correct.blockmatrix()->get(row, col);
+            if (!this->blockmatrix()->validate(row, col, correct_val)) return false;
+//            if (this_val != correct_val) return false;
+        }
+    }
+    return true;
 }

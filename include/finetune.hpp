@@ -53,11 +53,11 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
-EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
-                                    EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight);
-void edge_count_updates_sparse(ISparseMatrix *blockmodel, int current_block, int proposed_block,
-                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, int self_edge_weight,
-                               SparseEdgeCountUpdates &updates);
+[[maybe_unused]] EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
+                                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                                     int self_edge_weight);
+void edge_count_updates_sparse(const Blockmodel &blockmodel, int vertex, int current_block, int proposed_block,
+                               EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
 /// Returns the edge weights in `neighbors[vertex]` as an `EdgeWeights` struct. If `ignore_self` is `true`, then
 /// self-edges will not be added to EdgeWeights.
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self = false);
