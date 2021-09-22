@@ -50,8 +50,7 @@ TEST_F(FinetuneTest, DenseDeltaEntropyGivesCorrectAnswer) {
     double E_before = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
     int current_block = B.block_assignment(vertex);
     double delta_entropy =
-            finetune::compute_delta_entropy(current_block, Proposal.proposal, B, graph.num_edges(), Updates,
-                                  new_block_degrees);
+            finetune::compute_delta_entropy(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
     std::cout << "dE using updates = " << delta_entropy;
     B.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                            new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
@@ -123,7 +122,7 @@ TEST_F(FinetuneTest, BlockmodelDeltasAreCorrect) {
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
     Delta delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
-    EXPECT_EQ(delta.entries().size(), 8) << "blockmodel deltas are the wrong size. Expected 8 but got " << delta.entries().size();
+    EXPECT_EQ(delta.entries().size(), 6) << "blockmodel deltas are the wrong size. Expected 6 but got " << delta.entries().size();
     EXPECT_EQ(delta.get(0,0), 1);
     EXPECT_EQ(delta.get(0,1), 0);
     EXPECT_EQ(delta.get(0,2), 1);
