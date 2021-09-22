@@ -32,9 +32,13 @@ public:
         this->_current_block = -1;
         this->_proposed_block = -1;
     }
-    Delta(int current_block, int proposed_block) {
+    Delta(int current_block, int proposed_block, int buckets = 10) {
         this->_current_block = current_block;
         this->_proposed_block = proposed_block;
+        this->_current_block_row = MapVector<int>(buckets);
+        this->_proposed_block_row = MapVector<int>(buckets);
+        this->_current_block_col = MapVector<int>(buckets);
+        this->_proposed_block_col = MapVector<int>(buckets);
     }
     Delta(int current_block, int proposed_block, const MapVector<int> &block_row, const MapVector<int> &block_col,
           const MapVector<int> &proposed_row, const MapVector<int> &proposed_col) {

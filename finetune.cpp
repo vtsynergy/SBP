@@ -86,11 +86,7 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
 
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
                             const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
-//    const ISparseMatrix *matrix = blockmodel.blockmatrix();
-    Delta delta(current_block, proposed_block);
-//    ,matrix->getrow_sparse(current_block),
-//                matrix->getcol_sparse(current_block),matrix->getrow_sparse(proposed_block),
-//                matrix->getcol_sparse(proposed_block));
+    Delta delta(current_block, proposed_block, int(std::max(out_edges.indices.size(), in_edges.indices.size())));
 
     // current_block -> current_block == proposed_block --> proposed_block  (this includes self edges)
     // current_block --> other_block == proposed_block --> other_block
