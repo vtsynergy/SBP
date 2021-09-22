@@ -42,6 +42,7 @@ public:
         this->_proposed_block = proposed_block;
         this->zero_init(block_row, block_col, proposed_row, proposed_col);
     }
+    /// Adds `value` as the delta to cell matrix[`row`,`col`].
     void add(int row, int col, int value) {
         if (row == this->_current_block)
             this->_current_block_row[col] += value;
@@ -54,6 +55,7 @@ public:
         else
             throw std::logic_error("Neither the row nor column are current_block or proposed_block.");
     }
+    /// Returns all stores deltas as a list of tuples storing `row`, `col`, `delta`.
     std::vector<std::tuple<int, int, int>> entries() const {
         std::vector<std::tuple<int, int, int>> result;
         for (const std::pair<const int, int> &entry : this->_current_block_row) {
@@ -70,6 +72,7 @@ public:
         }
         return result;
     }
+    /// Returns the delta for matrix[`row`,`col`] without modifying the underlying data structure.
     int get(int row, int col) const {
         if (row == this->_current_block)
             return map_vector::get(this->_current_block_row, col);
@@ -81,6 +84,7 @@ public:
             return map_vector::get(this->_proposed_block_col, row);
         throw std::logic_error("Neither the row nor column are current_block or proposed_block.");
     }
+    /// Adds -`value` (negative `value`) as the delta to cell matrix[`row`,`col`].
     void sub(int row, int col, int value) {
         if (row == this->_current_block)
             this->_current_block_row[col] -= value;
@@ -93,6 +97,8 @@ public:
         else
             throw std::logic_error("Neither the row nor column are current_block or proposed_block.");
     }
+    /// Initiates the deltas with 0s for all non-zero elements currently present in `block_row`, `block_col`,
+    /// `proposed_row`, and `proposed_col`.
     void zero_init(const MapVector<int> &block_row, const MapVector<int> &block_col, const MapVector<int> &proposed_row,
                    const MapVector<int> &proposed_col) {
 //    void zero_init(const ISparseMatrix *matrix) {
@@ -121,6 +127,8 @@ public:
             this->add(row, this->_proposed_block, 0);
         }
     }
+    int current_block() const { return this->_current_block; }
+    int proposed_block() const { return this->_proposed_block; }
 };
 
 #endif // SBP_BLOCKMODEL_DELTA_HPP
