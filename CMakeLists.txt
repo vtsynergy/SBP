@@ -44,33 +44,22 @@ target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(DistributedSBP main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
-#
-#target_sources(DistributedSBP PUBLIC
-#    # main.cpp
-#    graph.cpp
-#    utils.cpp
-#    sbp.cpp
-#    evaluate.cpp
-#    common.cpp
-#    finetune.cpp
-#    block_merge.cpp
-#    partition.cpp
-#    blockmodel/blockmodel.cpp
-#    blockmodel/blockmodel_triplet.cpp
-#    blockmodel/dist_blockmodel.cpp
-#    blockmodel/sparse/dict_matrix.cpp
-#    blockmodel/sparse/dict_transpose_matrix.cpp
-#    blockmodel/sparse/dist_dict_matrix.cpp)
+
+add_executable(Influence influence.cpp)
+target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
 
 if(DEBUG)
-    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp -g3 -fsanitize=address)
-    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs -fsanitize=address)
+    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
+    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -fsanitize=address)
+    target_link_libraries(DistributedSBP PUBLIC SBP -fsanitize=address)
+    target_link_libraries(Influence PUBLIC SBP -fsanitize=address)
 else(DEBUG)
 #    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
 #    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs)
     target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
     target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs)
     target_link_libraries(DistributedSBP PUBLIC SBP)
+    target_link_libraries(Influence PUBLIC SBP)
 endif(DEBUG)
 
 # Google Test Suite
