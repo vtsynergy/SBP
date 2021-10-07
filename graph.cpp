@@ -60,6 +60,12 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
         utils::insert_nodup(out_neighbors, from , to);
         utils::insert_nodup(in_neighbors, to, from);
     }
+    while (out_neighbors.size() < size_t(num_vertices)) {
+        out_neighbors.push_back(std::vector<int>());
+    }
+    while (in_neighbors.size() < size_t(num_vertices)) {
+        in_neighbors.push_back(std::vector<int>());
+    }
 }
 
 void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
@@ -73,5 +79,11 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         if (from != to)
             utils::insert_nodup(out_neighbors, to, from);
         in_neighbors = NeighborList(out_neighbors);
+    }
+    while (out_neighbors.size() < size_t(num_vertices)) {
+        out_neighbors.push_back(std::vector<int>());
+    }
+    while (in_neighbors.size() < size_t(num_vertices)) {
+        in_neighbors.push_back(std::vector<int>());
     }
 }
