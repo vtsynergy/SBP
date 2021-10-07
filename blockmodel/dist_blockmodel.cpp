@@ -244,7 +244,7 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
     TwoHopBlockmodel blockmodel_copy = TwoHopBlockmodel(this->num_blocks, this->block_reduction_rate);
     blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
-    blockmodel_copy._blockmatrix = this->_blockmatrix->copy();
+    blockmodel_copy._blockmatrix = std::shared_ptr<ISparseMatrix>(this->_blockmatrix->copy());
     blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
     blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
     blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
@@ -424,9 +424,9 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
 void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     if (args.transpose) {
-        this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
     } else {
-        this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);

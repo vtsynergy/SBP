@@ -5,7 +5,7 @@ Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     this->update(old_blockmodel);
     this->status();
 
-    // If have not yet reached golden ratio, continue from middle blockmodel
+    // If search has not yet reached golden ratio, continue from middle blockmodel
     if (this->golden_ratio_not_reached()) {
         Blockmodel blockmodel = this->get(1).copy();
         blockmodel.setNum_blocks_to_merge(int(blockmodel.getNum_blocks() * BLOCK_REDUCTION_RATE));
@@ -86,7 +86,7 @@ void BlockmodelTriplet::update(Blockmodel &blockmodel) {
             } else {
                 old_index = 2;
             }
-            this->blockmodels[old_index] = this->blockmodels[1];
+            this->blockmodels[old_index] = this->blockmodels[1].copy();
             index = 1;
         } else {
             if (this->blockmodels[1].getNum_blocks() > blockmodel.getNum_blocks()) {
@@ -96,7 +96,7 @@ void BlockmodelTriplet::update(Blockmodel &blockmodel) {
             }
         }
     }
-    this->blockmodels[index] = blockmodel;
+    this->blockmodels[index] = blockmodel.copy();
 }
 
 TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {

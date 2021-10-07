@@ -29,13 +29,22 @@ void DictMatrix::clearrow(int row) {
 // }
 
 ISparseMatrix* DictMatrix::copy() const {
+    // TODO: this is probably inefficient (create a matrix, then use a copy constructor to return a new one)
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
-    DictMatrix dict_matrix(this->nrows, this->ncols);
+    ISparseMatrix* dict_matrix = new DictMatrix(this->nrows, this->ncols);
     for (int i = 0; i < this->nrows; ++i) {
-        const std::unordered_map<int, int> row = this->matrix[i];
-        dict_matrix.matrix[i] = row;  // TODO: double-check that this is a copy constructor
+        for (const std::pair<const int, int> &entry : this->matrix[i]) {
+            dict_matrix->add(i, entry.first, entry.second);
+        }
     }
-    return new DictMatrix(dict_matrix);
+    std::cout << "Returning copied dict_matrix" << std::endl;
+    return dict_matrix;
+//    DictMatrix dict_matrix(this->nrows, this->ncols);
+//    for (int i = 0; i < this->nrows; ++i) {
+//        const std::unordered_map<int, int> row = this->matrix[i];
+//        dict_matrix.matrix[i] = row;  // TODO: double-check that this is a copy constructor
+//    }
+//    return new DictMatrix(dict_matrix);
 }
 
 std::vector<std::tuple<int, int, int>> DictMatrix::entries() const {
@@ -327,15 +336,15 @@ void DictMatrix::update_edge_counts(int current_block, int proposed_block, MapVe
 }
 
 void DictMatrix::update_edge_counts(const Delta &delta) {
-    throw std::logic_error("update_edge_counts with ISparseMatrix not yet implemented for DictMatrix!");
-//    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
-//        int row = entry.first.first;
-//        int col = entry.first.second;
-//        int change = entry.second;
-//        this->matrix[row][col] += change;
-//        if (this->matrix[row][col] == 0)
-//            this->matrix[row].erase(col);
-//    }
+    for (const std::tuple<int, int, int> &entry : delta.entries()) {
+        int row = std::get<0>(entry);
+        int col = std::get<1>(entry);
+        int change = std::get<2>(entry);
+        this->matrix[row][col] += change;
+        if (this->matrix[row][col] == 0) {
+            this->matrix[row].erase(col);
+        }
+    }
 }
 
 bool DictMatrix::validate(int row, int col, int val) const {

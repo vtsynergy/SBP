@@ -13,27 +13,28 @@
 class BlockmodelTriplet {
 
 public:
-    /// TODO
+    /// Creates an empty blockmodel triplet.
     BlockmodelTriplet() : optimal_num_blocks_found(false) {}
-    /// TODO
+    /// True if the optimal number of blocks has been found.
     bool optimal_num_blocks_found;
-    /// TODO
+    /// Updates the blockmodel triplet with the provided blockmodel (inserts it into the correct spot, moves/deletes
+    /// the remaining blockmodels as needed).
     void update(Blockmodel &blockmodel);
-    /// TODO
+    /// Prints the number of blocks and overall entropy of every blockmodel in the blockmodel triplet.
     void status();
-    /// TODO
+    /// Returns the blockmodel at index `i`. IndexOutOfBoundError if i >= 3.
     Blockmodel &get(int i) { return blockmodels[i]; }
-    /// TODO
+    /// Returns true if the golden ratio has not been reached, false otherwise. In practice, returns true if
+    /// blockmodels[2] == 0.
     bool golden_ratio_not_reached();
-    /// TODO
+    /// Returns true if the optimal number of blocks has been found.
     bool is_done();
-    /// TODO
+    /// Returns the blockmodel on which to perform the next iteration of SBP.
     Blockmodel get_next_blockmodel(Blockmodel &old_blockmodel);
 
 protected:
     /// Blockmodels arranged in order of decreasing number of blocks.
     /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
-    /// TODO
     Blockmodel blockmodels[3];
     /// TODO
     int lower_difference();

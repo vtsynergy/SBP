@@ -156,7 +156,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
     MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
     for (const std::pair<const int, int> &pair : col) {
@@ -369,7 +369,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
     MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
     for (const std::pair<int, int> &pair : col) {

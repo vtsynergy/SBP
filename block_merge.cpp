@@ -255,7 +255,7 @@ double compute_delta_entropy(int current_block, int proposal, int num_edges, con
 double compute_delta_entropy_sparse(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
                                     SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
     const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
     const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
@@ -282,7 +282,7 @@ double compute_delta_entropy_sparse(int current_block, int proposal, int num_edg
 
 double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmodel, const Delta &delta,
                                     common::NewBlockDegrees &block_degrees) {
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     double delta_entropy = 0.0;
     int proposed_block = delta.proposed_block();
     for (const std::tuple<int, int, int> &entry : delta.entries()) {
@@ -321,7 +321,7 @@ double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmo
     return delta_entropy;
 }
 
-EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates edge_count_updates(std::shared_ptr<ISparseMatrix> blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
     std::vector<int> proposal_row = blockmodel->getrow(proposed_block);

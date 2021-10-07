@@ -47,9 +47,9 @@ class Blockmodel {
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
         if (args.transpose) {
-            this->_blockmatrix = new DictTransposeMatrix(this->num_blocks, this->num_blocks);
+            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
         } else {
-            this->_blockmatrix = new DictMatrix(this->num_blocks, this->num_blocks);
+            this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
         }
         // Set the block assignment to be the range [0, this->num_blocks)
         this->_block_assignment = utils::range<int>(0, this->num_blocks);
@@ -107,7 +107,8 @@ class Blockmodel {
     /// TODO
     void set_block_membership(int vertex, int block);
     /// TODO: Get rid of getters and setters?
-    ISparseMatrix *blockmatrix() const { return this->_blockmatrix; }
+    std::shared_ptr<ISparseMatrix> blockmatrix() const { return this->_blockmatrix; }
+//    ISparseMatrix *blockmatrix() const { return this->_blockmatrix; }
     /// Returns an immutable copy of the vertex-to-block assignment vector.
     const std::vector<int> &block_assignment() const { return this->_block_assignment; }
     /// Returns the block assignment for `vertex`.
@@ -149,7 +150,8 @@ class Blockmodel {
   protected:
     // Structure
     int num_blocks;
-    ISparseMatrix *_blockmatrix;
+    std::shared_ptr<ISparseMatrix> _blockmatrix;
+//    ISparseMatrix *_blockmatrix;
     // Known info
     std::vector<int> _block_assignment;
     std::vector<int> block_degrees;

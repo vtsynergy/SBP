@@ -47,7 +47,7 @@ double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmo
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel);
 
 /// Computes the new edge counts for the affected blocks (communities) under a proposed block merge.
-EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
+EdgeCountUpdates edge_count_updates(std::shared_ptr<ISparseMatrix> blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks);
 
 /// Fills the new edge counts for the affected blocks (communities) under a proposed block merge.

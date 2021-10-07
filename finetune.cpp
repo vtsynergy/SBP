@@ -180,7 +180,7 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
     const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
     const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
@@ -231,7 +231,7 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
 
 double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
                              const common::NewBlockDegrees &block_degrees) {
-    const ISparseMatrix *matrix = blockmodel.blockmatrix();
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     double delta_entropy = 0.0;
     for (const std::tuple<int, int, int> &entry : delta.entries()) {
         int row = std::get<0>(entry);

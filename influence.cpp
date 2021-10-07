@@ -304,8 +304,8 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
 
 int main(int argc, char* argv[]) {
     args = Args(argc, argv);
-//    Graph graph = Graph::load(args);
-    Graph G = to_graph(Graph1);
+    Graph G = Graph::load(args);
+//    Graph G = to_graph(Graph1);
     stochastic_block_partition(G, args.tag);
 //    compute_influence(Graph1);
 //    compute_influence(Graph2);
