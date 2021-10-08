@@ -75,8 +75,9 @@ std::vector<int> DictMatrix::getcol(int col) const {
     check_col_bounds(col);
     std::vector<int> col_values(this->nrows, 0);
     for (int row = 0; row < this->nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const MapVector<int> &matrix_row = this->matrix[row];
+        for (const std::pair<const int, int> &element : matrix_row) {
             if (element.first == col) {
                 col_values[row] = element.second;
                 break;
@@ -90,8 +91,9 @@ MapVector<int> DictMatrix::getcol_sparse(int col) const {
     check_col_bounds(col);
     MapVector<int> col_vector;
     for (int row = 0; row < this->nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        for (const std::pair<const int, int> &element : matrix_row) {
             if (element.first == col) {
                 col_vector[row] = element.second;
                 break;
@@ -104,8 +106,9 @@ MapVector<int> DictMatrix::getcol_sparse(int col) const {
 void DictMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
     check_col_bounds(col);
     for (int row = 0; row < this->nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        for (const std::pair<const int, int> &element : matrix_row) {
             if (element.first == col) {
                 col_vector[row] = element.second;
                 break;
@@ -146,7 +149,8 @@ EdgeWeights DictMatrix::incoming_edges(int block) const {
     std::vector<int> indices;
     std::vector<int> values;
     for (int row = 0; row < this->nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
         for (const std::pair<const int, int> &element : matrix_row) {
             if (element.first == block) {
                 indices.push_back(row);
@@ -162,8 +166,9 @@ Indices DictMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;
     for (int row = 0; row < nrows; ++row) {
-        std::unordered_map<int, int> matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        std::unordered_map<int, int> matrix_row = this->matrix[row];
+        for (const std::pair<const int, int> &element : matrix_row) {
             row_vector.push_back(row);
             col_vector.push_back(element.first);
         }
@@ -181,8 +186,9 @@ EdgeWeights DictMatrix::outgoing_edges(int block) const {
     check_row_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
-    const std::unordered_map<int, int> &block_row = this->matrix[block];
-    for (const std::pair<int, int> &element : block_row) {
+    const MapVector<int> &block_row = this->matrix[block];
+//    const std::unordered_map<int, int> &block_row = this->matrix[block];
+    for (const std::pair<const int, int> &element : block_row) {
         indices.push_back(element.first);
         values.push_back(element.second);
     }
@@ -215,8 +221,9 @@ void DictMatrix::sub(int row, int col, int val) {
 int DictMatrix::edges() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-        for (const std::pair<int, int> &element : matrix_row) {
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        for (const std::pair<const int, int> &element : matrix_row) {
             total += element.second;
         }
         // for (int col = 0; col < ncols; ++col) {
@@ -243,8 +250,9 @@ std::vector<int> DictMatrix::sum(int axis) const {
         std::vector<int> totals(this->ncols, 0);
         for (int row_index = 0; row_index < this->nrows; ++row_index) {
         // for (const std::unordered_map<int, int> &row : this->matrix) {
-            const std::unordered_map<int, int> &row = this->matrix[row_index];
-            for (const std::pair<int, int> &element : row) {
+            const MapVector<int> &row = this->matrix[row_index];
+//            const std::unordered_map<int, int> &row = this->matrix[row_index];
+            for (const std::pair<const int, int> &element : row) {
                 totals[element.first] += totals[element.second];
             }
         }
@@ -257,8 +265,9 @@ std::vector<int> DictMatrix::sum(int axis) const {
     } else {  // (axis == 1) sum across rows
         std::vector<int> totals(this->nrows, 0);
         for (int row = 0; row < this->nrows; ++row) {
-            const std::unordered_map<int, int> &matrix_row = this->matrix[row];
-            for (const std::pair<int, int> &element : matrix_row) {
+            const MapVector<int> &matrix_row = this->matrix[row];
+//            const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+            for (const std::pair<const int, int> &element : matrix_row) {
                 totals[row] += element.second;
             }
             // for (int col = 0; col < this->ncols; ++col) {
@@ -356,7 +365,8 @@ std::vector<int> DictMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
         for (const std::pair<const int, int> &element : matrix_row) {
             values.push_back(element.second);
         }

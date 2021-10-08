@@ -50,11 +50,11 @@ ISparseMatrix* DictTransposeMatrix::copy() const {
     // std::vector<std::unordered_map<int, int>> dict_matrix(this->nrows, std::unordered_map<int, int>());
     DictTransposeMatrix dict_matrix(this->nrows, this->ncols);
     for (int i = 0; i < this->nrows; ++i) {
-        const std::unordered_map<int, int> row = this->matrix[i];
+        const MapVector<int> row = this->matrix[i];
         dict_matrix.matrix[i] = row;  // TODO: double-check that this is a copy constructor
     }
     for (int i = 0; i < this->ncols; ++i) {
-        const std::unordered_map<int, int> col = this->matrix_transpose[i];
+        const MapVector<int> col = this->matrix_transpose[i];
         dict_matrix.matrix_transpose[i] = col;
     }
     return new DictTransposeMatrix(dict_matrix);
@@ -78,7 +78,7 @@ int DictTransposeMatrix::get(int row, int col) const {
 std::vector<int> DictTransposeMatrix::getcol(int col) const {
     check_col_bounds(col);
     std::vector<int> col_values(this->nrows, 0);
-    const std::unordered_map<int, int> &matrix_col = this->matrix_transpose[col];
+    const MapVector<int> &matrix_col = this->matrix_transpose[col];
     for (const std::pair<int, int> element : matrix_col) {
         col_values[element.first] = element.second;
     }
@@ -107,7 +107,7 @@ std::vector<int> DictTransposeMatrix::getrow(int row) const {
     // NOTE: could save some time by pulling this->matrix[row] out, and then iterating over it using references
     // but, this could be not thread safe
     // for (int row_index = 0; row_index < this->nrows; ++row_index) {
-    const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+    const MapVector<int> &matrix_row = this->matrix[row];
     for (const std::pair<int, int> element : matrix_row) {
         row_values[element.first] = element.second;
     }
@@ -133,7 +133,7 @@ EdgeWeights DictTransposeMatrix::incoming_edges(int block) const {
     check_col_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
-    const std::unordered_map<int, int> &block_col = this->matrix_transpose[block];
+    const MapVector<int> &block_col = this->matrix_transpose[block];
     for (const std::pair<int, int> &element : block_col) {
         indices.push_back(element.first);
         values.push_back(element.second);
@@ -145,7 +145,7 @@ Indices DictTransposeMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;
     for (int row = 0; row < nrows; ++row) {
-        std::unordered_map<int, int> matrix_row = this->matrix[row];
+        const MapVector<int> matrix_row = this->matrix[row];
         for (const std::pair<const int, int> &element : matrix_row) {
             row_vector.push_back(row);
             col_vector.push_back(element.first);
@@ -187,7 +187,7 @@ void DictTransposeMatrix::sub(int row, int col, int val) {
 int DictTransposeMatrix::edges() const {
     int total = 0;
     for (int row = 0; row < nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const MapVector<int> &matrix_row = this->matrix[row];
         for (const std::pair<int, int> &element : matrix_row) {
             total += element.second;
         }
@@ -219,7 +219,7 @@ std::vector<int> DictTransposeMatrix::sum(int axis) const {
     if (axis == 0) {  // sum across columns
         std::vector<int> totals(this->ncols, 0);
         for (int row_index = 0; row_index < this->nrows; ++row_index) {
-            const std::unordered_map<int, int> &row = this->matrix[row_index];
+            const MapVector<int> &row = this->matrix[row_index];
             for (const std::pair<int, int> &element : row) {
                 totals[element.first] += totals[element.second];
             }
@@ -228,7 +228,7 @@ std::vector<int> DictTransposeMatrix::sum(int axis) const {
     } else {  // (axis == 1) sum across rows
         std::vector<int> totals(this->nrows, 0);
         for (int row = 0; row < this->nrows; ++row) {
-            const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+            const MapVector<int> &matrix_row = this->matrix[row];
             for (const std::pair<int, int> &element : matrix_row) {
                 totals[row] += element.second;
             }
@@ -241,7 +241,7 @@ EdgeWeights DictTransposeMatrix::outgoing_edges(int block) const {
     check_row_bounds(block);
     std::vector<int> indices;
     std::vector<int> values;
-    const std::unordered_map<int, int> &block_row = this->matrix[block];
+    const MapVector<int> &block_row = this->matrix[block];
     for (const std::pair<int, int> &element : block_row) {
         indices.push_back(element.first);
         values.push_back(element.second);
@@ -410,7 +410,7 @@ std::vector<int> DictTransposeMatrix::values() const {
     // TODO: maybe return a sparse vector every time?
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {
-        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const MapVector<int> &matrix_row = this->matrix[row];
         for (const std::pair<const int, int> &element : matrix_row) {
             values.push_back(element.second);
         }

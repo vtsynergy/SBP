@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
+
 /// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
 struct IntPairHash {
     size_t operator() (const std::pair<int, int> &pair) const {
@@ -38,8 +40,11 @@ struct SparseVector {
     }
 };
 
-template <typename T> 
-using MapVector = std::unordered_map<int, T>;
+//template <typename T>
+//using MapVector = std::unordered_map<int, T>;
+
+template <typename T>
+using MapVector = absl::flat_hash_map<int, T>;
 
 struct Merge {
     int block = -1;

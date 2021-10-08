@@ -198,7 +198,8 @@ TEST_F(FinetuneTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
 
 TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmodelDeltas) {
     int vertex = 7;
-    std::unordered_map<int, int> block_counts1;
+    MapVector<int> block_counts1;
+//    std::unordered_map<int, int> block_counts1;
     for (const int neighbor : graph.out_neighbors(vertex)) {
         int neighbor_block = B.block_assignment(neighbor);
         block_counts1[neighbor_block] += 1;
@@ -213,7 +214,8 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
-    std::unordered_map<int, int> block_counts2;
+    MapVector<int> block_counts2;
+//    std::unordered_map<int, int> block_counts2;
     for (uint i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
         int block = blocks_out_neighbors.indices[i];
         int weight = blocks_out_neighbors.values[i];

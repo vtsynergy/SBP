@@ -23,7 +23,8 @@ class DictMatrix : public ISparseMatrix {
         this->ncols = ncols;
         this->nrows = nrows;
         // this->matrix = boost::numeric::ublas::coordinate_matrix<int>(this->nrows, this->ncols);
-        this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
+//        this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
+        this->matrix = std::vector<MapVector<int>>(this->nrows, MapVector<int>());
         // this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
         // int shape_array[2] = {this->nrows, this->ncols};
         this->shape = std::make_pair(this->nrows, this->ncols);
@@ -72,7 +73,8 @@ class DictMatrix : public ISparseMatrix {
     // void check_col_bounds(int col);
     // int ncols;
     // int nrows;
-    std::vector<std::unordered_map<int, int>> matrix;
+//    std::vector<std::unordered_map<int, int>> matrix;
+    std::vector<MapVector<int>> matrix;
     // boost::numeric::ublas::mapped_matrix<int> matrix;
     // boost::numeric::ublas::coordinate_matrix<int> matrix;
 };
