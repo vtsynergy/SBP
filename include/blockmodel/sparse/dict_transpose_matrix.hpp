@@ -25,8 +25,10 @@ class DictTransposeMatrix : public ISparseMatrix {
     DictTransposeMatrix(int nrows, int ncols) {  // : ncols(ncols), nrows(nrows) {
         this->ncols = ncols;
         this->nrows = nrows;
-        this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
-        this->matrix_transpose = std::vector<std::unordered_map<int, int>>(this->ncols, std::unordered_map<int, int>());
+//        this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
+//        this->matrix_transpose = std::vector<std::unordered_map<int, int>>(this->ncols, std::unordered_map<int, int>());
+        this->matrix = std::vector<MapVector<int>>(this->nrows, MapVector<int>());
+        this->matrix_transpose = std::vector<MapVector<int>>(this->ncols, MapVector<int>());
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
     virtual void add(int row, int col, int val) override;
@@ -82,8 +84,10 @@ class DictTransposeMatrix : public ISparseMatrix {
     // void check_col_bounds(int col) const;
     // int ncols;
     // int nrows;
-    std::vector<std::unordered_map<int, int>> matrix;
-    std::vector<std::unordered_map<int, int>> matrix_transpose;
+//    std::vector<std::unordered_map<int, int>> matrix;
+//    std::vector<std::unordered_map<int, int>> matrix_transpose;
+    std::vector<MapVector<int>> matrix;
+    std::vector<MapVector<int>> matrix_transpose;
 };
 
 #endif // CPPSBP_PARTITION_SPARSE_DICT_TRANSPOSE_MATRIX_HPP

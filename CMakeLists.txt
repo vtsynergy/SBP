@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(extern/hungarian)
+add_subdirectory(extern/abseil-cpp)
 
 set(INCLUDE_DIRS
     include
@@ -21,7 +22,9 @@ set(INCLUDE_DIRS
     include/blockmodel/sparse
     extern/tclap-1.2.2/include
     patches
-    extern/hungarian)
+    extern/hungarian
+    extern/abseil-cpp
+        )
 
 # add the executable
 add_library(SBP STATIC
@@ -49,17 +52,23 @@ add_executable(Influence influence.cpp)
 target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
 
 if(DEBUG)
+#    To check for heap overflows and such, use -fsanitize=address
+#    To run with valgrind, do NOT use -fsanitize=address
     target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
-    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -fsanitize=address)
-    target_link_libraries(DistributedSBP PUBLIC SBP -fsanitize=address)
-    target_link_libraries(Influence PUBLIC SBP -fsanitize=address)
+    target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address)
+    target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
+    target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
+#    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
+#    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
+#    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
+#    target_link_libraries(Influence PUBLIC SBP -g3)
 else(DEBUG)
 #    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
 #    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs)
     target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
-    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs)
-    target_link_libraries(DistributedSBP PUBLIC SBP)
-    target_link_libraries(Influence PUBLIC SBP)
+    target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)
+    target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map)
+    target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map)
 endif(DEBUG)
 
 # Google Test Suite
@@ -73,5 +82,5 @@ add_executable(Test
         test/toy_example.hpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
-target_link_libraries(Test SBP gtest_main hungarian -fopenmp stdc++fs)
+target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)
 gtest_discover_tests(Test)
