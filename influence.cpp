@@ -83,27 +83,31 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
         Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), 0.5, modified_assignment);
 //        std::cout << "log_posterior_prob: " << blockmodel.log_posterior_probability() << " exp(log_p) = " << std::exp(blockmodel.log_posterior_probability()) << std::endl;
         if (mdl)
-            distribution[block] = 1.0 / finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+            distribution[block] = 0.0 - finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
         else  // use log posterior probability
             distribution[block] = blockmodel.log_posterior_probability();
     }
-    if (!mdl) {
-        double min_log_posterior_probability = std::numeric_limits<double>::max();
-        for (double val : distribution) {
-            if (val < min_log_posterior_probability)
-                min_log_posterior_probability = val;
-        }
-        min_log_posterior_probability = std::abs(min_log_posterior_probability);
-        for (int block = 0; block < num_blocks; ++block) {
-            distribution[block] = std::exp(min_log_posterior_probability + distribution[block]);
-        }
+//    if (!mdl) {
+    double min_log_posterior_probability = std::numeric_limits<double>::max();
+    for (double val : distribution) {
+        if (val < min_log_posterior_probability)
+            min_log_posterior_probability = val;
     }
+    min_log_posterior_probability = std::abs(min_log_posterior_probability);
+    for (int block = 0; block < num_blocks; ++block) {
+        distribution[block] = std::exp(min_log_posterior_probability + distribution[block]);
+    }
+//    }
+//    if (mdl)
+//        utils::print<double>(distribution);
 //    std::cout << "distribution: ";
 //    utils::print<double>(distribution);
     auto sum = utils::sum<double>(distribution);
     if (sum == 0)
         return distribution;
     distribution = distribution / sum;
+//    if (mdl)
+//        utils::print<double>(distribution);
     return distribution;
 }
 
@@ -116,7 +120,7 @@ double total_variation_distance(const Blockmodel &B, const Graph &graph, int ver
     std::vector<double> Ycd = conditional_distribution(graph, Y, vertex1, B.getNum_blocks(), mdl);
     double tvd = 0.0;
     for (int block = 0; block < B.getNum_blocks(); ++block) {
-//        if (vertex1 == 0 && vertex2 == 7) {
+//        if (mdl && vertex1 == 0 && vertex2 == 1) {
 //            std::cout << "block = " << block << "|" << Xcd[block] << " - " << Ycd[block] << "| = " << Xcd[block] - Ycd[block] << std::endl;
 //        }
         tvd += std::abs(Xcd[block] - Ycd[block]);
@@ -126,7 +130,7 @@ double total_variation_distance(const Blockmodel &B, const Graph &graph, int ver
     return tvd;
 }
 
-std::pair<double,double> compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge = false, bool mdl = false) {
+std::tuple<double,double,std::vector<std::vector<double>>> compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge = false, bool mdl = false) {
 //    std::vector<int> initial_assignment = utils::range<int>(0, graph.num_vertices());
 //    Blockmodel B(graph.num_vertices(), graph.out_neighbors(), 0.5, initial_assignment);
 //    if (do_merge)
@@ -176,7 +180,7 @@ std::pair<double,double> compute_influence(const Graph &graph, const Blockmodel 
     }
     avg_influence /= double(graph.num_vertices());
     std::cout << "total (max) influence = " << max_influence << " avg influence = " << avg_influence << std::endl;
-    return std::make_pair(max_influence, avg_influence);
+    return std::make_tuple(max_influence, avg_influence, influence_matrix);
 }
 
 Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
@@ -227,7 +231,7 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
 //    return compute_influence(graph, do_merge, mdl);
 //}
 
-void print_csv(const std::vector<std::pair<double,double>>& csv_row, double mdl, double f1, const std::string& tag = "test") {
+void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vector<double>>>>& csv_row, double mdl, double f1, const std::string& tag = "test") {
     std::ostringstream filepath_stream;
     filepath_stream << "./influence_results/" << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
@@ -243,9 +247,9 @@ void print_csv(const std::vector<std::pair<double,double>>& csv_row, double mdl,
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
         for (int i = 0; i < 5; ++i) {
-            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i << "_mdl_max_influence,itr" << i << "_mdl_avg_influence";
+            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i << "_mdl_max_influence,itr" << i << "_mdl_avg_influence,itr" << i << "_matrix";
             if (i == 0)
-                file << ",itr0.5_ll_max_influence,it0.5_ll_avg_influence,itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence";
+                file << ",itr0.5_ll_max_influence,it0.5_ll_avg_influence,itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence,itr" << i << "_matrix";
         }
         file << ",mdl,f1" << std::endl;
     }
@@ -253,16 +257,39 @@ void print_csv(const std::vector<std::pair<double,double>>& csv_row, double mdl,
     file << "," << args.algorithm;
     for (int i = 0; i < 5; ++i) {
         auto res = csv_row[i*2];
-        file << "," << res.first << "," << res.second;
+        file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
+        auto matrix = std::get<2>(res);
+        for (const auto &row : matrix) {
+            for (int col = 0; col < row.size(); ++col) {
+                if (col != row.size() - 1) {
+                    file << row[col] << ",";
+                } else {
+                    file << row[col];
+                }
+            }
+        }
+        std::cout << "\"";
         res = csv_row[i*2 + 1];
-        file << "," << res.first << "," << res.second;
+//        file << "," << res.first << "," << res.second;
+        file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
+        matrix = std::get<2>(res);
+        for (const auto &row : matrix) {
+            for (int col = 0; col < row.size(); ++col) {
+                if (col != row.size() - 1) {
+                    file << row[col] << ",";
+                } else {
+                    file << row[col];
+                }
+            }
+        }
+        std::cout << "\"";
     }
     file << "," << mdl << "," << f1 << std::endl;
     file.close();
 }
 
 void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
-    std::vector<std::pair<double, double>> csv_row;  // log-likelihood influence, mdl-influence at 0, 0.5, 1, 2, 3, ... iterations
+    std::vector<std::tuple<double, double, std::vector<std::vector<double>>>> csv_row;  // log-likelihood influence, mdl-influence at 0, 0.5, 1, 2, 3, ... iterations
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
