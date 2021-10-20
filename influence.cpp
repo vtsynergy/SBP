@@ -235,7 +235,7 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
     std::ostringstream filepath_stream;
     filepath_stream << "./influence_results/" << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
-    filepath_stream << "/" << args.overlap << "_" << args.blocksizevar << ".csv";
+    filepath_stream << "/" << args.type << ".csv";
     std::string filepath = filepath_stream.str();
     bool write_header = false;
     if (!fs::exists(filepath)) {
