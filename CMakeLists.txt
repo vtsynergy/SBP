@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(extern/hungarian)
 add_subdirectory(extern/abseil-cpp)
+add_subdirectory(extern/robin-map)
 
 set(INCLUDE_DIRS
     include
@@ -24,6 +25,7 @@ set(INCLUDE_DIRS
     patches
     extern/hungarian
     extern/abseil-cpp
+    extern/robin-map/include
         )
 
 # add the executable

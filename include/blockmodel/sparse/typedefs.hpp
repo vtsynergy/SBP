@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "tsl/robin_map.h"
 
 /// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
 struct IntPairHash {
@@ -43,8 +44,11 @@ struct SparseVector {
 //template <typename T>
 //using MapVector = std::unordered_map<int, T>;
 
+//template <typename T>
+//using MapVector = absl::flat_hash_map<int, T>;
+
 template <typename T>
-using MapVector = absl::flat_hash_map<int, T>;
+using MapVector = tsl::robin_map<int, T>;
 
 struct Merge {
     int block = -1;
