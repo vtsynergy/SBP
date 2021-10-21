@@ -280,6 +280,21 @@ TEST_F(FinetuneTest, SpecialCaseGivesCorrectSparseEdgeCountUpdates) {
     EXPECT_EQ(updates.proposal_col[5], 0);
 }
 
+TEST_F(FinetuneTest, SpecialCaseBlockmodelDeltasAreCorrect) {
+    int vertex = 6;
+    common::ProposalAndEdgeCounts proposal { 0, 1, 2, 3 };
+    EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
+    EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
+    Delta delta = finetune::blockmodel_delta(vertex, 3, proposal.proposal, out_edges, in_edges, B3);
+    EXPECT_EQ(delta.entries().size(), 6);
+    EXPECT_EQ(delta.get(0,2), 1);
+    EXPECT_EQ(delta.get(2,0), 1);
+    EXPECT_EQ(delta.get(2,3), -1);
+    EXPECT_EQ(delta.get(3,0), 1);
+    EXPECT_EQ(delta.get(3,2), -1);
+    EXPECT_EQ(delta.get(3,3), -1);
+}
+
 TEST_F(FinetuneTest, SpecialCaseShouldGiveCorrectDeltaEntropy) {
     int vertex = 6;
     common::ProposalAndEdgeCounts proposal { 0, 1, 2, 3 };
@@ -295,5 +310,9 @@ TEST_F(FinetuneTest, SpecialCaseShouldGiveCorrectDeltaEntropy) {
     B5.move_vertex(vertex, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     double E_before = finetune::overall_entropy(B3, 11, 23);
     double dE = finetune::overall_entropy(B5, 11, 23) - E_before;
+    std::cout << "======== Before move ========" << std::endl;
+    B3.print_blockmodel();
+    std::cout << "======== After move =======" << std::endl;
+    B5.print_blockmodel();
     EXPECT_FLOAT_EQ(dE, result.delta_entropy);
 }
