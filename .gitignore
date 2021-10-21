@@ -132,6 +132,7 @@ cmake-build-debug/
 r0*/
 *r0*/
 vtune*
+generator/test_*
 
 # output files
 main
