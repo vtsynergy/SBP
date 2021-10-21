@@ -268,7 +268,7 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
                 }
             }
         }
-        std::cout << "\"";
+        file << "\"";
         res = csv_row[i*2 + 1];
 //        file << "," << res.first << "," << res.second;
         file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
@@ -282,7 +282,7 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
                 }
             }
         }
-        std::cout << "\"";
+        file << "\"";
     }
     file << "," << mdl << "," << f1 << std::endl;
     file.close();
