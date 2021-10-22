@@ -247,15 +247,15 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
         for (int i = 0; i < 5; ++i) {
-            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i << "_mdl_max_influence,itr" << i << "_mdl_avg_influence,itr" << i << "_matrix";
+            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i <<"_ll_matrix,itr" << i << "_mdl_max_influence,itr" << i << "_mdl_avg_influence,itr" << i << "_mdl_matrix";
             if (i == 0)
-                file << ",itr0.5_ll_max_influence,it0.5_ll_avg_influence,itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence,itr" << i << "_matrix";
+                file << ",itr0.5_ll_max_influence,itr0.5_ll_avg_influence,itr0.5_ll_matrix,itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence,itr0.5_mdl_matrix";
         }
         file << ",mdl,f1" << std::endl;
     }
     file << tag << "," << args.numvertices << "," << args.overlap << "," << args.blocksizevar << "," << args.undirected;
     file << "," << args.algorithm;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         auto res = csv_row[i*2];
         file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
         auto matrix = std::get<2>(res);
