@@ -237,10 +237,10 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
         int row = std::get<0>(entry);
         int col = std::get<1>(entry);
         int change = std::get<2>(entry);
-        delta_entropy += common::cell_entropy((double) matrix->get(row, col), (double) blockmodel.getBlock_degrees_in()[col],
-                                              (double) blockmodel.getBlock_degrees_out()[row]);
-        delta_entropy -= common::cell_entropy((double) matrix->get(row, col) + change, (double) block_degrees.block_degrees_in[col],
-                                              (double) block_degrees.block_degrees_out[row]);
+        delta_entropy += common::cell_entropy((float) matrix->get(row, col), (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy((float) matrix->get(row, col) + change, (float) block_degrees.block_degrees_in[col],
+                                              (float) block_degrees.block_degrees_out[row]);
     }
     int current_block = delta.current_block();
     int proposed_block = delta.proposed_block();
@@ -251,10 +251,10 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
         int value = entry.second;
         if (delta.get(row, col) != 0) continue;
         // Value has not changed
-        delta_entropy += common::cell_entropy((double) value, (double) blockmodel.getBlock_degrees_in()[col],
-                                              (double) blockmodel.getBlock_degrees_out()[row]);
-        delta_entropy -= common::cell_entropy((double) value, (double) block_degrees.block_degrees_in[col],
-                                              (double) block_degrees.block_degrees_out[row]);
+        delta_entropy += common::cell_entropy((float) value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy((float) value, (float) block_degrees.block_degrees_in[col],
+                                              (float) block_degrees.block_degrees_out[row]);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         int row = proposed_block;
@@ -262,10 +262,10 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
         int value = entry.second;
         if (delta.get(row, col) != 0) continue;
         // Value has not changed
-        delta_entropy += common::cell_entropy((double) value, (double) blockmodel.getBlock_degrees_in()[col],
-                                              (double) blockmodel.getBlock_degrees_out()[row]);
-        delta_entropy -= common::cell_entropy((double) value, (double) block_degrees.block_degrees_in[col],
-                                              (double) block_degrees.block_degrees_out[row]);
+        delta_entropy += common::cell_entropy((float) value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy((float) value, (float) block_degrees.block_degrees_in[col],
+                                              (float) block_degrees.block_degrees_out[row]);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         int row = entry.first;
@@ -273,10 +273,10 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
         int value = entry.second;
         if (delta.get(row, col) != 0 || row == current_block || row == proposed_block) continue;
         // Value has not changed and we're not double counting
-        delta_entropy += common::cell_entropy((double) value, (double) blockmodel.getBlock_degrees_in()[col],
-                                              (double) blockmodel.getBlock_degrees_out()[row]);
-        delta_entropy -= common::cell_entropy((double) value, (double) block_degrees.block_degrees_in[col],
-                                              (double) block_degrees.block_degrees_out[row]);
+        delta_entropy += common::cell_entropy((float) value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy((float) value, (float) block_degrees.block_degrees_in[col],
+                                              (float) block_degrees.block_degrees_out[row]);
     }
     for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         int row = entry.first;
@@ -284,10 +284,10 @@ double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
         int value = entry.second;
         if (delta.get(row, col) != 0 || row == current_block || row == proposed_block) continue;
         // Value has not changed and we're not double counting
-        delta_entropy += common::cell_entropy((double) value, (double) blockmodel.getBlock_degrees_in()[col],
-                                              (double) blockmodel.getBlock_degrees_out()[row]);
-        delta_entropy -= common::cell_entropy((double) value, (double) block_degrees.block_degrees_in[col],
-                                              (double) block_degrees.block_degrees_out[row]);
+        delta_entropy += common::cell_entropy((float) value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy((float) value, (float) block_degrees.block_degrees_in[col],
+                                              (float) block_degrees.block_degrees_out[row]);
     }
     return delta_entropy;
 }
