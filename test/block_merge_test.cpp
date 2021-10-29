@@ -68,3 +68,11 @@ TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithBlockmodelDel
     double E_after = finetune::overall_entropy(B2, 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
+
+TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithBlockmodelDeltasSansBlockDegrees) {
+    double E_before = finetune::overall_entropy(B, 11, 23);
+    double dE = block_merge::compute_delta_entropy(0, {1, B.getBlock_degrees_out()[0],
+                                                       B.getBlock_degrees_in()[0], B.getBlock_degrees()[0]}, B, Deltas);
+    double E_after = finetune::overall_entropy(B2, 11, 23);
+    EXPECT_FLOAT_EQ(E_after - E_before, dE);
+}

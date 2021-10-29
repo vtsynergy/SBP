@@ -43,6 +43,10 @@ double compute_delta_entropy_sparse(int current_block, int proposal, int num_edg
 double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmodel, const Delta &delta,
                                     common::NewBlockDegrees &block_degrees);
 
+/// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
+double compute_delta_entropy(int current_block, common::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
+                             const Delta &delta);
+
 /// Returns the potential changes to the blockmodel if `current_block` was merged into `proposed_block`.
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel);
 

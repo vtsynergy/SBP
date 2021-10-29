@@ -321,6 +321,61 @@ double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmo
     return delta_entropy;
 }
 
+double compute_delta_entropy(int current_block, common::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
+                             const Delta &delta) {
+    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
+    double delta_entropy = 0.0;
+    int proposed_block = delta.proposed_block();
+    auto get_deg_in = [&blockmodel,&proposal,current_block,proposed_block](int index)->float {
+        int value = blockmodel.getBlock_degrees_in()[index];
+        if (index == current_block)
+            value -= proposal.num_in_neighbor_edges;
+        else if (index == proposed_block)
+            value += proposal.num_in_neighbor_edges;
+        return float(value);
+    };
+    auto get_deg_out = [&blockmodel,&proposal,current_block,proposed_block](int index)->float {
+        int value = blockmodel.getBlock_degrees_out()[index];
+        if (index == current_block)
+            value -= proposal.num_out_neighbor_edges;
+        else if (index == proposed_block)
+            value += proposal.num_out_neighbor_edges;
+        return float(value);
+    };
+    for (const std::tuple<int, int, int> &entry : delta.entries()) {
+        int row = std::get<0>(entry);
+        int col = std::get<1>(entry);
+        auto change = (float) std::get<2>(entry);
+        // delta += + E(old) - E(new)
+        auto value = (float) matrix->get(row, col);
+        delta_entropy += common::cell_entropy(value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        if (row == current_block || col == current_block) continue;  // the "new" cell entropy == 0;
+        delta_entropy -= common::cell_entropy(value + change, get_deg_in(col), get_deg_out(row));
+    }
+    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+        int row = proposed_block;
+        int col = entry.first;
+        auto value = (float) entry.second;
+        if (delta.get(row, col) != 0) continue;
+        // Value has not changed
+        delta_entropy += common::cell_entropy((float) value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy(value, get_deg_in(col), get_deg_out(row));
+    }
+    for (const std::pair<const int, int> &entry : blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+        int row = entry.first;
+        int col = proposed_block;
+        auto value = (float) entry.second;
+        if (delta.get(row, col) != 0 || row == current_block || row == proposed_block) continue;
+        // Value has not changed and we're not double counting
+        delta_entropy += common::cell_entropy(value, (float) blockmodel.getBlock_degrees_in()[col],
+                                              (float) blockmodel.getBlock_degrees_out()[row]);
+        delta_entropy -= common::cell_entropy(value, get_deg_in(col), get_deg_out(row));
+    }
+    return delta_entropy;
+}
+
 EdgeCountUpdates edge_count_updates(std::shared_ptr<ISparseMatrix> blockmodel, int current_block, int proposed_block,
                                     EdgeWeights &out_blocks, EdgeWeights &in_blocks) {
     // TODO: these are copy constructors, can we safely get rid of them?
@@ -446,23 +501,27 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
     if (past_proposals[proposal.proposal])
         return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};
     Delta delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
-    // SparseEdgeCountUpdates updates;
-    // edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
-    //                           updates);
-    // Note: if it becomes an issue, figuring out degrees on the fly could save some RAM. The
-    // only ones that change are the degrees for current_block and proposal anyway...
-    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + delta.get(current_block, current_block);
-    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + delta.get(proposal.proposal, proposal.proposal);
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
+    //==========NEW==============
+    double delta_entropy = compute_delta_entropy(current_block, proposal, blockmodel, delta);
+    //==========OLD==============
+//     SparseEdgeCountUpdates updates;
+//        // edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,
+//        //                           updates);
+//        // Note: if it becomes an issue, figuring out degrees on the fly could save some RAM. The
+//        // only ones that change are the degrees for current_block and proposal anyway...
+//        int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
+//                                       + delta.get(current_block, current_block);
+//        int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
+//                                        + delta.get(proposal.proposal, proposal.proposal);
 //    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-//            current_block, blockmodel, blockmodel.blockmatrix()->get(current_block, current_block), proposal);
-    double delta_entropy = compute_delta_entropy_sparse(current_block, blockmodel, delta, new_block_degrees);
-    // double delta_entropy =
-    //     compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, updates,
-    //                                  new_block_degrees);
+//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
+////    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+////            current_block, blockmodel, blockmodel.blockmatrix()->get(current_block, current_block), proposal);
+//    double delta_entropy = compute_delta_entropy_sparse(current_block, blockmodel, delta, new_block_degrees);
+//    // double delta_entropy =
+//    //     compute_delta_entropy_sparse(current_block, proposal.proposal, num_edges, blockmodel, updates,
+//    //                                  new_block_degrees);
+    //=========OLD==============
     past_proposals[proposal.proposal] = true;
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
