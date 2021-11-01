@@ -133,6 +133,7 @@ r0*/
 *r0*/
 vtune*
 generator/test_*
+generator/version*
 
 # output files
 main
@@ -140,3 +141,4 @@ main
 *.out
 *.csv
 *.xlsx
+*.png
