@@ -245,9 +245,9 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
     blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
     blockmodel_copy._blockmatrix = std::shared_ptr<ISparseMatrix>(this->_blockmatrix->copy());
-    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
-    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
-    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._block_degrees = std::vector<int>(this->_block_degrees);
+    blockmodel_copy._block_degrees_out = std::vector<int>(this->_block_degrees_out);
+    blockmodel_copy._block_degrees_in = std::vector<int>(this->_block_degrees_in);
     blockmodel_copy._in_two_hop_radius = std::vector<bool>(this->_in_two_hop_radius);
     blockmodel_copy.num_blocks_to_merge = 0;
     blockmodel_copy._my_blocks = std::vector<bool>(this->_my_blocks);
@@ -429,8 +429,8 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
         this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
-    this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    this->_block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    this->_block_degrees_out = utils::constant<int>(this->num_blocks, 0);
 
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
         std::vector<int> vertex_neighbors = neighbors[vertex];
@@ -453,15 +453,15 @@ void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             // Update blockmodel
             this->_blockmatrix->add(block, neighbor_block, weight);
             // Update degrees
-            this->block_degrees_out[block] += weight;
-            this->block_degrees_in[neighbor_block] += weight;
+            this->_block_degrees_out[block] += weight;
+            this->_block_degrees_in[neighbor_block] += weight;
         }
     }
     // Count block degrees
     if (args.undirected) {
-        this->block_degrees = std::vector<int>(this->block_degrees_out);
+        this->_block_degrees = std::vector<int>(this->_block_degrees_out);
     } else {
-        this->block_degrees = this->block_degrees_out + this->block_degrees_in; 
+        this->_block_degrees = this->_block_degrees_out + this->_block_degrees_in;
     }
 }
 
@@ -490,8 +490,8 @@ double TwoHopBlockmodel::log_posterior_probability() const {
         }
         // if (row % mpi.num_processes != mpi.rank) continue;
         values.push_back(all_values[i]);
-        degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]]);
-        degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]]);
+        degrees_in.push_back(this->_block_degrees_in[nonzero_indices.cols[i]]);
+        degrees_out.push_back(this->_block_degrees_out[nonzero_indices.rows[i]]);
     }
     std::vector<double> temp = values * utils::nat_log<double>(
         values / (degrees_out * degrees_in));

@@ -26,7 +26,7 @@ TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
     EXPECT_EQ(nbd.block_degrees_in[0], 12);
     EXPECT_EQ(nbd.block_degrees_in[1], 7);
     EXPECT_EQ(nbd.block_degrees_in[2], 4);
-    // TODO: when computing new_block_degrees, fix error where block_degrees are improperly calculated (k != k_in + k_out if there are self_edges)
+    // TODO: when computing new_block_degrees, fix error where _block_degrees are improperly calculated (k != k_in + k_out if there are self_edges)
     // TODO: same error may be present in blockmodel creation and updates
     EXPECT_EQ(nbd.block_degrees[0], 14);
     EXPECT_EQ(nbd.block_degrees[1], 9);

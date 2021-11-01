@@ -130,12 +130,18 @@ class Blockmodel {
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(int vertex, int block) { this->_block_assignment[vertex] = block; }
     void set_block_assignment(std::vector<int> block_assignment) { this->_block_assignment = block_assignment; }
-    const std::vector<int> &getBlock_degrees() const { return this->block_degrees; }
-    void setBlock_degrees(std::vector<int> block_degrees) { this->block_degrees = block_degrees; }
-    const std::vector<int> &getBlock_degrees_in() const { return this->block_degrees_in; }
-    void setBlock_degrees_in(std::vector<int> block_degrees_in) { this->block_degrees_in = block_degrees_in; }
-    const std::vector<int> &getBlock_degrees_out() const { return this->block_degrees_out; }
-    void setBlock_degrees_out(std::vector<int> block_degrees_out) { this->block_degrees_out = block_degrees_out; }
+    const std::vector<int> &degrees() const { return this->_block_degrees; }
+    int degrees(int block) const { return this->_block_degrees[block]; }
+    void degrees(int block, int value) { this->_block_degrees[block] = value; }
+    void degrees(std::vector<int> block_degrees) { this->_block_degrees = block_degrees; }
+    const std::vector<int> &degrees_in() const { return this->_block_degrees_in; }
+    int degrees_in(int block) const { return this->_block_degrees_in[block]; }
+    void degrees_in(int block, int value) { this->_block_degrees_in[block] = value; }
+    void degrees_in(std::vector<int> block_degrees_in) { this->_block_degrees_in = block_degrees_in; }
+    const std::vector<int> &degrees_out() const { return this->_block_degrees_out; }
+    int degrees_out(int block) const { return this->_block_degrees_out[block]; }
+    void degrees_out(int block, int value) { this->_block_degrees_out[block] = value; }
+    void degrees_out(std::vector<int> block_degrees_out) { this->_block_degrees_out = block_degrees_out; }
     float &getBlock_reduction_rate() { return this->block_reduction_rate; }
     void setBlock_reduction_rate(float block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
     float &getOverall_entropy() { return this->overall_entropy; }
@@ -154,9 +160,9 @@ class Blockmodel {
 //    ISparseMatrix *_blockmatrix;
     // Known info
     std::vector<int> _block_assignment;
-    std::vector<int> block_degrees;
-    std::vector<int> block_degrees_in;
-    std::vector<int> block_degrees_out;
+    std::vector<int> _block_degrees;
+    std::vector<int> _block_degrees_in;
+    std::vector<int> _block_degrees_out;
     float block_reduction_rate;
     // Computed info
     float overall_entropy;

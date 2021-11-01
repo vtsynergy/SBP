@@ -13,15 +13,15 @@ class BlockmodelComplexTest : public ComplexExample {
 };
 
 TEST_F(BlockmodelTest, BlockDegreesAreCorrectlyInstantiated) {
-    EXPECT_EQ(B.getBlock_degrees_out()[0], 8);
-    EXPECT_EQ(B.getBlock_degrees_out()[1], 7);
-    EXPECT_EQ(B.getBlock_degrees_out()[2], 8);
-    EXPECT_EQ(B.getBlock_degrees_in()[0], 9);
-    EXPECT_EQ(B.getBlock_degrees_in()[1], 7);
-    EXPECT_EQ(B.getBlock_degrees_in()[2], 7);
-    EXPECT_EQ(B.getBlock_degrees()[0], 10);
-    EXPECT_EQ(B.getBlock_degrees()[1], 9);
-    EXPECT_EQ(B.getBlock_degrees()[2], 9);
+    EXPECT_EQ(B.degrees_out(0), 8);
+    EXPECT_EQ(B.degrees_out(1), 7);
+    EXPECT_EQ(B.degrees_out(2), 8);
+    EXPECT_EQ(B.degrees_in(0), 9);
+    EXPECT_EQ(B.degrees_in(1), 7);
+    EXPECT_EQ(B.degrees_in(2), 7);
+    EXPECT_EQ(B.degrees(0), 10);
+    EXPECT_EQ(B.degrees(1), 9);
+    EXPECT_EQ(B.degrees(2), 9);
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {

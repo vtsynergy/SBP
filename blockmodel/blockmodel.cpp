@@ -81,9 +81,9 @@ Blockmodel Blockmodel::copy() {
     blockmodel_copy._block_assignment = std::vector<int>(this->_block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
     blockmodel_copy._blockmatrix = std::shared_ptr<ISparseMatrix>(this->_blockmatrix->copy());
-    blockmodel_copy.block_degrees = std::vector<int>(this->block_degrees);
-    blockmodel_copy.block_degrees_out = std::vector<int>(this->block_degrees_out);
-    blockmodel_copy.block_degrees_in = std::vector<int>(this->block_degrees_in);
+    blockmodel_copy._block_degrees = std::vector<int>(this->_block_degrees);
+    blockmodel_copy._block_degrees_out = std::vector<int>(this->_block_degrees_out);
+    blockmodel_copy._block_degrees_in = std::vector<int>(this->_block_degrees_in);
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
 }
@@ -135,9 +135,9 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
         this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->block_degrees_in = utils::constant<int>(this->num_blocks, 0);
-    this->block_degrees_out = utils::constant<int>(this->num_blocks, 0);
-    this->block_degrees = utils::constant<int>(this->num_blocks, 0);
+    this->_block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    this->_block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    this->_block_degrees = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
     for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
@@ -156,11 +156,11 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             // Update blockmodel
             this->_blockmatrix->add(block, neighbor_block, weight);
             // Update degrees
-            this->block_degrees_out[block] += weight;
-            this->block_degrees_in[neighbor_block] += weight;
-            this->block_degrees[block] += weight;
+            this->_block_degrees_out[block] += weight;
+            this->_block_degrees_in[neighbor_block] += weight;
+            this->_block_degrees[block] += weight;
             if (block != neighbor_block)
-                this->block_degrees[neighbor_block] += weight;
+                this->_block_degrees[neighbor_block] += weight;
         }
     }
 }
@@ -171,8 +171,8 @@ double Blockmodel::log_posterior_probability() const {
     std::vector<double> degrees_in;
     std::vector<double> degrees_out;
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
-        degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]]);
-        degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]]);
+        degrees_in.push_back(this->_block_degrees_in[nonzero_indices.cols[i]]);
+        degrees_out.push_back(this->_block_degrees_out[nonzero_indices.rows[i]]);
     }
     std::vector<double> temp = values * utils::nat_log<double>(
         values / (degrees_out * degrees_in));
@@ -186,9 +186,9 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
         std::vector<double> degrees_in;
         std::vector<double> degrees_out;
         for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
-            // This is OK bcause block_degrees_in == block_degrees_out == block_degrees
-            degrees_in.push_back(this->block_degrees_in[nonzero_indices.cols[i]] / (2.0));
-            degrees_out.push_back(this->block_degrees_out[nonzero_indices.rows[i]] / (2.0));
+            // This is OK bcause _block_degrees_in == _block_degrees_out == _block_degrees
+            degrees_in.push_back(this->_block_degrees_in[nonzero_indices.cols[i]] / (2.0));
+            degrees_out.push_back(this->_block_degrees_out[nonzero_indices.rows[i]] / (2.0));
         }
         std::vector<double> temp = values * utils::nat_log<double>(
             (values / (2.0)) / (degrees_out * degrees_in));
@@ -211,9 +211,9 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeC
                              std::vector<int> &new_block_degrees) {
     this->_block_assignment[vertex] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
-    this->block_degrees_out = new_block_degrees_out;
-    this->block_degrees_in = new_block_degrees_in;
-    this->block_degrees = new_block_degrees;
+    this->_block_degrees_out = new_block_degrees_out;
+    this->_block_degrees_in = new_block_degrees_in;
+    this->_block_degrees = new_block_degrees;
 }
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, SparseEdgeCountUpdates &updates,
@@ -221,9 +221,9 @@ void Blockmodel::move_vertex(int vertex, int current_block, int new_block, Spars
                              std::vector<int> &new_block_degrees) {
     this->_block_assignment[vertex] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
-    this->block_degrees_out = new_block_degrees_out;
-    this->block_degrees_in = new_block_degrees_in;
-    this->block_degrees = new_block_degrees;
+    this->_block_degrees_out = new_block_degrees_out;
+    this->_block_degrees_in = new_block_degrees_in;
+    this->_block_degrees = new_block_degrees;
 }
 
 void Blockmodel::move_vertex(int vertex, int new_block, const Delta &delta,
@@ -231,9 +231,9 @@ void Blockmodel::move_vertex(int vertex, int new_block, const Delta &delta,
                              std::vector<int> &new_block_degrees) {
     this->_block_assignment[vertex] = new_block;
     this->_blockmatrix->update_edge_counts(delta);
-    this->block_degrees_out = new_block_degrees_out;
-    this->block_degrees_in = new_block_degrees_in;
-    this->block_degrees = new_block_degrees;
+    this->_block_degrees_out = new_block_degrees_out;
+    this->_block_degrees_in = new_block_degrees_in;
+    this->_block_degrees = new_block_degrees;
 }
 
 void Blockmodel::print_blockmatrix() const {
@@ -244,11 +244,11 @@ void Blockmodel::print_blockmodel() const {
     std::cout << "Blockmodel: " << std::endl;
     this->print_blockmatrix();
     std::cout << "Block degrees out: ";
-    utils::print<int>(this->block_degrees_out);
+    utils::print<int>(this->_block_degrees_out);
     std::cout << "Block degrees in: ";
-    utils::print<int>(this->block_degrees_in);
+    utils::print<int>(this->_block_degrees_in);
     std::cout << "Block degrees: ";
-    utils::print<int>(this->block_degrees);
+    utils::print<int>(this->_block_degrees);
     std::cout << "Assignment: ";
     utils::print<int>(this->_block_assignment);
 }

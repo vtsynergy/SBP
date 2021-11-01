@@ -65,14 +65,14 @@ NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &b
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);
 
 // /// Computes the entropy of one row or column of sparse data
-// double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
+// double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &_block_degrees, int degree);
 
 /// Computes the entropy of one row or column of sparse data.
 double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
                           int num_edges);
 
 // /// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`
-// double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+// double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &_block_degrees, int degree,
 //                           int current_block, int proposal);
 
 /// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`.

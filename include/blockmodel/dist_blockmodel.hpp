@@ -102,13 +102,13 @@
 //    ISparseMatrix *blockmatrix() { return this->_blockmatrix; }
 //    std::vector<int> &degrees() { return this->_degrees; }
 //    int &degrees(int block) { return this->_degrees[block]; }
-//    void degrees(std::vector<int> block_degrees) { this->_degrees = block_degrees; }
+//    void degrees(std::vector<int> _block_degrees) { this->_degrees = _block_degrees; }
 //    std::vector<int> &degrees_in() { return this->_degrees_in; }
 //    int &degrees_in(int block) { return this->_degrees_in[block]; }
-//    void degrees_in(std::vector<int> block_degrees_in) { this->_degrees_in = block_degrees_in; }
+//    void degrees_in(std::vector<int> _block_degrees_in) { this->_degrees_in = _block_degrees_in; }
 //    std::vector<int> &degrees_out() { return this->_degrees_out; }
 //    int &degrees_out(int block) { return this->_degrees_out[block]; }
-//    void degrees_out(std::vector<int> block_degrees_out) { this->_degrees_out = block_degrees_out; }
+//    void degrees_out(std::vector<int> _block_degrees_out) { this->_degrees_out = _block_degrees_out; }
 //    // float &getBlock_reduction_rate() { return this->block_reduction_rate; }
 //    // void setBlock_reduction_rate(float block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
 //    int &num_blocks_to_merge() { return this->_num_blocks_to_merge; }

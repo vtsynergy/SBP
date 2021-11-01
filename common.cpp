@@ -25,9 +25,9 @@ int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
 
 NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel, int current_block_self_edges,
                                           int proposed_block_self_edges, ProposalAndEdgeCounts &proposal) {
-    std::vector<int> degrees_out(blockmodel.getBlock_degrees_out());
-    std::vector<int> degrees_in(blockmodel.getBlock_degrees_in());
-    std::vector<int> degrees_total(blockmodel.getBlock_degrees());
+    std::vector<int> degrees_out(blockmodel.degrees_out());
+    std::vector<int> degrees_in(blockmodel.degrees_in());
+    std::vector<int> degrees_total(blockmodel.degrees());
     degrees_out[current_block] -= proposal.num_out_neighbor_edges;
     degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
     degrees_in[current_block] -= proposal.num_in_neighbor_edges;
@@ -149,7 +149,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     }
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
+    if (std::rand() <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
         int proposal = propose_random_block(current_block, num_blocks);
         return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
@@ -249,7 +249,7 @@ double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_
     assert(!std::isnan(dE));
     return dE;
     // std::vector<double> row_or_col_double = utils::to_double<int>(row_or_col) / (2.0 * num_edges);
-    // std::vector<double> block_degrees_double = utils::to_double<int>(block_degrees) / (2.0 * num_edges);
+    // std::vector<double> block_degrees_double = utils::to_double<int>(_block_degrees) / (2.0 * num_edges);
     // std::vector<double> result = (row_or_col_double * 2.0 * num_edges) / (block_degrees_double * degree);
     // // std::vector<double> result = row_or_col_double / (block_degrees_double * degree * 2.0 * num_edges);
     // result = row_or_col_double * utils::nat_log<double>(result);
@@ -267,7 +267,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
         if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
             continue;
         double block_deg = (double) block_degrees[pair.first] / 2.0;
-        // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+        // double temp = (double) pair.second / (2.0 * num_edges * (double) _block_degrees[pair.first] * degree);
         double temp = ((double) pair.second / 2.0) / (block_deg * deg);
         temp = (double) pair.second * std::log(temp);
         result += temp;
@@ -281,8 +281,8 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     // for (const std::pair<int, int> &pair : row_or_col) {
     //     if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
     //         continue;
-    //     double block_deg = (double) block_degrees[pair.first] / (2.0 * num_edges);
-    //     // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+    //     double block_deg = (double) _block_degrees[pair.first] / (2.0 * num_edges);
+    //     // double temp = (double) pair.second / (2.0 * num_edges * (double) _block_degrees[pair.first] * degree);
     //     double temp = ((double) pair.second * 2.0 * num_edges) / (block_deg * deg);
     //     temp = (double) pair.second * std::log(temp);
     //     result += temp;
@@ -302,7 +302,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
             continue;
         double block_deg = (double) block_degrees[pair.first] / 2.0;
         double temp = ((double) pair.second / 2.0) / (block_deg * deg);
-        // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+        // double temp = (double) pair.second / (2.0 * num_edges * (double) _block_degrees[pair.first] * degree);
         temp = (double) pair.second * std::log(temp);
         result += temp;
     }
@@ -315,9 +315,9 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     //     // 0s sometimes get inserted into the sparse matrix
     //     if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
     //         continue;
-    //     double block_deg = (double) block_degrees[pair.first] / (2.0 * num_edges);
+    //     double block_deg = (double) _block_degrees[pair.first] / (2.0 * num_edges);
     //     double temp = ((double) pair.second * 2.0 * num_edges) / (block_deg * deg);
-    //     // double temp = (double) pair.second / (2.0 * num_edges * (double) block_degrees[pair.first] * degree);
+    //     // double temp = (double) pair.second / (2.0 * num_edges * (double) _block_degrees[pair.first] * degree);
     //     temp = (double) pair.second * std::log(temp);
     //     result += temp;
     // }
@@ -358,7 +358,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     assert(blockmodel.stores(neighbor_block));
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    if (std::rand() <= (num_blocks / ((float)blockmodel.getBlock_degrees()[neighbor_block] + num_blocks))) {
+    if (std::rand() <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
         std::vector<int> blocks = utils::range<int>(0, blockmodel.getNum_blocks());
         std::vector<int> weights = utils::to_int<bool>(blockmodel.in_two_hop_radius());
         int proposal = choose_neighbor(blocks, weights);
