@@ -590,8 +590,7 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
         return 1.0;
     }
     // Compute block weights
-    // TODO: change to unordered_map?
-    std::map<int, int> block_counts;
+    MapVector<int> block_counts;
     for (const int neighbor : graph.out_neighbors(vertex)) {
         int neighbor_block = blockmodel.block_assignment(neighbor);
         block_counts[neighbor_block] += 1;
