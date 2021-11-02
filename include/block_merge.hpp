@@ -16,6 +16,7 @@
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
+#include "typedefs.hpp"
 
 namespace block_merge {
 
@@ -44,7 +45,7 @@ double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmo
                                     common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
-double compute_delta_entropy(int current_block, common::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
+double compute_delta_entropy(int current_block, utils::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
                              const Delta &delta);
 
 /// Returns the potential changes to the blockmodel if `current_block` was merged into `proposed_block`.

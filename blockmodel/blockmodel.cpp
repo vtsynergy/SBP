@@ -3,6 +3,8 @@
 #include "assert.h"
 
 #include "../args.hpp"
+#include "typedefs.hpp"
+#include "utils.hpp"
 
 std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) {
     std::map<int, bool> unique_map;
@@ -234,6 +236,24 @@ void Blockmodel::move_vertex(int vertex, int new_block, const Delta &delta,
     this->_block_degrees_out = new_block_degrees_out;
     this->_block_degrees_in = new_block_degrees_in;
     this->_block_degrees = new_block_degrees;
+}
+
+void Blockmodel::move_vertex(int vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal) {
+    this->_block_assignment[vertex] = proposal.proposal;
+    this->_blockmatrix->update_edge_counts(delta);
+    int current_block = delta.current_block();
+    int current_block_self_edges = this->_blockmatrix->get(current_block, current_block)
+                                   + delta.get(current_block, current_block);
+    int proposed_block_self_edges = this->_blockmatrix->get(proposal.proposal, proposal.proposal)
+                                    + delta.get(proposal.proposal, proposal.proposal);
+    this->_block_degrees_out[current_block] -= proposal.num_out_neighbor_edges;
+    this->_block_degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
+    this->_block_degrees_in[current_block] -= proposal.num_in_neighbor_edges;
+    this->_block_degrees_in[proposal.proposal] += proposal.num_in_neighbor_edges;
+    this->_block_degrees[current_block] = this->_block_degrees_out[current_block] +
+            this->_block_degrees_in[current_block] - current_block_self_edges;
+    this->_block_degrees[proposal.proposal] = this->_block_degrees_out[proposal.proposal] +
+            this->_block_degrees_in[proposal.proposal] - proposed_block_self_edges;
 }
 
 void Blockmodel::print_blockmatrix() const {

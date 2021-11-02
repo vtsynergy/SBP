@@ -4,6 +4,8 @@
 
 #include "args.hpp"
 #include "mpi_data.hpp"
+#include "utils.hpp"
+#include "typedefs.hpp"
 
 namespace block_merge {
 
@@ -144,7 +146,7 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
             int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
             int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
             int k = k_out + k_in;
-            common::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
+            utils::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
             Delta delta = blockmodel_delta(merge_from, proposal.proposal, blockmodel);
 //             common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
 //                     merge_from, blockmodel, blockmodel.blockmatrix()->get(merge_from, merge_from), proposal);
@@ -333,7 +335,7 @@ double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmo
     return delta_entropy;
 }
 
-double compute_delta_entropy(int current_block, common::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
+double compute_delta_entropy(int current_block, utils::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
                              const Delta &delta) {
     const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     double delta_entropy = 0.0;
@@ -486,7 +488,7 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
                                  std::vector<int> &block_assignment) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
-    common::ProposalAndEdgeCounts proposal =
+    utils::ProposalAndEdgeCounts proposal =
             common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
     EdgeCountUpdates updates =
             edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks);
@@ -508,7 +510,7 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
                                         std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
-    common::ProposalAndEdgeCounts proposal =
+    utils::ProposalAndEdgeCounts proposal =
             common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
     if (past_proposals[proposal.proposal])
         return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};

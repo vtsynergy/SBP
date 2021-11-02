@@ -11,6 +11,7 @@
 #include "graph.hpp"
 #include "mpi_data.hpp"
 #include "utils.hpp"
+#include "typedefs.hpp"
 
 const double ENTROPY = 92.58797747;
 
@@ -19,7 +20,7 @@ protected:
     // My variables
     std::vector<int> assignment;
     Blockmodel B, B2;
-    common::ProposalAndEdgeCounts Proposal;
+    utils::ProposalAndEdgeCounts Proposal;
     Graph graph;
     common::NewBlockDegrees  new_block_degrees;
     EdgeCountUpdates Updates;

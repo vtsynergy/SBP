@@ -20,6 +20,13 @@
 
 namespace utils {
 
+typedef struct proposal_and_edge_counts_t {
+    int proposal;
+    int num_out_neighbor_edges;
+    int num_in_neighbor_edges;
+    int num_neighbor_edges;
+} ProposalAndEdgeCounts;
+
 /// Builds the base path for the graph and true assignment .tsv files.
 /// Assumes the file is saved in the following directory:
 /// <args.directory>/<args.type>/<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar
@@ -237,7 +244,7 @@ template <typename T> inline void print_short(const std::vector<T> &vector) {
     std::cout << vector[vector.size() - 1] << "]" << std::endl;
 }
 
-}
+}  // namespace utils
 
 /// Allows elementwise multiplication of two std::vector<float> objects.
 inline std::vector<float> operator*(const std::vector<float> &lhs, const std::vector<float> &rhs) {

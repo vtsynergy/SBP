@@ -107,3 +107,17 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
     }
     B.validate(graph.out_neighbors());
 }
+
+TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasAndOnTheFlyBlockDegreesIsCorrect) {
+    B.move_vertex(6, Deltas, Proposal);
+    for (int row = 0; row < B.getNum_blocks(); ++row) {
+        for (int col = 0; col < B.getNum_blocks(); ++col) {
+            int val1 = B.blockmatrix()->get(row, col);
+            int val2 = B2.blockmatrix()->get(row, col);
+            EXPECT_EQ(val1, val2)
+                                << "Blockmatrices differ at " << row << "," << col << " : using updates, value = " << val1
+                                << " using assignment, value = " << val2;
+        }
+    }
+    B.validate(graph.out_neighbors());
+}

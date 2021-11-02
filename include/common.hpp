@@ -15,6 +15,7 @@
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
 #include "utils.hpp"
+#include "typedefs.hpp"
 
 // TODO: move everything that uses `blockmodel` to one of the Blockmodel classes
 
@@ -29,13 +30,6 @@ typedef struct new_block_degrees_t {
     std::vector<int> block_degrees_in;
     std::vector<int> block_degrees;
 } NewBlockDegrees;
-
-typedef struct proposal_and_edge_counts_t {
-    int proposal;
-    int num_out_neighbor_edges;
-    int num_in_neighbor_edges;
-    int num_neighbor_edges;
-} ProposalAndEdgeCounts;
 
 /// Calculates the entropy of a single blockmodel cell.
 inline float cell_entropy(float value, float degree_in, float degree_out) {
@@ -59,7 +53,7 @@ int choose_neighbor(const SparseVector<double> &multinomial_distribution);
 /// TODO: computing current_block_self_edges is annoying af. Maybe use Updates and Deltas instead.
 /// Computes the block degrees under a proposed move
 NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel, int current_block_self_edges,
-                                          int proposed_block_self_edges, common::ProposalAndEdgeCounts &proposal);
+                                          int proposed_block_self_edges, utils::ProposalAndEdgeCounts &proposal);
 
 /// Computes the entropy of one row or column of data.
 double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);
@@ -98,9 +92,9 @@ std::vector<int> nonzeros(std::vector<int> &in);
 std::vector<int> nonzeros(MapVector<int> &in);
 
 /// Proposes a new block for either the block merge or finetune step based on `bool block_merge`.
-ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
-                                        bool block_merge = false);
+utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                               const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
+                                               bool block_merge = false);
 /// TODO
 int propose_random_block(int current_block, int num_blocks);
 
@@ -139,9 +133,9 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 namespace dist {
 
 // TODO: get rid of block_assignment, just use blockmodel?
-ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
-                                        bool block_merge);
+utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                               const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
+                                               bool block_merge);
 
 } // namespace dist
 

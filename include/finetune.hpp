@@ -16,6 +16,7 @@
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "blockmodel/sparse/delta.hpp"
 #include "utils.hpp"
+#include "typedefs.hpp"
 
 /*******************
  * FINE-TUNE
@@ -49,7 +50,7 @@ double compute_delta_entropy(int current_block, int proposal, const Blockmodel &
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
-                             const common::NewBlockDegrees &block_degrees);
+                             const utils::ProposalAndEdgeCounts &proposal);
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
@@ -62,35 +63,34 @@ void edge_count_updates_sparse(const Blockmodel &blockmodel, int vertex, int cur
 /// self-edges will not be added to EdgeWeights.
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self = false);
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
-VertexMove eval_vertex_move(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+VertexMove eval_vertex_move(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                             const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                             EdgeWeights &in_edges);
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
 /// blockmodel deltas.
-VertexMove eval_vertex_move_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                                     const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                     EdgeWeights &in_edges);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 /// Computes the Hastings correction using dense vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           common::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
+                           utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 /// Computes the Hastings correction using sparse vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           common::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
+                           utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 /// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
 double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
-                           int current_block, const common::ProposalAndEdgeCounts &proposal,
-                           const common::NewBlockDegrees &new_block_degrees);
+                           int current_block, const utils::ProposalAndEdgeCounts &proposal);
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
-VertexMove move_vertex(int vertex, int current_block, common::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
+VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
                        const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges);
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
-VertexMove move_vertex_nodelta(int vertex, int current_block, common::ProposalAndEdgeCounts proposal,
+VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                                Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                EdgeWeights &in_edges);
 /// Computes the overall entropy of the given blockmodel.

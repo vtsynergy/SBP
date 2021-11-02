@@ -5,6 +5,8 @@
 #include "common.hpp"
 
 #include "toy_example.hpp"
+#include "utils.hpp"
+#include "typedefs.hpp"
 
 class CommonTest : public ToyExample {
 };
@@ -15,7 +17,7 @@ class CommonComplexTest : public ComplexExample {
 TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
     int vertex = 7;
     int current_block = B.block_assignment(vertex);
-    common::ProposalAndEdgeCounts proposal {0, 2, 3, 5};
+    utils::ProposalAndEdgeCounts proposal {0, 2, 3, 5};
     int current_block_self_edges = 3;
     int proposed_block_self_edges = 8;
     common::NewBlockDegrees nbd = common::compute_new_block_degrees(

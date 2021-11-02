@@ -9,6 +9,7 @@
 #include "utils.hpp"
 
 #include "toy_example.hpp"
+#include "typedefs.hpp"
 
 // TODO: figure out correct placement of these
 MPI_t mpi;  // Unused
@@ -186,9 +187,8 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
 TEST_F(FinetuneTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
     int vertex = 7;
     double E_before = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
-    double delta_entropy = finetune::compute_delta_entropy(B, Deltas, new_block_degrees);
-    B.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
-                  new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    double delta_entropy = finetune::compute_delta_entropy(B, Deltas, Proposal);
+    B.move_vertex(vertex, Deltas, Proposal);
     int blockmodel_edges = utils::sum<int>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges()) << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
     double E_after = finetune::overall_entropy(B, graph.num_vertices(), graph.num_edges());
@@ -238,7 +238,7 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
 TEST_F(FinetuneTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
     int vertex = 7;
     int current_block = B.block_assignment(vertex);
-    double hastings1 = finetune::hastings_correction(vertex, graph, B, Deltas, current_block, Proposal, new_block_degrees);
+    double hastings1 = finetune::hastings_correction(vertex, graph, B, Deltas, current_block, Proposal);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
@@ -282,7 +282,7 @@ TEST_F(FinetuneTest, SpecialCaseGivesCorrectSparseEdgeCountUpdates) {
 
 TEST_F(FinetuneTest, SpecialCaseBlockmodelDeltasAreCorrect) {
     int vertex = 6;
-    common::ProposalAndEdgeCounts proposal { 0, 1, 2, 3 };
+    utils::ProposalAndEdgeCounts proposal {0, 1, 2, 3 };
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
     Delta delta = finetune::blockmodel_delta(vertex, 3, proposal.proposal, out_edges, in_edges, B3);
@@ -297,7 +297,7 @@ TEST_F(FinetuneTest, SpecialCaseBlockmodelDeltasAreCorrect) {
 
 TEST_F(FinetuneTest, SpecialCaseShouldGiveCorrectDeltaEntropy) {
     int vertex = 6;
-    common::ProposalAndEdgeCounts proposal { 0, 1, 2, 3 };
+    utils::ProposalAndEdgeCounts proposal {0, 1, 2, 3 };
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
     SparseEdgeCountUpdates updates;

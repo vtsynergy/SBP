@@ -3,6 +3,8 @@
 #include "args.hpp"
 
 #include "assert.h"
+#include "utils.hpp"
+#include "typedefs.hpp"
 
 namespace common {
 
@@ -24,7 +26,7 @@ int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
 }
 
 NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &blockmodel, int current_block_self_edges,
-                                          int proposed_block_self_edges, ProposalAndEdgeCounts &proposal) {
+                                          int proposed_block_self_edges, utils::ProposalAndEdgeCounts &proposal) {
     std::vector<int> degrees_out(blockmodel.degrees_out());
     std::vector<int> degrees_in(blockmodel.degrees_in());
     std::vector<int> degrees_total(blockmodel.degrees());
@@ -126,9 +128,9 @@ std::vector<int> nonzeros(MapVector<int> &in) {
 }
 
 // TODO: get rid of block_assignment, just use blockmodel?
-ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
-                                        bool block_merge) {
+utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                               const std::vector<int> &block_assignment, const Blockmodel &blockmodel,
+                                               bool block_merge) {
     std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
     std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
     int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
@@ -138,7 +140,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
 
     if (k == 0) { // If the current block has no neighbors, propose merge with random block
         int proposal = propose_random_block(current_block, num_blocks);
-        return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+        return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor_block;
     if (block_merge)
@@ -151,7 +153,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
         int proposal = propose_random_block(current_block, num_blocks);
-        return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+        return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
 
     // Build multinomial distribution
@@ -167,7 +169,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         total_edges = utils::sum<double, int>(edges);
         if (total_edges == 0.0) { // Neighbor block has no neighbors, so propose a random block
             int proposal = propose_random_block(current_block, num_blocks);
-            return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+            return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
         }
     } else {
         total_edges = utils::sum<double, int>(edges);
@@ -176,7 +178,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     SparseVector<double> multinomial_distribution;
     utils::div(edges, total_edges, multinomial_distribution);
     int proposal = choose_neighbor(multinomial_distribution);
-    return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+    return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 
 int propose_random_block(int current_block, int num_blocks) {
@@ -330,9 +332,9 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 namespace dist {
 
 // TODO: get rid of block_assignment, just use blockmodel?
-ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                        const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
-                                        bool block_merge) {
+utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                               const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
+                                               bool block_merge) {
     std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
     std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
     int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
@@ -346,7 +348,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         int proposal = choose_neighbor(blocks, weights);
         // int proposal = propose_random_block(current_block, num_blocks);  // TODO: only propose blocks in 2 hop radius
         assert(blockmodel.stores(proposal));
-        return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+        return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
     int neighbor_block;
     if (block_merge)
@@ -364,7 +366,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         int proposal = choose_neighbor(blocks, weights);
         // int proposal = propose_random_block(current_block, num_blocks);
         assert(blockmodel.stores(proposal));
-        return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+        return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
 
     // Build multinomial distribution
@@ -381,7 +383,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
         if (total_edges == 0.0) { // Neighbor block has no neighbors, so propose a random block
             int proposal = propose_random_block(current_block, num_blocks);
             assert(blockmodel.stores(proposal));
-            return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+            return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
         }
     } else {
         total_edges = utils::sum<double, int>(edges);
@@ -391,7 +393,7 @@ ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_bloc
     utils::div(edges, total_edges, multinomial_distribution);
     int proposal = choose_neighbor(multinomial_distribution);
     assert(blockmodel.stores(proposal));
-    return ProposalAndEdgeCounts{proposal, k_out, k_in, k};
+    return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
 }
 
 }  // namespace dist

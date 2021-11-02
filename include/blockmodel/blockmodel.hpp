@@ -19,6 +19,8 @@
 #include "sparse/dict_transpose_matrix.hpp"
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
+#include "typedefs.hpp"
+#include "utils.hpp"
 
 static const double BLOCK_REDUCTION_RATE = 0.5;
 
@@ -104,6 +106,9 @@ class Blockmodel {
     /// TODO: update block degrees on the fly.
     void move_vertex(int vertex, int new_block, const Delta &delta, std::vector<int> &new_block_degrees_out,
                      std::vector<int> &new_block_degrees_in, std::vector<int> &new_block_degrees);
+    /// Moves `vertex` from one block to another. Updates the blockmodel using the new blockmodel values from `delta`,
+    /// and updates the block degrees, which are calculated on-the-fly.
+    void move_vertex(int vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal);
     /// TODO
     void set_block_membership(int vertex, int block);
     /// TODO: Get rid of getters and setters?
