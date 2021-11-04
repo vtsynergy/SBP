@@ -273,12 +273,13 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
 //        file << "," << res.first << "," << res.second;
         file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
         matrix = std::get<2>(res);
-        for (const auto &row : matrix) {
+        for (int vertex = 0; vertex < matrix.size(); ++vertex) {
+            auto row = matrix[vertex];
             for (int col = 0; col < row.size(); ++col) {
-                if (col != row.size() - 1) {
-                    file << row[col] << ",";
-                } else {
+                if (vertex == matrix.size() - 1 && col == matrix.size() - 1) {
                     file << row[col];
+                } else {
+                    file << row[col] << ",";
                 }
             }
         }
