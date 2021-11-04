@@ -20,11 +20,12 @@
 MPI_t mpi;
 Args args;
 
-struct result_t {
-    std::vector<std::pair<double, double>> csv_row;
-    double f1;
-    double mdl;
-} Result;
+struct Result {
+    std::vector<int> membership;
+    std::vector<std::vector<double>> matrix;
+    double max_influence;
+    double avg_influence;
+};
 
 double stop = false;
 
@@ -130,7 +131,7 @@ double total_variation_distance(const Blockmodel &B, const Graph &graph, int ver
     return tvd;
 }
 
-std::tuple<double,double,std::vector<std::vector<double>>> compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge = false, bool mdl = false) {
+Result compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge = false, bool mdl = false) {
 //    std::vector<int> initial_assignment = utils::range<int>(0, graph.num_vertices());
 //    Blockmodel B(graph.num_vertices(), graph.out_neighbors(), 0.5, initial_assignment);
 //    if (do_merge)
@@ -180,7 +181,8 @@ std::tuple<double,double,std::vector<std::vector<double>>> compute_influence(con
     }
     avg_influence /= double(graph.num_vertices());
     std::cout << "total (max) influence = " << max_influence << " avg influence = " << avg_influence << std::endl;
-    return std::make_tuple(max_influence, avg_influence, influence_matrix);
+    return { B.block_assignment(), influence_matrix, max_influence, avg_influence };
+//    return std::make_tuple(max_influence, avg_influence, influence_matrix);
 }
 
 Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
@@ -207,31 +209,7 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
     return graph;
 }
 
-//std::pair<double, double> compute_influence(const std::vector<std::vector<int>> &graph_edges, bool do_merge = false, bool mdl = false) {
-//    int num_vertices = -1;
-//    int num_edges = (int) graph_edges.size();
-//    NeighborList out_neighbors;
-//    NeighborList in_neighbors;
-//    for (const std::vector<int> &edge : graph_edges) {
-//        int from = edge[0];
-//        int to = edge[1];
-//        utils::insert_nodup(out_neighbors, from , to);
-//        utils::insert_nodup(in_neighbors, to, from);
-//        int max_v = std::max(from + 1, to + 1);
-//        num_vertices = std::max(max_v, num_vertices);
-//    }
-//    while (out_neighbors.size() < size_t(num_vertices)) {
-//        out_neighbors.push_back(std::vector<int>());
-//    }
-//    while (in_neighbors.size() < size_t(num_vertices)) {
-//        in_neighbors.push_back(std::vector<int>());
-//    }
-//    std::vector<int> assignment = utils::range<int>(0, num_vertices);
-//    Graph graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
-//    return compute_influence(graph, do_merge, mdl);
-//}
-
-void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vector<double>>>>& csv_row, double mdl, double f1, const std::string& tag = "test") {
+void print_csv(const std::vector<Result>& csv_row, double mdl, double f1, const std::string& tag = "test") {
     std::ostringstream filepath_stream;
     filepath_stream << "./influence_results/" << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
@@ -243,54 +221,70 @@ void print_csv(const std::vector<std::tuple<double,double,std::vector<std::vecto
         write_header = true;
     }
     std::ofstream file;
-    file.open(filepath, std::ios_base::app);  // , std::ofstream::out);
+    file.open(filepath, std::ios_base::app);
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
         for (int i = 0; i < 5; ++i) {
-            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i <<"_ll_matrix,itr" << i << "_mdl_max_influence,itr" << i << "_mdl_avg_influence,itr" << i << "_mdl_matrix";
+            file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i
+                 << "_ll_matrix,itr" << i << "membership,itr" << i << "_mdl_max_influence,itr" << i
+                 << "_mdl_avg_influence,itr" << i << "_mdl_matrix";
             if (i == 0)
-                file << ",itr0.5_ll_max_influence,itr0.5_ll_avg_influence,itr0.5_ll_matrix,itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence,itr0.5_mdl_matrix";
+                file << ",itr0.5_ll_max_influence,itr0.5_ll_avg_influence,itr0.5_ll_matrix,itr0.5_membership,"
+                     << "itr0.5_mdl_max_influence,itr0.5_mdl_avg_influence,itr0.5_mdl_matrix";
         }
         file << ",mdl,f1" << std::endl;
     }
     file << tag << "," << args.numvertices << "," << args.overlap << "," << args.blocksizevar << "," << args.undirected;
     file << "," << args.algorithm;
     for (int i = 0; i < 6; ++i) {
-        auto res = csv_row[i*2];
-        file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
-        auto matrix = std::get<2>(res);
-        for (const auto &row : matrix) {
+        const Result &ll_res = csv_row[i * 2];
+        file << "," << ll_res.max_influence << "," << ll_res.avg_influence << ",\"";
+//        file << "," << std::get<0>(ll_res) << "," << std::get<1>(ll_res) << ",\"";  // ll_res.first << "," << ll_res.second;
+//        auto matrix = std::get<2>(ll_res);
+        const auto &ll_matrix = ll_res.matrix;
+        for (int vertex = 0; vertex < ll_matrix.size(); ++vertex) {
+            auto row = ll_matrix[vertex];
             for (int col = 0; col < row.size(); ++col) {
-                if (col != row.size() - 1) {
-                    file << row[col] << ",";
-                } else {
-                    file << row[col];
-                }
-            }
-        }
-        file << "\"";
-        res = csv_row[i*2 + 1];
-//        file << "," << res.first << "," << res.second;
-        file << "," << std::get<0>(res) << "," << std::get<1>(res) << ",\"";  // res.first << "," << res.second;
-        matrix = std::get<2>(res);
-        for (int vertex = 0; vertex < matrix.size(); ++vertex) {
-            auto row = matrix[vertex];
-            for (int col = 0; col < row.size(); ++col) {
-                if (vertex == matrix.size() - 1 && col == matrix.size() - 1) {
+                if (vertex == ll_matrix.size() - 1 && col == ll_matrix.size() - 1) {
                     file << row[col];
                 } else {
                     file << row[col] << ",";
                 }
             }
         }
+        file << "\",\"";
+        for (int vertex = 0; vertex < ll_res.membership.size(); ++vertex) {
+            if (vertex == ll_res.membership.size() - 1) {
+                file << ll_res.membership[vertex];
+            } else {
+                file << ll_res.membership[vertex] << ",";
+            }
+        }
         file << "\"";
+        const Result &mdl_res = csv_row[i * 2 + 1];
+//        file << "," << ll_res.first << "," << ll_res.second;
+//        file << "," << std::get<0>(ll_res) << "," << std::get<1>(ll_res) << ",\"";  // ll_res.first << "," << ll_res.second;
+        file << "," << mdl_res.max_influence << "," << mdl_res.avg_influence << ",\"";
+//        matrix = std::get<2>(ll_res);
+        const auto &mdl_matrix = mdl_res.matrix;
+        for (int vertex = 0; vertex < mdl_matrix.size(); ++vertex) {
+            auto row = mdl_matrix[vertex];
+            for (int col = 0; col < row.size(); ++col) {
+                if (vertex == mdl_matrix.size() - 1 && col == mdl_matrix.size() - 1) {
+                    file << row[col];
+                } else {
+                    file << row[col] << ",";
+                }
+            }
+        }
+        file << "\"";  // mdl_res also has a membership, but it's the same as the ll_res membership
     }
     file << "," << mdl << "," << f1 << std::endl;
     file.close();
 }
 
 void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
-    std::vector<std::tuple<double, double, std::vector<std::vector<double>>>> csv_row;  // log-likelihood influence, mdl-influence at 0, 0.5, 1, 2, 3, ... iterations
+    std::vector<Result> csv_row;  // log-likelihood influence, mdl-influence at 0, 0.5, 1, 2, 3, ... iterations
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
