@@ -81,7 +81,7 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
         }
 //        std::cout << "modified assignment: ";
 //        utils::print<int>(modified_assignment);
-        Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), 0.5, modified_assignment);
+        Blockmodel blockmodel(block_number, graph.out_neighbors(), 0.5, modified_assignment);
 //        std::cout << "log_posterior_prob: " << blockmodel.log_posterior_probability() << " exp(log_p) = " << std::exp(blockmodel.log_posterior_probability()) << std::endl;
         if (mdl)
             distribution[block] = 0.0 - finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
