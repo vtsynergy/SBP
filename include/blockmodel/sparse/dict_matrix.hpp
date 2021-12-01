@@ -47,6 +47,7 @@ class DictMatrix : public ISparseMatrix {
     // virtual MapVector<int> getrow_sparse(int row) override;
     // virtual const MapVector<int>& getrow_sparse(int row) const override;
     EdgeWeights incoming_edges(int block) const override;
+    std::set<int> neighbors(int block) const override;
     Indices nonzero() const override;
     EdgeWeights outgoing_edges(int block) const override;
     /// Sets the values in a row equal to the input vector

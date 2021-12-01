@@ -56,6 +56,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     // const MapVector<int>& getrow_sparse(int row) const;
     virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
     virtual EdgeWeights incoming_edges(int block) const override;
+    std::set<int> neighbors(int block) const override;
     virtual Indices nonzero() const override;
     virtual EdgeWeights outgoing_edges(int block) const override;
     /// Sets the values in a row equal to the input vector.

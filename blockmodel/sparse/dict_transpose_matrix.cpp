@@ -141,6 +141,17 @@ EdgeWeights DictTransposeMatrix::incoming_edges(int block) const {
     return EdgeWeights {indices, values};
 }
 
+std::set<int> DictTransposeMatrix::neighbors(int block) const {
+    std::set<int> result;
+    for (const std::pair<const int, int> &entry : this->matrix[block]) {
+        result.insert(entry.first);
+    }
+    for (const std::pair<const int, int> &entry : this->matrix_transpose[block]) {
+        result.insert(entry.first);
+    }
+    return result;
+}
+
 Indices DictTransposeMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;

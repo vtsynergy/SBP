@@ -80,6 +80,8 @@ add_executable(Test
         test/blockmodel_test.cpp
         test/block_merge_test.cpp
         test/common_test.cpp
+        test/dict_matrix_test.cpp
+        test/dict_transpose_matrix_test.cpp
         test/finetune_test.cpp
         test/toy_example.hpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})

@@ -92,6 +92,8 @@ public:
     // virtual const MapVector<int>& getrow_sparse(int row) const = 0;
     /// TODO: docstring
     virtual EdgeWeights incoming_edges(int block) const = 0;
+    /// Returns the set of all neighbors of `block`. This includes `block` if it has self-edges.
+    virtual std::set<int> neighbors(int block) const = 0;
     /// TODO: docstring
     virtual Indices nonzero() const = 0;
     /// TODO: docstring
