@@ -167,6 +167,10 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
     }
 }
 
+bool Blockmodel::is_neighbor_of(int block1, int block2) const {
+    return this->blockmatrix()->get(block1, block2) + this->blockmatrix()->get(block2, block1) > 0;
+}
+
 double Blockmodel::log_posterior_probability() const {
     Indices nonzero_indices = this->_blockmatrix->nonzero();
     std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());

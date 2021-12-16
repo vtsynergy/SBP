@@ -118,6 +118,8 @@ class Blockmodel {
     const std::vector<int> &block_assignment() const { return this->_block_assignment; }
     /// Returns the block assignment for `vertex`.
     int block_assignment(int vertex) const { return this->_block_assignment[vertex]; }
+    /// Returns true if `block1` is a neighbor of `block2`.
+    bool is_neighbor_of(int block1, int block2) const;
     /// Prints blockmatrix to file (should not be used for large blockmatrices)
     void print_blockmatrix() const;
     /// Prints the blockmodel with some additional information.
