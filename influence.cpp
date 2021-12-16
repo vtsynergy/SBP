@@ -711,6 +711,7 @@ void print_minimal_csv(const std::vector<Result>& csv_row, double mdl, double f1
 }
 
 void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
+    auto start = std::chrono::high_resolution_clock::now();
     std::vector<Result> csv_row;  // log-likelihood influence, mdl-influence at 0, 0.5, 1, 2, 3, ... iterations
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
@@ -718,7 +719,9 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), 0.5);
+    auto t1 = std::chrono::high_resolution_clock::now();
     csv_row.push_back(compute_random_avg_practical_max_neighbor_influence(graph, blockmodel));
+    auto t2 = std::chrono::high_resolution_clock::now() - t1;
 //    csv_row.push_back(compute_influence(graph, blockmodel, false, false));
 //    csv_row.push_back(compute_influence(graph, blockmodel, false, true));
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
@@ -732,7 +735,9 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
         }
         blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
         if (iteration == 0) {
+            t1 = std::chrono::high_resolution_clock::now();
             csv_row.push_back(compute_random_avg_practical_max_neighbor_influence(graph, blockmodel));
+            t2 += std::chrono::high_resolution_clock::now() - t1;
 //            csv_row.push_back(compute_influence(graph, blockmodel, false, false));
 //            csv_row.push_back(compute_influence(graph, blockmodel, false, true));
         }
@@ -743,11 +748,18 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         iteration++;
+        t1 = std::chrono::high_resolution_clock::now();
         csv_row.push_back(compute_random_avg_practical_max_neighbor_influence(graph, blockmodel));
+        t2 += std::chrono::high_resolution_clock::now() - t1;
 //        csv_row.push_back(compute_influence(graph, blockmodel, false, false));
 //        csv_row.push_back(compute_influence(graph, blockmodel, false, true));
         std::cout << "Done with iteration " << iteration - 1 << std::endl;
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto full_duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    auto influence_duration = std::chrono::duration_cast<std::chrono::seconds>(t2);
+    std::cout << "influence took " << influence_duration.count() << "/" << full_duration.count() << " seconds ("
+              << 100.0 * double(influence_duration.count()) / double(full_duration.count()) << ")" << std::endl;
     double mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
     double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
     print_minimal_csv(csv_row, mdl, f1, tag);
