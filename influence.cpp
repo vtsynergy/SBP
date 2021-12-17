@@ -449,9 +449,9 @@ Result compute_random_avg_practical_max_influence(const Graph &graph, const Bloc
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        int vertex1_block = B.block_assignment(vertex1);
+        int vertex2_block = B.block_assignment(vertex1);
         for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
-            if (!B.is_neighbor_of(vertex1_block, block1)) continue;
+            if (!B.is_neighbor_of(vertex2_block, block1)) continue;
             for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2 || !B.is_neighbor_of(block1, block2)) continue;
                 double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
@@ -485,9 +485,9 @@ Result compute_random_avg_practical_max_neighbor_influence(const Graph &graph, c
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        int vertex1_block = B.block_assignment(vertex1);
+        int vertex2_block = B.block_assignment(vertex1);
         for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
-            if (!B.is_neighbor_of(vertex1_block, block1)) continue;
+            if (!B.is_neighbor_of(vertex2_block, block1) && block1 != vertex2_block) continue;
             for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2 || !B.is_neighbor_of(block1, block2)) continue;
                 double tvd = neighbor_total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
