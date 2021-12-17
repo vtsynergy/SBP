@@ -13,8 +13,10 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
+    double initial_mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
+    std::cout << "Initial MDL = " << initial_mdl << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
