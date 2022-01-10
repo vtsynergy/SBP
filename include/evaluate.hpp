@@ -13,7 +13,7 @@
 
 namespace evaluate {
 
-double calculate_f1_score(const Graph &graph, Hungarian::Matrix &contingency_table);
+double calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table);
 
 double evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel);
 

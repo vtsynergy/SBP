@@ -83,7 +83,8 @@ add_executable(Test
         test/dict_matrix_test.cpp
         test/dict_transpose_matrix_test.cpp
         test/finetune_test.cpp
-        test/toy_example.hpp)
+        test/toy_example.hpp
+        test/evaluate_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)

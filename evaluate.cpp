@@ -1,15 +1,15 @@
 #include "evaluate.hpp"
 
-double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &contingency_table) {
+double evaluate::calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table) {
     // The number of vertex pairs = |V| choose 2 = |V|! / (2! * (|V| - 2)!) = (|V| * |V|-1) / 2
-    double num_pairs = (graph.num_vertices() * (graph.num_vertices() - 1)) / 2;
-
+    double num_pairs = (num_vertices * (num_vertices - 1.0)) / 2.0;
+    std::cout << "num_pairs = " << num_pairs << std::endl;
     const int nrows = contingency_table.size();
     const int ncols = contingency_table[0].size();
-    std::vector<int> rowsums(nrows, 0);
-    std::vector<int> colsums(ncols, 0);
-    double cell_pairs = 0;
-    double cells_squared = 0;
+    std::vector<double> rowsums(nrows, 0);
+    std::vector<double> colsums(ncols, 0);
+    double cell_pairs = 0;  // num_agreement_same
+    double cells_squared = 0;  // sum_table_squared
     for (int row = 0; row < nrows; ++row) {
         for (int col = 0; col < ncols; ++col) {
             int value = contingency_table[row][col];
@@ -19,22 +19,38 @@ double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &conti
             cells_squared += (value * value);
         }
     }
-    cell_pairs /= 2;
+    std::cout << "sum_table_squared = " << cells_squared << std::endl;
+    cell_pairs /= 2.0;
     double row_pairs = 0;  // num_same_in_b1
     double col_pairs = 0;  // num_same_in_b2
-    double rowsums_squared = 0;
-    double colsums_squared = 0;
-    for (int i = 0; i < nrows; ++i) {
-        row_pairs += (rowsums[i] * (rowsums[i] - 1));
-        rowsums_squared += (rowsums[i] * rowsums[i]);
+    double rowsums_squared = 0;  // sum_rowsum_squared
+    double colsums_squared = 0;  // sum_colsum_squared
+    std::cout << "limit<int> = " << std::numeric_limits<int>::max() << " " << std::numeric_limits<double>::max() << " " << std::numeric_limits<float>::max() << std::endl;
+    for (double sum : rowsums) {
+        row_pairs += (sum * (sum - 1));
+        std::cout << rowsums_squared << " += (" << sum << "^2 =) " << sum * sum << " = " << rowsums_squared + (sum * sum) << std::endl;
+        rowsums_squared += (sum * sum);
     }
-    for (int i = 0; i < ncols; ++i) {
-        col_pairs += (colsums[i] * (colsums[i] - 1));
-        colsums_squared += (colsums[i] * colsums[i]);
+    for (double sum : colsums) {
+        col_pairs += (sum * (sum - 1));
+        colsums_squared += (sum * sum);
     }
-    row_pairs /= 2;
-    col_pairs /= 2;
-    double num_agreement_diff = (graph.num_vertices() * graph.num_vertices()) + cells_squared;
+//    for (int i = 0; i < nrows; ++i) {
+//        row_pairs += (rowsums[i] * (rowsums[i] - 1));
+//        rowsums_squared += (rowsums[i] * rowsums[i]);
+//    }
+//    for (int i = 0; i < ncols; ++i) {
+//        col_pairs += (colsums[i] * (colsums[i] - 1));
+//        colsums_squared += (colsums[i] * colsums[i]);
+//    }
+    std::cout << "sum_colsum_squared = " << colsums_squared << std::endl;
+    utils::print<double>(rowsums);
+    std::cout << "sum_rowsum_squared = " << rowsums_squared << std::endl;
+    row_pairs /= 2.0;
+    col_pairs /= 2.0;
+    std::cout << "num_same_in_b1 = " << row_pairs << std::endl;
+    std::cout << "num_same_in_b2 = " << col_pairs << std::endl;
+    double num_agreement_diff = (num_vertices * num_vertices) + cells_squared;
     num_agreement_diff -= (rowsums_squared + colsums_squared);
     num_agreement_diff /= 2.0;
     double num_agreement = cell_pairs + num_agreement_diff;
@@ -44,6 +60,8 @@ double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &conti
     double f1_score = (2.0 * precision * recall) / (precision + recall);
 
     std::cout << "Rand index: " << rand_index << std::endl;
+
+    // TODO: precision & recall could be flipped. Figure out when that is so...
     std::cout << "Recall: " << recall << std::endl;
     std::cout << "Precision: " << precision << std::endl;
     std::cout << "F1 Score: " << f1_score << std::endl;
@@ -52,7 +70,7 @@ double evaluate::calculate_f1_score(const Graph &graph, Hungarian::Matrix &conti
 
 double evaluate::evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
     Hungarian::Matrix contingency_table = hungarian(graph, blockmodel);
-    double f1_score = calculate_f1_score(graph, contingency_table);
+    double f1_score = calculate_f1_score(graph.num_vertices(), contingency_table);
     return f1_score;
 }
 
