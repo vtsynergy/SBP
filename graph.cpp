@@ -50,6 +50,29 @@ Graph Graph::load(Args &args) {
     return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
 }
 
+double Graph::modularity(const std::vector<int> &assignment) const {
+    // See equation for Q_d in: https://hal.archives-ouvertes.fr/hal-01231784/document
+    double result = 0.0;
+    for (int vertex_i = 0; vertex_i < this->_num_vertices; ++vertex_i) {
+        for (int vertex_j = 0; vertex_j < this->_num_vertices; ++vertex_j) {
+            if (assignment[vertex_i] != assignment[vertex_j]) continue;
+            int edge_weight = 0.0;
+            for (int neighbor : this->_out_neighbors[vertex_i]) {
+                if (neighbor == vertex_j) {
+                    edge_weight = 1.0;
+                    break;
+                }
+            }
+            int deg_out_i = this->_out_neighbors[vertex_i].size();
+            int deg_in_j = this->_in_neighbors[vertex_j].size();
+            double temp = edge_weight - (double(deg_out_i * deg_in_j) / double(this->_num_edges));
+            result += temp;
+        }
+    }
+    result /= double(this->_num_edges);
+    return result;
+}
+
 void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
                            std::vector<std::vector<std::string>> &contents) {
     for (std::vector<std::string> &edge : contents) {

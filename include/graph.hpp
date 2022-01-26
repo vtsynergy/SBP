@@ -25,6 +25,7 @@
 
 // typedef std::vector<std::vector<int>> VarLengthMatrix;
 
+// TODO: replace _out_neighbors and _in_neighbors with our DictTransposeMatrix
 class Graph {
 public:
     Graph(NeighborList &out_neighbors, NeighborList &in_neighbors, int num_vertices, int num_edges,
@@ -56,14 +57,16 @@ public:
     const NeighborList &in_neighbors() const { return this->_in_neighbors; }
     /// Returns a const reference to the in neighbors of vertex `v`
     const std::vector<int> &in_neighbors(int v) const { return this->_in_neighbors[v]; }
+    /// Calculates the modularity of this graph given a particular vertex-to-block `assignment`
+    double modularity(const std::vector<int> &assignment) const;
+    /// Returns the number of edges in this graph
+    int num_edges() const { return this->_num_edges; }
+    /// Returns the number of vertices in this graph
+    int num_vertices() const { return this->_num_vertices; }
     /// Returns a const reference to the out neighbors
     const NeighborList &out_neighbors() const { return this->_out_neighbors; }
     /// Returns a const reference to the out neighbors of vertex `v`
     const std::vector<int> &out_neighbors(int v) const { return this->_out_neighbors[v]; }
-    /// Returns the number of vertices in this graph
-    int num_vertices() const { return this->_num_vertices; }
-    /// Returns the number of edges in this graph
-    int num_edges() const { return this->_num_edges; }
 private:
     /// For every vertex, stores the outgoing neighbors as a std::vector<int>
     NeighborList _out_neighbors;
