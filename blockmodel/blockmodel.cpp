@@ -6,6 +6,26 @@
 #include "typedefs.hpp"
 #include "utils.hpp"
 
+double Blockmodel::block_size_variation() const {
+    // Normalized using variance / max_variance, where max_variance = range^2 / 4
+    // See: https://link-springer-com/content/pdf/10.1007/BF00143817.pdf
+    std::vector<int> block_sizes(this->num_blocks, 0);
+    for (int block : this->_block_assignment) {
+        block_sizes[block]++;
+    }
+    double total = utils::sum<int>(block_sizes);
+    double mean = total / double(this->num_blocks);
+    double min = std::numeric_limits<double>::max(), max = std::numeric_limits<double>::min(), variance = 0;
+    for (int block_size : block_sizes) {
+        if (block_size < min) min = block_size;
+        if (block_size > max) max = block_size;
+        variance += double(block_size - mean) * double(block_size - mean);
+    }
+    variance /= double(this->num_blocks);
+    double max_variance = (double(max - min) * double(max - mean)) / 4.0;
+    return float(variance / max_variance);
+}
+
 std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) {
     std::map<int, bool> unique_map;
     for (size_t i = 0; i < values.size(); ++i) {
@@ -18,6 +38,12 @@ std::vector<int> Blockmodel::build_mapping(const std::vector<int> &values) {
         counter++;
     }
     return mapping;
+}
+
+double Blockmodel::difficulty_score() const {
+    double norm_variance = this->block_size_variation();
+    double interblock_edges = this->interblock_edges();
+    return (2.0 * norm_variance * interblock_edges) / (norm_variance + interblock_edges);
 }
 
 std::vector<int> Blockmodel::sort_indices(const std::vector<double> &unsorted) {
@@ -165,6 +191,12 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
                 this->_block_degrees[neighbor_block] += weight;
         }
     }
+}
+
+double Blockmodel::interblock_edges() const {
+    double num_edges = utils::sum<int>(this->_block_degrees_in);
+    double interblock_edges = num_edges - double(this->_blockmatrix->trace());
+    return interblock_edges / num_edges;
 }
 
 bool Blockmodel::is_neighbor_of(int block1, int block2) const {

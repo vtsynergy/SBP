@@ -83,6 +83,10 @@ class Blockmodel {
     // TODO: move block_reduction_rate to some constants file
     static Blockmodel from_sample(int num_blocks, NeighborList &neighbors, std::vector<int> &sample_block_membership,
                                  std::map<int, int> &mapping, float block_reduction_rate);
+    /// Returns the normalized difference in block sizes.
+    double block_size_variation() const;
+    /// Difficulty score, being the geometric mean between block_size_variation() and interblock_edges().
+    double difficulty_score() const;
     /// TODO
     void initialize_edge_counts(const NeighborList &neighbors);
     /// TODO
@@ -120,6 +124,8 @@ class Blockmodel {
     int block_assignment(int vertex) const { return this->_block_assignment[vertex]; }
     /// Returns true if `block1` is a neighbor of `block2`.
     bool is_neighbor_of(int block1, int block2) const;
+    /// Returns the percentage of edges occurring between blocks.
+    double interblock_edges() const;
     /// Prints blockmatrix to file (should not be used for large blockmatrices)
     void print_blockmatrix() const;
     /// Prints the blockmodel with some additional information.
