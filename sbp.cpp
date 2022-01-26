@@ -14,10 +14,14 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
     double initial_mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    double initial_modularity = graph.modularity(blockmodel.block_assignment());
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
-    std::cout << "Initial MDL = " << initial_mdl << std::endl;
+    std::cout << "Initial MDL = " << initial_mdl 
+              << " log posterior probability = " << blockmodel.log_posterior_probability(graph.num_edges())
+              << " Modularity = " << initial_modularity << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
+    int iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
@@ -29,6 +33,12 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else  // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
+        iteration++;
+        std::cout << "Iteration " << iteration << ": MDL = " << blockmodel.getOverall_entropy()
+                  << " log posterior probability = " << blockmodel.log_posterior_probability(graph.num_edges())
+                  << " Modularity = " << graph.modularity(blockmodel.block_assignment()) << std::endl;
+        std::cout << "interblock E = " << blockmodel.interblock_edges() << " var = "
+                  << blockmodel.block_size_variation() << " composite = " << blockmodel.difficulty_score() << std::endl;
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     return blockmodel;
