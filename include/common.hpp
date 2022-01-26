@@ -34,6 +34,7 @@ typedef struct new_block_degrees_t {
 /// Calculates the entropy of a single blockmodel cell.
 inline float cell_entropy(float value, float degree_in, float degree_out) {
     if (value == 0.0) return 0.0;
+    assert((degree_in * degree_out >= 0) && "degree_in * degree_out less than 0 (overflow baby)");
     float entropy = value * logf(value / (degree_in * degree_out));
     // if (std::isnan(entropy) || std::isinf(entropy)) {
     //     std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
