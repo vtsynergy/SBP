@@ -1,4 +1,5 @@
 
+#include <chrono>
 #include <execinfo.h>
 #include <iostream>
 #include <mpi.h>
@@ -43,11 +44,14 @@ int main(int argc, char* argv[]) {
     Graph graph = Graph::load(args);
 
     if (mpi.num_processes > 1) {
-        // Blockmodel b = sbp::dist::stochastic_block_partition(graph, mpi, args);
+        MPI_Barrier(MPI_COMM_WORLD);  // keep start - end as close as possible for all processes
+        double start = MPI_Wtime();
         Blockmodel blockmodel = sbp::dist::stochastic_block_partition(graph, args);
+        double end = MPI_Wtime();
         if (mpi.rank == 0) {
             double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
             std::cout << "Final F1 score = " << f1 << std::endl;
+            std::cout << "Community detection runtime = " << end - start << "s" << std::endl;
         }
         // double avg_f1;
         // Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
@@ -59,9 +63,13 @@ int main(int argc, char* argv[]) {
         //     std::cout << "Average F1 Score across " << mpi.num_processes << " partitions = " << avg_f1 << std::endl;
         // }
     } else {
+        auto start = std::chrono::steady_clock::now();
         Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> runtime = end - start;
         double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
         std::cout << "Final F1 score = " << f1 << std::endl;
+        std::cout << "Community detection runtime = " << runtime.count() << "s" << std::endl;
     }
 
     MPI_Finalize();
