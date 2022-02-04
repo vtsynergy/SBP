@@ -10,6 +10,23 @@
 
 namespace entropy {
 
+/// Computes the change in entropy under a proposed block merge.
+double block_merge_delta_mdl(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+
+/// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
+double block_merge_delta_mdl(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+                             SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+
+/// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
+double block_merge_delta_mdl(int current_block, const Blockmodel &blockmodel, const Delta &delta,
+                             common::NewBlockDegrees &block_degrees);
+
+/// Computes the change in entropy under a proposed block merge using changes to the blockmodel. This method should
+/// be preferred in almost all cases.
+double block_merge_delta_mdl(int current_block, utils::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
+                             const Delta &delta);
+
 /// Computes the change in blockmodel minimum description length when a vertex moves from `current_block` to `proposal`.
 /// Uses a dense version of `updates` to the blockmodel, and requires pre-calculated updated `block_degrees`.
 double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,

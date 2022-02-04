@@ -101,6 +101,34 @@ protected:
 //    }
 };
 
+class BlockMergeTest : public ToyExample {
+    void SetUp() override {
+        ToyExample::SetUp();
+        Updates = EdgeCountUpdates();
+        Updates.block_row = { 0, 0, 0 };
+        Updates.block_col = { 0, 0, 0 };
+        Updates.proposal_row = { 0, 14, 1 };
+        Updates.proposal_col = { 0, 14, 2 };
+        SparseUpdates = SparseEdgeCountUpdates();
+        SparseUpdates.proposal_row[1] = 14;
+        SparseUpdates.proposal_row[2] = 1;
+        SparseUpdates.proposal_col[1] = 14;
+        SparseUpdates.proposal_col[2] = 2;
+        Deltas = Delta(0, 1);
+        Deltas.add(0, 0, -7);
+        Deltas.add(0, 1, -1);
+        Deltas.add(1, 0, -1);
+        Deltas.add(1, 1, 9);
+        Deltas.add(2, 0, -1);
+        Deltas.add(2, 1, 1);
+        new_block_degrees.block_degrees_out = { 0, 15, 8 };
+        new_block_degrees.block_degrees_in = { 0, 16, 7 };
+        new_block_degrees.block_degrees = { 0, 17, 9 };
+        std::vector<int> assignment2 = { 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
+        B2 = Blockmodel(3, graph.out_neighbors(), 0.5, assignment2);
+    }
+};
+
 class ComplexExample : public ToyExample {
 protected:
     common::NewBlockDegrees BlockDegreesAfterUpdates;

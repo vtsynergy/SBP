@@ -35,6 +35,8 @@ protected:
     }
 };
 
+class BlockMergeEntropyTest : public BlockMergeTest {};
+
 TEST_F(EntropyTest, SetUpWorksCorrectly) {
     EXPECT_EQ(graph.num_vertices(), 11);
     EXPECT_EQ(graph.out_neighbors().size(), graph.num_vertices());
@@ -165,4 +167,33 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     std::cout << "======== After move =======" << std::endl;
     B5.print_blockmodel();
     EXPECT_FLOAT_EQ(dE, result.delta_entropy);
+}
+
+TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithDenseUpdates) {
+    double E_before = entropy::mdl(B, 11, 23);
+    double dE = entropy::block_merge_delta_mdl(0, 1, 23, B, Updates, new_block_degrees);
+    double E_after = entropy::mdl(B2, 11, 23);
+    EXPECT_FLOAT_EQ(E_after - E_before, dE);
+}
+
+TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithSparseUpdates) {
+    double E_before = entropy::mdl(B, 11, 23);
+    double dE = entropy::block_merge_delta_mdl(0, 1, 23, B, SparseUpdates, new_block_degrees);
+    double E_after = entropy::mdl(B2, 11, 23);
+    EXPECT_FLOAT_EQ(E_after - E_before, dE);
+}
+
+TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithBlockmodelDeltas) {
+    double E_before = entropy::mdl(B, 11, 23);
+    double dE = entropy::block_merge_delta_mdl(0, B, Deltas, new_block_degrees);
+    double E_after = entropy::mdl(B2, 11, 23);
+    EXPECT_FLOAT_EQ(E_after - E_before, dE);
+}
+
+TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithBlockmodelDeltasSansBlockDegrees) {
+    double E_before = entropy::mdl(B, 11, 23);
+    double dE = entropy::block_merge_delta_mdl(0, {1, B.degrees_out(0),
+                                                       B.degrees_in(0), B.degrees(0)}, B, Deltas);
+    double E_after = entropy::mdl(B2, 11, 23);
+    EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
