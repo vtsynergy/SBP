@@ -1,6 +1,10 @@
 #include "sbp.hpp"
 
+#include "block_merge.hpp"
 #include "blockmodel/dist_blockmodel.hpp"
+#include "entropy.hpp"
+#include "finetune.hpp"
+#include "mpi_data.hpp"
 
 #include "assert.h"
 
@@ -12,8 +16,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
-    double initial_mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), float(BLOCK_REDUCTION_RATE));
+    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     double initial_modularity = graph.modularity(blockmodel.block_assignment());
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;

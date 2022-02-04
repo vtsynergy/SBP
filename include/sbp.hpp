@@ -7,13 +7,10 @@
 #include <omp.h>
 
 #include "args.hpp"
-#include "block_merge.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "blockmodel/dist_blockmodel.hpp"
-#include "finetune.hpp"
 #include "graph.hpp"
-#include "mpi_data.hpp"
 
 namespace sbp {
 

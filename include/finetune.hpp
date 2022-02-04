@@ -38,34 +38,47 @@ typedef struct vertex_move_t {
 static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning iterations
 
 bool accept(double delta_entropy, double hastings_correction);
+
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+
 EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
+
 /// Returns the potential changes to the blockmodel if the vertex with `out_edges` and `in_edges` moves from
 /// `current_block` into `proposed_block`.
 /// NOTE: assumes that any self edges are present in exactly one of `out_edges` and `in_edges`.
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
-                                 const EdgeWeights &in_edges, const Blockmodel &blockmodel);
+                       const EdgeWeights &in_edges, const Blockmodel &blockmodel);
+
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+
 double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+
 double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
                              const utils::ProposalAndEdgeCounts &proposal);
+
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
+
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
+
 [[maybe_unused]] EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                                      EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                                      int self_edge_weight);
+
 void edge_count_updates_sparse(const Blockmodel &blockmodel, int vertex, int current_block, int proposed_block,
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
+
 /// Returns the edge weights in `neighbors[vertex]` as an `EdgeWeights` struct. If `ignore_self` is `true`, then
 /// self-edges will not be added to EdgeWeights.
 EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_self = false);
+
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
 VertexMove eval_vertex_move(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                             const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                             EdgeWeights &in_edges);
+
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
 /// blockmodel deltas.
 VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
@@ -73,46 +86,55 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
                                     EdgeWeights &in_edges);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
 /// Computes the Hastings correction using dense vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
+
 /// Computes the Hastings correction using sparse vectors.
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
+
 /// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
 double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
                            int current_block, const utils::ProposalAndEdgeCounts &proposal);
+
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
 VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
                        const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges);
+
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
 VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                                Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                EdgeWeights &in_edges);
+
 /// Computes the overall entropy of the given blockmodel.
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+//double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+
 /// Proposes a new Metropolis-Hastings vertex move.
 VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
+
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
 
-namespace directed {
-
-/// Computes the overall entropy of the given blockmodel for a directed graph.
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
-
-}  // namespace directed
-
-namespace undirected {
-
-/// Computes the overall entropy of the given blockmodel for an undirected graph.
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
-
-}  // namespace undirected
+//namespace directed {
+//
+///// Computes the overall entropy of the given blockmodel for a directed graph.
+//double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+//
+//}  // namespace directed
+//
+//namespace undirected {
+//
+///// Computes the overall entropy of the given blockmodel for an undirected graph.
+//double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+//
+//}  // namespace undirected
 
 namespace dist {
 
@@ -138,14 +160,14 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
 namespace directed {
 
 /// Computes the overall entropy of the given blockmodel for a directed graph.
-double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
+double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
 
 }  // namespace directed
 
 // namespace undirected {
 
 // /// Computes the overall entropy of the given blockmodel for an undirected graph.
-// double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
+// double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 
 // }  // namespace undirected
 

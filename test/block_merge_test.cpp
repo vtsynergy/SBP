@@ -2,7 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include "finetune.hpp"  // for overall_entropy()
+#include "entropy.hpp"
+#include "finetune.hpp"  // for mdl()
 #include "block_merge.hpp"
 #include "blockmodel/sparse/delta.hpp"
 
@@ -49,30 +50,30 @@ TEST_F(BlockMergeTest, BlockmodelDeltaIsCorrectlyComputed) {
 }
 
 TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithDenseUpdates) {
-    double E_before = finetune::overall_entropy(B, 11, 23);
+    double E_before = entropy::mdl(B, 11, 23);
     double dE = block_merge::compute_delta_entropy(0, 1, 23, B, Updates, new_block_degrees);
-    double E_after = finetune::overall_entropy(B2, 11, 23);
+    double E_after = entropy::mdl(B2, 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithSparseUpdates) {
-    double E_before = finetune::overall_entropy(B, 11, 23);
+    double E_before = entropy::mdl(B, 11, 23);
     double dE = block_merge::compute_delta_entropy_sparse(0, 1, 23, B, SparseUpdates, new_block_degrees);
-    double E_after = finetune::overall_entropy(B2, 11, 23);
+    double E_after = entropy::mdl(B2, 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithBlockmodelDeltas) {
-    double E_before = finetune::overall_entropy(B, 11, 23);
+    double E_before = entropy::mdl(B, 11, 23);
     double dE = block_merge::compute_delta_entropy_sparse(0, B, Deltas, new_block_degrees);
-    double E_after = finetune::overall_entropy(B2, 11, 23);
+    double E_after = entropy::mdl(B2, 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeTest, BlockmodelDeltaEntropyIsCorrectlyComputeWithBlockmodelDeltasSansBlockDegrees) {
-    double E_before = finetune::overall_entropy(B, 11, 23);
+    double E_before = entropy::mdl(B, 11, 23);
     double dE = block_merge::compute_delta_entropy(0, {1, B.degrees_out(0),
                                                        B.degrees_in(0), B.degrees(0)}, B, Deltas);
-    double E_after = finetune::overall_entropy(B2, 11, 23);
+    double E_after = entropy::mdl(B2, 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }

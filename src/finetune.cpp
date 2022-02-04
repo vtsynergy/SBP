@@ -1,6 +1,7 @@
 #include "finetune.hpp"
 
 #include "args.hpp"
+#include "entropy.hpp"
 #include "mpi_data.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
@@ -27,7 +28,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     double initial_entropy = blockmodel.getOverall_entropy();
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -63,7 +64,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -716,11 +717,11 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAnd
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
-    if (args.undirected)
-        return undirected::overall_entropy(blockmodel, num_vertices, num_edges);
-    return directed::overall_entropy(blockmodel, num_vertices, num_edges);
-}
+//double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
+//    if (args.undirected)
+//        return undirected::mdl(blockmodel, num_vertices, num_edges);
+//    return directed::mdl(blockmodel, num_vertices, num_edges);
+//}
 
 VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) {
     bool did_move = false;
@@ -759,7 +760,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
@@ -779,7 +780,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -789,7 +790,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
@@ -809,57 +810,57 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
             break;
         }
     }
-    blockmodel.setOverall_entropy(overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
 }
 
-namespace directed {
+//namespace directed {
+//
+//double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
+//    double log_posterior_p = blockmodel.log_posterior_probability();
+//    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
+//    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+//    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+//}
 
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
-    double log_posterior_p = blockmodel.log_posterior_probability();
-    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
-    double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
-}
+//}  // namespace directed
 
-}  // namespace directed
-
-namespace undirected {
-
-double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
-    std::cout << "undirected!" << std::endl;
-    double log_posterior_p = blockmodel.log_posterior_probability(num_edges);
-    if (std::isnan(log_posterior_p)) {
-        std::cout << "nan in log posterior" << std::endl;
-        exit(-5000);
-    }
-    double x = blockmodel.getNum_blocks() * (blockmodel.getNum_blocks() + 1.0) / (2.0 * num_edges);
-    if (std::isnan(x)) {
-        std::cout << "nan in X" << std::endl;
-        exit(-5000);
-    }
-    double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    if (std::isnan(h)) {
-        std::cout << "nan in h()" << std::endl;
-    }
-        // std::cout << "X: " << x << std::endl;
-        // std::cout << "log(X): " << log(x) << std::endl;
-    if (std::isnan(h)) {
-        exit(-5000);
-    }
-    double first = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks()));
-    std::cout << "first: " << first << " log_posterior: " << log_posterior_p << std::endl;
-    double result = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
-    if (std::isnan(result)) {
-        std::cout << "nan in result" << std::endl;
-        exit(-5000);
-    }
-    return result;
-}
-
-}  // namespace undirected
+//namespace undirected {
+//
+//double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
+//    std::cout << "undirected!" << std::endl;
+//    double log_posterior_p = blockmodel.log_posterior_probability(num_edges);
+//    if (std::isnan(log_posterior_p)) {
+//        std::cout << "nan in log posterior" << std::endl;
+//        exit(-5000);
+//    }
+//    double x = blockmodel.getNum_blocks() * (blockmodel.getNum_blocks() + 1.0) / (2.0 * num_edges);
+//    if (std::isnan(x)) {
+//        std::cout << "nan in X" << std::endl;
+//        exit(-5000);
+//    }
+//    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+//    if (std::isnan(h)) {
+//        std::cout << "nan in h()" << std::endl;
+//    }
+//        // std::cout << "X: " << x << std::endl;
+//        // std::cout << "log(X): " << log(x) << std::endl;
+//    if (std::isnan(h)) {
+//        exit(-5000);
+//    }
+//    double first = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks()));
+//    std::cout << "first: " << first << " log_posterior: " << log_posterior_p << std::endl;
+//    double result = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+//    if (std::isnan(result)) {
+//        std::cout << "nan in result" << std::endl;
+//        exit(-5000);
+//    }
+//    return result;
+//}
+//
+//}  // namespace undirected
 
 namespace dist {
 
@@ -877,7 +878,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    double old_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = dist::directed::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
 //    double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
@@ -936,7 +937,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             blockmodel.initialize_edge_counts(graph.out_neighbors());
             vertex_moves += batch_vertex_moves;
         }
-        new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = dist::directed::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -975,7 +976,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     }
     std::vector<double> delta_entropies;
     int total_vertex_moves = 0;
-    double old_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = dist::directed::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
 //    double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
@@ -1019,7 +1020,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
         blockmodel.initialize_edge_counts(graph.out_neighbors());
         vertex_moves += batch_vertex_moves;
-        new_entropy = dist::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = dist::directed::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -1061,10 +1062,10 @@ bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initia
 }
 
 double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {
-    return dist::directed::overall_entropy(blockmodel, num_vertices, num_edges);
+    return dist::directed::mdl(blockmodel, num_vertices, num_edges);
     // if (args.undirected)
-    //     return dist::undirected::overall_entropy(blockmodel, num_vertices, num_edges);
-    // return dist::directed::overall_entropy(blockmodel, num_vertices, num_edges);
+    //     return dist::undirected::mdl(blockmodel, num_vertices, num_edges);
+    // return dist::directed::mdl(blockmodel, num_vertices, num_edges);
 }
 
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph) {
@@ -1108,7 +1109,7 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
 
 namespace directed {
 
-double overall_entropy(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {
+double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) {
     double log_posterior_p = blockmodel.log_posterior_probability();
     double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
