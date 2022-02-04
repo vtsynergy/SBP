@@ -41,18 +41,18 @@ TEST_F(EntropyTest, SetUpWorksCorrectly) {
     EXPECT_EQ(graph.num_edges(), 23);
 }
 
-TEST_F(EntropyTest, OverallEntropyGivesCorrectAnswer) {
+TEST_F(EntropyTest, MDLGivesCorrectAnswer) {
     double E = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(E, ENTROPY) << "Calculated entropy = " << E << " but was expecting " << ENTROPY;
 }
 
 /// TODO: same test but using a vertex with a self edge
-TEST_F(EntropyTest, DenseDeltaEntropyGivesCorrectAnswer) {
+TEST_F(EntropyTest, DenseDeltaMDLGivesCorrectAnswer) {
     int vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     int current_block = B.block_assignment(vertex);
     double delta_entropy =
-            finetune::compute_delta_entropy(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
+            entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
     std::cout << "dE using updates = " << delta_entropy;
     B.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                            new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
@@ -60,12 +60,12 @@ TEST_F(EntropyTest, DenseDeltaEntropyGivesCorrectAnswer) {
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before) << "calculated dE was " << delta_entropy << " but actual dE was " << E_after - E_before;
 }
 
-TEST_F(EntropyTest, SparseDeltaEntropyGivesCorrectAnswer) {
+TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
     int vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     int current_block = B.block_assignment(vertex);
     double delta_entropy =
-            finetune::compute_delta_entropy(current_block, Proposal.proposal, B, graph.num_edges(), SparseUpdates,
+            entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), SparseUpdates,
                                             new_block_degrees);
     std::cout << "dE using sparse updates = " << delta_entropy;
     B.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
@@ -75,10 +75,10 @@ TEST_F(EntropyTest, SparseDeltaEntropyGivesCorrectAnswer) {
 }
 
 /// TODO: same test but using a vertex with a self edge
-TEST_F(EntropyTest, DeltaEntropyUsingBlockmodelDeltasGivesCorrectAnswer) {
+TEST_F(EntropyTest, DeltaMDLUsingBlockmodelDeltasGivesCorrectAnswer) {
     int vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
-    double delta_entropy = finetune::compute_delta_entropy(B, Deltas, Proposal);
+    double delta_entropy = entropy::delta_mdl(B, Deltas, Proposal);
     B.move_vertex(vertex, Deltas, Proposal);
     int blockmodel_edges = utils::sum<int>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges()) << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
@@ -138,7 +138,7 @@ TEST_F(EntropyTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
     EXPECT_FLOAT_EQ(hastings1, hastings2);
 }
 
-TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaEntropy) {
+TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     int vertex = 6;
     utils::ProposalAndEdgeCounts proposal {0, 1, 2, 3 };
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);

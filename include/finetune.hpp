@@ -49,15 +49,6 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
                        const EdgeWeights &in_edges, const Blockmodel &blockmodel);
 
-double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
-                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
-
-double compute_delta_entropy(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
-                             SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
-
-double compute_delta_entropy(const Blockmodel &blockmodel, const Delta &delta,
-                             const utils::ProposalAndEdgeCounts &proposal);
-
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 

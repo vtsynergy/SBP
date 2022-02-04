@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 
 #include "entropy.hpp"
-#include "finetune.hpp"  // for mdl()
 #include "block_merge.hpp"
 #include "blockmodel/sparse/delta.hpp"
 
