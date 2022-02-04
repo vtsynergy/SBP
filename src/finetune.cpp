@@ -667,6 +667,7 @@ VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCoun
         return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
                                              blockmodel);
+
 //    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
 //                                   + delta.get(current_block, current_block);
 //    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)

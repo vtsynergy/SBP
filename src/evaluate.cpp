@@ -45,7 +45,6 @@ double evaluate::calculate_f1_score(int num_vertices, Hungarian::Matrix &conting
     double precision = cell_pairs / col_pairs;
     double f1_score = (2.0 * precision * recall) / (precision + recall);
 
-
     std::cout << "Accuracy: " << correctly_classified / double(num_vertices) << std::endl;
     std::cout << "Rand index: " << rand_index << std::endl;
     // TODO: precision & recall could be flipped. Figure out when that is so...

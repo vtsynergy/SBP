@@ -8,7 +8,7 @@
 
 double Blockmodel::block_size_variation() const {
     // Normalized using variance / max_variance, where max_variance = range^2 / 4
-    // See: https://link-springer-com/content/pdf/10.1007/BF00143817.pdf
+    // See: https://link.springer.com/content/pdf/10.1007/BF00143817.pdf
     std::vector<int> block_sizes(this->num_blocks, 0);
     for (int block : this->_block_assignment) {
         block_sizes[block]++;

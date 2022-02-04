@@ -7,7 +7,7 @@ set(CMAKE_C_COMPILER mpicc)
 set(CMAKE_CXX_COMPILER mpic++)
 
 # set the project name
-project(DistributedSBP VERSION 2021.08.29)
+project(DistributedSBP VERSION 2022.02.04)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -30,27 +30,27 @@ set(INCLUDE_DIRS
 
 # add the executable
 add_library(SBP STATIC
-    graph.cpp
-    utils.cpp
-    sbp.cpp
-    evaluate.cpp
-    common.cpp
-    finetune.cpp
-    block_merge.cpp
-    partition.cpp
-    blockmodel/blockmodel.cpp
-    blockmodel/blockmodel_triplet.cpp
-    blockmodel/dist_blockmodel.cpp
-    blockmodel/sparse/dict_matrix.cpp
-    blockmodel/sparse/dict_transpose_matrix.cpp
+    src/graph.cpp
+    src/utils.cpp
+    src/sbp.cpp
+    src/evaluate.cpp
+    src/common.cpp
+    src/finetune.cpp
+    src/block_merge.cpp
+    src/partition.cpp
+    src/blockmodel/blockmodel.cpp
+    src/blockmodel/blockmodel_triplet.cpp
+    src/blockmodel/dist_blockmodel.cpp
+    src/blockmodel/sparse/dict_matrix.cpp
+    src/blockmodel/sparse/dict_transpose_matrix.cpp
 #    blockmodel/sparse/dist_dict_matrix.cpp
         )
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DistributedSBP main.cpp)
+add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(Influence influence.cpp)
+add_executable(Influence src/influence.cpp)
 target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
 
 if(DEBUG)
