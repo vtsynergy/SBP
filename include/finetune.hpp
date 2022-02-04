@@ -78,20 +78,6 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
-/// Computes the Hastings correction using dense vectors.
-double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
-                           common::NewBlockDegrees &new_block_degrees);
-
-/// Computes the Hastings correction using sparse vectors.
-double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
-                           common::NewBlockDegrees &new_block_degrees);
-
-/// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
-double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
-                           int current_block, const utils::ProposalAndEdgeCounts &proposal);
-
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
 

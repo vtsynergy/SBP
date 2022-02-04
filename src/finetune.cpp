@@ -42,7 +42,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(blockmodel.block_assignment());
-            #pragma omp parallel for schedule(dynamic) default(none) \
+#pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment)
             for (int vertex = start; vertex < end; ++vertex) {
                 VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
@@ -80,7 +80,7 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
     }
     std::vector<int> blocks;
     std::vector<int> weights;
-    for (auto const &entry : block_counts) {
+    for (auto const &entry: block_counts) {
         blocks.push_back(entry.first);
         weights.push_back(entry.second);
     }
@@ -88,7 +88,7 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWei
 }
 
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
-                            const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
+                       const EdgeWeights &in_edges, const Blockmodel &blockmodel) {
     Delta delta(current_block, proposed_block, int(std::max(out_edges.indices.size(), in_edges.indices.size())));
 
     // current_block -> current_block == proposed_block --> proposed_block  (this includes self edges)
@@ -257,7 +257,7 @@ EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_
     std::vector<int> values;
     // Assumes graph is unweighted
     const std::vector<int> &neighbor_vector = neighbors[vertex];
-    for (const int neighbor : neighbor_vector) {
+    for (const int neighbor: neighbor_vector) {
         if (ignore_self && neighbor == vertex) continue;
         indices.push_back(neighbor);
         values.push_back(1);
@@ -283,7 +283,7 @@ VertexMove eval_vertex_move(int vertex, int current_block, utils::ProposalAndEdg
 ////                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
 //    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
 //            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-    double hastings = hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
+    double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
     if (accept(delta_entropy, hastings))
@@ -310,170 +310,14 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings =
-            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
-                                new_block_degrees);
+            entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
+                                         new_block_degrees);
     double delta_entropy =
             entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-                                  new_block_degrees);
+                               new_block_degrees);
     if (accept(delta_entropy, hastings))
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     return VertexMove{delta_entropy, false, -1, -1};
-}
-
-double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
-                           common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0) {
-        return 1.0;
-    }
-    // Compute block weights
-    std::map<int, int> block_counts;
-    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
-        int block = out_blocks.indices[i];
-        int weight = out_blocks.values[i];
-        block_counts[block] += weight; // block_count[new block] should initialize to 0
-    }
-    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
-        int block = in_blocks.indices[i];
-        int weight = in_blocks.values[i];
-        block_counts[block] += weight; // block_count[new block] should initialize to 0
-    }
-    // Create Arrays using unique blocks
-    size_t num_unique_blocks = block_counts.size();
-    std::vector<double> counts(num_unique_blocks, 0);
-    std::vector<double> proposal_weights(num_unique_blocks, 0);
-    std::vector<double> block_weights(num_unique_blocks, 0);
-    std::vector<double> block_degrees(num_unique_blocks, 0);
-    std::vector<double> proposal_degrees(num_unique_blocks, 0);
-    // Indexing
-    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
-    // Fill Arrays
-    int index = 0;
-    int num_blocks = blockmodel.getNum_blocks();
-    const std::vector<int> &current_block_degrees = blockmodel.degrees();
-    for (auto const &entry : block_counts) {
-        counts[index] = entry.second;
-        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
-        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
-        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
-        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
-        index++;
-    }
-    // Compute p_forward and p_backward
-    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
-    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
-    return p_backward / p_forward;
-}
-
-double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                           utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
-                           common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0) {
-        return 1.0;
-    }
-    // Compute block weights
-    std::map<int, int> block_counts;
-    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
-        int block = out_blocks.indices[i];
-        int weight = out_blocks.values[i];
-        block_counts[block] += weight; // block_count[new block] should initialize to 0
-    }
-    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
-        int block = in_blocks.indices[i];
-        int weight = in_blocks.values[i];
-        block_counts[block] += weight; // block_count[new block] should initialize to 0
-    }
-    // Create Arrays using unique blocks
-    size_t num_unique_blocks = block_counts.size();
-    std::vector<double> counts(num_unique_blocks, 0);
-    std::vector<double> proposal_weights(num_unique_blocks, 0);
-    std::vector<double> block_weights(num_unique_blocks, 0);
-    std::vector<double> block_degrees(num_unique_blocks, 0);
-    std::vector<double> proposal_degrees(num_unique_blocks, 0);
-    // Indexing
-    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
-    // Fill Arrays
-    int index = 0;
-    int num_blocks = blockmodel.getNum_blocks();
-    const std::vector<int> &current_block_degrees = blockmodel.degrees();
-    for (auto const &entry : block_counts) {
-        counts[index] = entry.second;
-        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
-        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
-        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
-        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
-        index++;
-    }
-    // Compute p_forward and p_backward
-    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
-    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
-    return p_backward / p_forward;
-}
-
-double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
-                           int current_block, const utils::ProposalAndEdgeCounts &proposal) {
-    if (proposal.num_neighbor_edges == 0) {
-        return 1.0;
-    }
-    // Compute block weights
-    MapVector<int> block_counts;
-    for (const int neighbor : graph.out_neighbors(vertex)) {
-        int neighbor_block = blockmodel.block_assignment(neighbor);
-        block_counts[neighbor_block] += 1;
-    }
-    for (const int neighbor : graph.in_neighbors(vertex)) {
-        if (neighbor == vertex) continue;
-        int neighbor_block = blockmodel.block_assignment(neighbor);
-        block_counts[neighbor_block] += 1;
-    }
-    // Create Arrays using unique blocks
-    size_t num_unique_blocks = block_counts.size();
-    std::vector<double> counts(num_unique_blocks, 0);
-    std::vector<double> proposal_weights(num_unique_blocks, 0);
-    std::vector<double> block_weights(num_unique_blocks, 0);
-    std::vector<double> block_degrees(num_unique_blocks, 0);
-    std::vector<double> proposal_degrees(num_unique_blocks, 0);
-    // Indexing
-    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
-    // Fill Arrays
-    int index = 0;
-    int num_blocks = blockmodel.getNum_blocks();
-    const std::vector<int> &current_block_degrees = blockmodel.degrees();
-    for (auto const &entry : block_counts) {
-        counts[index] = entry.second;
-        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
-        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
-        block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
-                delta.get(current_block, entry.first) +
-//                get(delta, std::make_pair(current_block, entry.first)) +
-                blockmodel.blockmatrix()->get(entry.first, current_block) +
-                delta.get(entry.first, current_block) + 1.0;
-//                get(delta, std::make_pair(entry.first, current_block)) + 1.0;
-        int new_block_degree = blockmodel.degrees(entry.first);
-        if (entry.first == current_block) {
-            int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                           + delta.get(current_block, current_block);
-            int degree_out = blockmodel.degrees_out(current_block) - proposal.num_out_neighbor_edges;
-            int degree_in = blockmodel.degrees_in(current_block) - proposal.num_in_neighbor_edges;
-            new_block_degree = degree_out + degree_in - current_block_self_edges;
-        } else if (entry.first == proposal.proposal) {
-            int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                            + delta.get(proposal.proposal, proposal.proposal);
-            int degree_out = blockmodel.degrees_out(proposal.proposal) + proposal.num_out_neighbor_edges;
-            int degree_in = blockmodel.degrees_in(proposal.proposal) + proposal.num_in_neighbor_edges;
-            new_block_degree = degree_out + degree_in - proposed_block_self_edges;
-        }
-//        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
-        proposal_degrees[index] = new_block_degree + num_blocks;
-        index++;
-    }
-    // Compute p_forward and p_backward
-    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
-    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
-    return p_backward / p_forward;
 }
 
 VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
@@ -481,7 +325,7 @@ VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCoun
     if (args.nodelta)
         return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
-                                             blockmodel);
+                                   blockmodel);
 
 //    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
 //                                   + delta.get(current_block, current_block);
@@ -490,14 +334,14 @@ VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCoun
 //    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
 //            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
 
-    double hastings = hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
+    double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, delta, proposal);
-        return VertexMove{delta_entropy, true, vertex, proposal.proposal };
+        return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     }
-    return VertexMove{delta_entropy, false, vertex, proposal.proposal };
+    return VertexMove{delta_entropy, false, vertex, proposal.proposal};
 }
 
 VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
@@ -519,10 +363,11 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAnd
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings =
-            hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates, new_block_degrees);
+            entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
+                                         new_block_degrees);
     double delta_entropy =
             entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-                                  new_block_degrees);
+                               new_block_degrees);
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                                new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
@@ -546,7 +391,7 @@ VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph) 
     utils::ProposalAndEdgeCounts proposal = common::propose_new_block(
             current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (proposal.proposal == current_block) {
-        return VertexMove{0.0, did_move, -1, -1 };
+        return VertexMove{0.0, did_move, -1, -1};
     }
 
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
@@ -681,9 +526,9 @@ namespace dist {
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     my_file.open(args.csv, std::ios::out | std::ios::app);
     MPI_Datatype Membership_t;
-    int membership_blocklengths[2] = { 1, 1 };
-    MPI_Aint membership_displacements[2] = { 0, sizeof(int) };
-    MPI_Datatype membership_types[2] = { MPI_INT, MPI_INT };
+    int membership_blocklengths[2] = {1, 1};
+    MPI_Aint membership_displacements[2] = {0, sizeof(int)};
+    MPI_Datatype membership_types[2] = {MPI_INT, MPI_INT};
     MPI_Type_create_struct(2, membership_blocklengths, membership_displacements, membership_types, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
@@ -712,7 +557,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int start = batch * batch_size;
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
-            #pragma omp parallel for schedule(dynamic) default(none) \
+#pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
             for (int vertex = start; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
@@ -721,13 +566,13 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                 VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
 //                    assert(blockmodel.stores(proposal.proposed_block));  // assert no work with default(none) until gcc 9.3.0
-                    #pragma omp critical (updates)
+#pragma omp critical (updates)
                     {
-                        membership_updates.push_back(Membership { vertex, proposal.proposed_block });
+                        membership_updates.push_back(Membership{vertex, proposal.proposed_block});
                     }
                 }
             }
-            int num_moves = (int)membership_updates.size();
+            int num_moves = (int) membership_updates.size();
             // MPI COMMUNICATION
             int rank_moves[mpi.num_processes];
             t1 = MPI_Wtime();
@@ -736,14 +581,14 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int offsets[mpi.num_processes];
             offsets[0] = 0;
             for (int i = 1; i < mpi.num_processes; ++i) {
-                offsets[i] = offsets[i-1] + rank_moves[i-1];
+                offsets[i] = offsets[i - 1] + rank_moves[i - 1];
             }
-            int batch_vertex_moves = offsets[mpi.num_processes-1] + rank_moves[mpi.num_processes-1];
+            int batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
             std::vector<Membership> collected_membership_updates(batch_vertex_moves);
             MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
                            rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
             // END MPI COMMUNICATION
-            for (const Membership &membership : collected_membership_updates) {
+            for (const Membership &membership: collected_membership_updates) {
                 block_assignment[membership.vertex] = membership.block;
             }
             blockmodel.set_block_assignment(block_assignment);
@@ -779,9 +624,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     my_file.open(args.csv, std::ios::out | std::ios::app);
     // MPI Datatype init
     MPI_Datatype Membership_t;
-    int membership_blocklengths[2] = { 1, 1 };  // Number of items in each field of Membership_t
-    MPI_Aint membership_displacements[2] = { 0, sizeof(int) };
-    MPI_Datatype membership_types[2] = { MPI_INT, MPI_INT };
+    int membership_blocklengths[2] = {1, 1};  // Number of items in each field of Membership_t
+    MPI_Aint membership_displacements[2] = {0, sizeof(int)};
+    MPI_Datatype membership_types[2] = {MPI_INT, MPI_INT};
     MPI_Type_create_struct(2, membership_blocklengths, membership_displacements, membership_types, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
@@ -808,10 +653,10 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
             if (proposal.did_move) {
                 vertex_moves++;
                 assert(blockmodel.stores(proposal.proposed_block));
-                membership_updates.push_back(Membership { vertex, proposal.proposed_block });
+                membership_updates.push_back(Membership{vertex, proposal.proposed_block});
             }
         }
-        int num_moves = (int)membership_updates.size();
+        int num_moves = (int) membership_updates.size();
         // MPI COMMUNICATION
         int rank_moves[mpi.num_processes];
         t1 = MPI_Wtime();
@@ -820,14 +665,14 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         int offsets[mpi.num_processes];
         offsets[0] = 0;
         for (int i = 1; i < mpi.num_processes; ++i) {
-            offsets[i] = offsets[i-1] + rank_moves[i-1];
+            offsets[i] = offsets[i - 1] + rank_moves[i - 1];
         }
-        int batch_vertex_moves = offsets[mpi.num_processes-1] + rank_moves[mpi.num_processes-1];
+        int batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
         std::vector<Membership> collected_membership_updates(batch_vertex_moves);
         MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
-                        rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
+                       rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
         // END MPI COMMUNICATION
-        for (const Membership &membership : collected_membership_updates) {
+        for (const Membership &membership: collected_membership_updates) {
             block_assignment[membership.vertex] = membership.block;
         }
         blockmodel.set_block_assignment(block_assignment);
@@ -890,7 +735,7 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, co
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
     utils::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
-        current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
+            current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
@@ -909,13 +754,13 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex);
 
     utils::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
-        current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
+            current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (!blockmodel.stores(proposal.proposal)) {
         std::cerr << "blockmodel doesn't own proposed block!!!!!" << std::endl;
         exit(-1000000000);
     }
     if (proposal.proposal == current_block) {
-        return VertexMove{0.0, did_move, -1, -1 };
+        return VertexMove{0.0, did_move, -1, -1};
     }
 
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);

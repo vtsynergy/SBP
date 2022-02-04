@@ -4,7 +4,6 @@
 
 #include "blockmodel.hpp"
 #include "blockmodel/sparse/delta.hpp"
-#include "entropy.hpp"  // get rid of this once entropy stuff fully migrated
 #include "finetune.hpp"
 #include "graph.hpp"
 #include "utils.hpp"
@@ -188,18 +187,6 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
     for (const auto entry : block_counts2) {
         EXPECT_EQ(entry.second, block_counts1[entry.first]);
     }
-}
-
-TEST_F(FinetuneTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
-    double hastings1 = finetune::hastings_correction(vertex, graph, B, Deltas, current_block, Proposal);
-    EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
-    EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
-    EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
-    EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
-    double hastings2 = finetune::hastings_correction(B, blocks_out_neighbors, blocks_in_neighbors, Proposal, Updates, new_block_degrees);
-    EXPECT_FLOAT_EQ(hastings1, hastings2);
 }
 
 TEST_F(FinetuneTest, SpecialCaseGivesCorrectSparseEdgeCountUpdates) {

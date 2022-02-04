@@ -192,6 +192,162 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
     return delta_entropy;
 }
 
+double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                           utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
+                           common::NewBlockDegrees &new_block_degrees) {
+    if (proposal.num_neighbor_edges == 0) {
+        return 1.0;
+    }
+    // Compute block weights
+    std::map<int, int> block_counts;
+    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
+        int block = out_blocks.indices[i];
+        int weight = out_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
+        int block = in_blocks.indices[i];
+        int weight = in_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    // Create Arrays using unique blocks
+    size_t num_unique_blocks = block_counts.size();
+    std::vector<double> counts(num_unique_blocks, 0);
+    std::vector<double> proposal_weights(num_unique_blocks, 0);
+    std::vector<double> block_weights(num_unique_blocks, 0);
+    std::vector<double> block_degrees(num_unique_blocks, 0);
+    std::vector<double> proposal_degrees(num_unique_blocks, 0);
+    // Indexing
+    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
+    // Fill Arrays
+    int index = 0;
+    int num_blocks = blockmodel.getNum_blocks();
+    const std::vector<int> &current_block_degrees = blockmodel.degrees();
+    for (auto const &entry : block_counts) {
+        counts[index] = entry.second;
+        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
+        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
+        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
+        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
+        index++;
+    }
+    // Compute p_forward and p_backward
+    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    return p_backward / p_forward;
+}
+
+double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                           utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
+                           common::NewBlockDegrees &new_block_degrees) {
+    if (proposal.num_neighbor_edges == 0) {
+        return 1.0;
+    }
+    // Compute block weights
+    std::map<int, int> block_counts;
+    for (uint i = 0; i < out_blocks.indices.size(); ++i) {
+        int block = out_blocks.indices[i];
+        int weight = out_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    for (uint i = 0; i < in_blocks.indices.size(); ++i) {
+        int block = in_blocks.indices[i];
+        int weight = in_blocks.values[i];
+        block_counts[block] += weight; // block_count[new block] should initialize to 0
+    }
+    // Create Arrays using unique blocks
+    size_t num_unique_blocks = block_counts.size();
+    std::vector<double> counts(num_unique_blocks, 0);
+    std::vector<double> proposal_weights(num_unique_blocks, 0);
+    std::vector<double> block_weights(num_unique_blocks, 0);
+    std::vector<double> block_degrees(num_unique_blocks, 0);
+    std::vector<double> proposal_degrees(num_unique_blocks, 0);
+    // Indexing
+    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
+    // Fill Arrays
+    int index = 0;
+    int num_blocks = blockmodel.getNum_blocks();
+    const std::vector<int> &current_block_degrees = blockmodel.degrees();
+    for (auto const &entry : block_counts) {
+        counts[index] = entry.second;
+        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
+        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
+        block_weights[index] = updates.block_row[entry.first] + updates.block_col[entry.first] + 1.0;
+        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
+        index++;
+    }
+    // Compute p_forward and p_backward
+    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    return p_backward / p_forward;
+}
+
+double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
+                           int current_block, const utils::ProposalAndEdgeCounts &proposal) {
+    if (proposal.num_neighbor_edges == 0) {
+        return 1.0;
+    }
+    // Compute block weights
+    MapVector<int> block_counts;
+    for (const int neighbor : graph.out_neighbors(vertex)) {
+        int neighbor_block = blockmodel.block_assignment(neighbor);
+        block_counts[neighbor_block] += 1;
+    }
+    for (const int neighbor : graph.in_neighbors(vertex)) {
+        if (neighbor == vertex) continue;
+        int neighbor_block = blockmodel.block_assignment(neighbor);
+        block_counts[neighbor_block] += 1;
+    }
+    // Create Arrays using unique blocks
+    size_t num_unique_blocks = block_counts.size();
+    std::vector<double> counts(num_unique_blocks, 0);
+    std::vector<double> proposal_weights(num_unique_blocks, 0);
+    std::vector<double> block_weights(num_unique_blocks, 0);
+    std::vector<double> block_degrees(num_unique_blocks, 0);
+    std::vector<double> proposal_degrees(num_unique_blocks, 0);
+    // Indexing
+    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
+    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
+    // Fill Arrays
+    int index = 0;
+    int num_blocks = blockmodel.getNum_blocks();
+    const std::vector<int> &current_block_degrees = blockmodel.degrees();
+    for (auto const &entry : block_counts) {
+        counts[index] = entry.second;
+        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
+        block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
+        block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
+                               delta.get(current_block, entry.first) +
+                               //                get(delta, std::make_pair(current_block, entry.first)) +
+                               blockmodel.blockmatrix()->get(entry.first, current_block) +
+                               delta.get(entry.first, current_block) + 1.0;
+//                get(delta, std::make_pair(entry.first, current_block)) + 1.0;
+        int new_block_degree = blockmodel.degrees(entry.first);
+        if (entry.first == current_block) {
+            int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
+                                           + delta.get(current_block, current_block);
+            int degree_out = blockmodel.degrees_out(current_block) - proposal.num_out_neighbor_edges;
+            int degree_in = blockmodel.degrees_in(current_block) - proposal.num_in_neighbor_edges;
+            new_block_degree = degree_out + degree_in - current_block_self_edges;
+        } else if (entry.first == proposal.proposal) {
+            int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
+                                            + delta.get(proposal.proposal, proposal.proposal);
+            int degree_out = blockmodel.degrees_out(proposal.proposal) + proposal.num_out_neighbor_edges;
+            int degree_in = blockmodel.degrees_in(proposal.proposal) + proposal.num_in_neighbor_edges;
+            new_block_degree = degree_out + degree_in - proposed_block_self_edges;
+        }
+//        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
+        proposal_degrees[index] = new_block_degree + num_blocks;
+        index++;
+    }
+    // Compute p_forward and p_backward
+    auto p_forward = utils::sum<double>(counts * proposal_weights / block_degrees);
+    auto p_backward = utils::sum<double>(counts * block_weights / proposal_degrees);
+    return p_backward / p_forward;
+}
+
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
     double log_posterior_p = blockmodel.log_posterior_probability();
     double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
