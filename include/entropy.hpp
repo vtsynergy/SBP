@@ -3,6 +3,7 @@
  */
 
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/dist_blockmodel.hpp"
 #include "common.hpp"
 #include "delta.hpp"
 #include "utils.hpp"
@@ -43,5 +44,15 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 
 // TODO: add an undirected mdl
+// TODO: add undirected delta_mdl functions
+
+namespace dist {
+
+/// Computes the overall entropy of the given blockmodel for a directed graph.
+double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
+
+// TODO: add an undirected distributed mdl
+
+}
 
 }
