@@ -16,6 +16,9 @@
 //MPI_t mpi;  // Unused
 //Args args;  // Unused
 
+const double MDL_10_VERTICES_50_EDGES_V1 = 200.5231073;
+const double MDL_10_VERTICES_50_EDGES_V2 = 314.1041264;
+
 class EntropyTest : public ToyExample {
 protected:
     Blockmodel B3;
@@ -167,6 +170,16 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     std::cout << "======== After move =======" << std::endl;
     B5.print_blockmodel();
     EXPECT_FLOAT_EQ(dE, result.delta_entropy);
+}
+
+TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForSmallGraph) {
+    double mdl = entropy::null_mdl_v1(50);
+    EXPECT_FLOAT_EQ(mdl, MDL_10_VERTICES_50_EDGES_V1);
+}
+
+TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForSmallGraph) {
+    double mdl = entropy::null_mdl_v2(10, 50);
+    EXPECT_FLOAT_EQ(mdl, MDL_10_VERTICES_50_EDGES_V2);
 }
 
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithDenseUpdates) {

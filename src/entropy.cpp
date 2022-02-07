@@ -535,19 +535,16 @@ double null_mdl_v1(int num_edges) {
     double log_posterior_p = num_edges * log(1.0 / num_edges);
     double x = 1.0 / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    std::cout << "log posterior = " << log_posterior_p << " blockmodel = " << (num_edges * h) << std::endl;
     return (num_edges * h) - log_posterior_p;
 }
 
 double null_mdl_v2(int num_vertices, int num_edges) {
-    // NOTE: this cannot be safely calculated with floats for graphs with > ~100,000,000 vertices.
-    // calculate log_posterior_probability
-    double v_squared = double(num_vertices) * double(num_vertices);
-    double cell_value = v_squared / num_edges;
-    double temp = cell_value * v_squared;  // TODO: this is potentially a very large number - break it up?
-    double log_posterior_p = temp * log(temp / (double(num_edges) * double(num_edges)));
+    double log_posterior_p = num_edges * log(1.0 / num_edges);
     // done calculating log_posterior_probability
     double x = pow(num_vertices, 2) / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    std::cout << "log posterior = " << log_posterior_p << " blockmodel = " << (num_edges * h) + (num_vertices * log(num_vertices)) << std::endl;
     return (num_edges * h) + (num_vertices * log(num_vertices)) - log_posterior_p;
 }
 
