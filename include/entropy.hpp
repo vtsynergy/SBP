@@ -61,16 +61,16 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 
 /// Computes the normalized minimum description length using `null_mdl_v1`.
-double normalize_mdl_v1(double mdl, int num_edges);
+double normalize_mdl_v1(double mdl, long num_edges);
 
 /// Computes the normalized minimum description length using `null_mdl_v2`.
-double normalize_mdl_v2(double mdl, int num_vertices, int num_edges);
+double normalize_mdl_v2(double mdl, long num_vertices, long num_edges);
 
 /// Computes the minimum description length of the null model with only one block.
-double null_mdl_v1(int num_edges);
+double null_mdl_v1(long num_edges);
 
 /// Computes the minimum description length of the null model with as many blocks as there are vertices.
-double null_mdl_v2(int num_vertices, int num_edges);
+double null_mdl_v2(long num_vertices, long num_edges);
 
 // TODO: add an undirected mdl
 // TODO: add undirected delta_mdl functions
@@ -81,6 +81,8 @@ namespace dist {
 double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
 
 // TODO: add an undirected distributed mdl
+
+// TODO: handle case when number of edges/vertices >= 2.15 billion (int --> long)
 
 }
 

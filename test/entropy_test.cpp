@@ -182,6 +182,38 @@ TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForSmallGraph) {
     EXPECT_FLOAT_EQ(mdl, MDL_10_VERTICES_50_EDGES_V2);
 }
 
+TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForLargeGraph) {
+    double hand_calculated_mdl = 1.462023E14;
+    long E = 5E12;
+    long V = 1E12;
+    double blocks = 1.0;
+    double x = (blocks * blocks) / double(E);
+    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    double bm = (double(E) * h) + double(V) * log(blocks);
+    double log_likelihood_p = double(E) * log(double(E) / (double(E) * double(E)));
+    double result = bm - log_likelihood_p;
+    double mdl = entropy::null_mdl_v1(E);
+    EXPECT_FLOAT_EQ(mdl, result);
+    EXPECT_FLOAT_EQ(mdl, hand_calculated_mdl);
+}
+
+TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForLargeGraph) {
+    double hand_calculated_mdl = 3.089407E+14;
+    long E = 5E12;
+    long V = 1E12;
+    auto blocks = double(V);
+    double x = (blocks * blocks) / double(E);
+    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    double bm = (double(E) * h) + double(V) * log(blocks);
+    double cell_value = double(E) / (blocks * blocks);
+    double cell_degree = double(E) / blocks;
+    double log_likelihood_p = (blocks * blocks) * (cell_value * log(cell_value / (cell_degree * cell_degree)));
+    double result = bm - log_likelihood_p;
+    double mdl = entropy::null_mdl_v2(V, E);
+    EXPECT_FLOAT_EQ(mdl, result);
+    EXPECT_FLOAT_EQ(mdl, hand_calculated_mdl);
+}
+
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithDenseUpdates) {
     double E_before = entropy::mdl(B, 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, 1, 23, B, Updates, new_block_degrees);
