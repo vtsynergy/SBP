@@ -60,6 +60,18 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
 /// `num_edges` edges.
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 
+/// Computes the normalized minimum description length using `null_mdl_v1`.
+double normalize_mdl_v1(double mdl, int num_edges);
+
+/// Computes the normalized minimum description length using `null_mdl_v2`.
+double normalize_mdl_v2(double mdl, int num_vertices, int num_edges);
+
+/// Computes the minimum description length of the null model with only one block.
+double null_mdl_v1(int num_edges);
+
+/// Computes the minimum description length of the null model with as many blocks as there are vertices.
+double null_mdl_v2(int num_vertices, int num_edges);
+
 // TODO: add an undirected mdl
 // TODO: add undirected delta_mdl functions
 

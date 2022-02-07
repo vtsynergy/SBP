@@ -523,6 +523,34 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
     return p_backward / p_forward;
 }
 
+double normalize_mdl_v1(double mdl, int num_edges) {
+    return mdl / null_mdl_v1(num_edges);
+}
+
+double normalize_mdl_v2(double mdl, int num_vertices, int num_edges) {
+    return mdl / null_mdl_v2(num_vertices, num_edges);
+}
+
+double null_mdl_v1(int num_edges) {
+    double log_posterior_p = num_edges * log(1.0 / num_edges);
+    double x = 1.0 / num_edges;
+    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    return (num_edges * h) - log_posterior_p;
+}
+
+double null_mdl_v2(int num_vertices, int num_edges) {
+    // NOTE: this cannot be safely calculated with floats for graphs with > ~100,000,000 vertices.
+    // calculate log_posterior_probability
+    double v_squared = double(num_vertices) * double(num_vertices);
+    double cell_value = v_squared / num_edges;
+    double temp = cell_value * v_squared;  // TODO: this is potentially a very large number - break it up?
+    double log_posterior_p = temp * log(temp / (double(num_edges) * double(num_edges)));
+    // done calculating log_posterior_probability
+    double x = pow(num_vertices, 2) / num_edges;
+    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+    return (num_edges * h) + (num_vertices * log(num_vertices)) - log_posterior_p;
+}
+
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges) {
     double log_posterior_p = blockmodel.log_posterior_probability();
     double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
@@ -539,6 +567,6 @@ double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges) 
     return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
 }
 
-}
+}  // namespace dist
 
-}
+}  // namespace entropy
