@@ -15,8 +15,7 @@ namespace sbp {
 void write_results(float iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
     file << args.tag << "," << graph.num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
-    file << entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()) << "," << mdl << ",";
-    file << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
+    file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
     file << entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges()) << ",";
     file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
@@ -34,7 +33,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     std::ofstream file;
     file.open(filepath, std::ios_base::app);
     file << "tag, numvertices, overlap, blocksizevar, undirected, algorithm, iteration, mdl, normalized_mdl_v1, ";
-    file << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation";
+    file << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation" << std::endl;
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
@@ -53,15 +52,16 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     write_results(0, file, graph, blockmodel, initial_mdl);
     std::cout << "Null model MDL v1 = " << null_model_mdl_v1 << " v2 = " << null_model_mdl_v2 << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
-    int iteration = 0;
+    float iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
-        if (iteration == 0) {
-            write_results(0.5, file, graph, blockmodel, initial_mdl);
+        if (iteration < 1) {
+            double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+            write_results(0.5, file, graph, blockmodel, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs")
