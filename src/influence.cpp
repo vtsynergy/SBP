@@ -762,7 +762,7 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
     std::cout << "influence took " << influence_duration.count() << "/" << full_duration.count() << " seconds ("
               << 100.0 * double(influence_duration.count()) / double(full_duration.count()) << ")" << std::endl;
     double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_minimal_csv(csv_row, mdl, f1, tag);
 }
 
@@ -803,7 +803,7 @@ void stochastic_block_partition_neighbor_influence_comparison(Graph &graph, cons
         }
     }
     double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_neighbor_csv(csv_row, mdl, f1, tag);
 }
 

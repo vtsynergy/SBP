@@ -49,8 +49,8 @@ int main(int argc, char* argv[]) {
         Blockmodel blockmodel = sbp::dist::stochastic_block_partition(graph, args);
         double end = MPI_Wtime();
         if (mpi.rank == 0) {
-            double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
-            std::cout << "Final F1 score = " << f1 << std::endl;
+            evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
+            std::cout << "Final F1 score = " << result.f1_score << std::endl;
             std::cout << "Community detection runtime = " << end - start << "s" << std::endl;
         }
         // double avg_f1;
@@ -67,8 +67,8 @@ int main(int argc, char* argv[]) {
         Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> runtime = end - start;
-        double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
-        std::cout << "Final F1 score = " << f1 << std::endl;
+        evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
+        std::cout << "Final F1 score = " << result.f1_score << std::endl;
         std::cout << "Community detection runtime = " << runtime.count() << "s" << std::endl;
     }
 
