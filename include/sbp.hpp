@@ -14,6 +14,19 @@
 
 namespace sbp {
 
+/// Stores intermediate information for later printing.
+struct Intermediate {
+    float iteration;
+    double mdl;
+    double normalized_mdl_v1;
+    double normalized_mdl_v2;
+    double modularity;
+    double interblock_edges;
+    double block_size_variation;
+};
+
+std::vector<Intermediate> get_intermediates();
+
 /// Performs community detection on the provided graph, using the stochastic block partitioning algorithm
 Blockmodel stochastic_block_partition(Graph &graph, Args &args);
 

@@ -16,7 +16,7 @@ namespace evaluate {
 struct Eval {
     double f1_score;
     double nmi;
-    double true_entropy;
+    double true_mdl;
 };
 
 double calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table);

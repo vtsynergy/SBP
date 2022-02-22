@@ -8,6 +8,7 @@
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "entropy.hpp"
 #include "evaluate.hpp"
 #include "graph.hpp"
 #include "mpi_data.hpp"
@@ -27,6 +28,35 @@
 MPI_t mpi;
 Args args;
 
+void write_results(const Graph &graph, const evaluate::Eval &eval) {
+    std::vector<sbp::Intermediate> intermediate_results = sbp::get_intermediates();
+    std::ostringstream filepath_stream;
+    filepath_stream << "./mdl_results/" << args.numvertices;
+    std::string filepath_dir = filepath_stream.str();
+    filepath_stream << "/" << args.type << ".csv";
+    std::string filepath = filepath_stream.str();
+    bool file_exists = fs::exists(filepath);
+    std::cout << std::boolalpha <<  "writing results to " << filepath << " exists = " << file_exists << std::endl;
+    fs::create_directories(fs::path(filepath_dir));
+    std::ofstream file;
+    file.open(filepath, std::ios_base::app);
+    if (!file_exists) {
+        file << "tag, numvertices, overlap, blocksizevar, undirected, algorithm, iteration, mdl, normalized_mdl_v1, "
+             << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, nmi, true_mdl, "
+             << "true_mdl_v1, true_mdl_v2" << std::endl;
+    }
+    for (const sbp::Intermediate &temp : intermediate_results) {
+        file << args.tag << ", " << graph.num_vertices() << ", " << args.overlap << ", " << args.blocksizevar << ", "
+             << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", " << temp.mdl << ", "
+             << temp.normalized_mdl_v1 << ", " << temp.normalized_mdl_v2 << ", " << temp.modularity << ", "
+             << temp.interblock_edges << ", " << temp.block_size_variation << ", " << eval.f1_score << ", "
+             << eval.nmi << ", " << eval.true_mdl << ", "
+             << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
+             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << std::endl;
+    }
+    file.close();
+}
+
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // int rank, num_processes;
@@ -36,6 +66,7 @@ int main(int argc, char* argv[]) {
     // std::cout << "rank: " << mpi.rank << " np: " << mpi.num_processes << std::endl;
 
     args = Args(argc, argv);
+
     if (mpi.rank == 0) {
         std::cout << "Number of processes = " << mpi.num_processes << std::endl;
         // std::cout << "Parsed out the arguments" << std::endl;
@@ -52,6 +83,7 @@ int main(int argc, char* argv[]) {
             evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
             std::cout << "Final F1 score = " << result.f1_score << std::endl;
             std::cout << "Community detection runtime = " << end - start << "s" << std::endl;
+            write_results(graph, result);
         }
         // double avg_f1;
         // Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
@@ -70,6 +102,7 @@ int main(int argc, char* argv[]) {
         evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
         std::cout << "Final F1 score = " << result.f1_score << std::endl;
         std::cout << "Community detection runtime = " << runtime.count() << "s" << std::endl;
+        write_results(graph, result);
     }
 
     MPI_Finalize();
