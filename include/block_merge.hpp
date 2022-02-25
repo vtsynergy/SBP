@@ -59,7 +59,7 @@ ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockm
 namespace dist {
 
 /// Merges entire blocks (communities) in blockmodel together in a distributed fashion.
-TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
+TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph, int num_edges);
 
 }  // namespace dist
 

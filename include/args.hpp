@@ -60,7 +60,7 @@ class Args {
                                                     false, "\t", "string, usually `\\t` or `,`", parser);
             TCLAP::ValueArg<std::string> _distribute("", "distribute", "The distribution scheme to use. Default = "
                                                      "2hop-snowball", false, "2hop-snowball", "none | 2hop-round-robin "
-                                                     "| 2hop-size-balanced | 2hop-snowball", parser);
+                                                     "| 2hop-size-balanced | 2hop-snowball | 2hop-super-snowball", parser);
             TCLAP::ValueArg<std::string> _directory("d", "directory",
                                 "The directory in which the graph is stored. The following structure is assumed:\n"
                                 "filename for graph:"
