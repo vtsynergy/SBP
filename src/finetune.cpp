@@ -23,6 +23,7 @@ bool accept(double delta_entropy, double hastings_correction) {
 }
 
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+    std::cout << "Asynchronous Gibbs iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }
@@ -408,6 +409,7 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Gr
 }
 
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+    std::cout << "Metropolis hastings iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }

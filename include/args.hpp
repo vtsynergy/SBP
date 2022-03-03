@@ -3,6 +3,7 @@
 #define TCLAP_WRAPPER_ARGS
 
 #include <iostream>
+#include <limits.h>
 #include <omp.h>
 #include <string>
 
@@ -14,6 +15,7 @@ class Args {
     /** Define all the arguments here for easy access */
     std::string algorithm;
     bool approximate;
+    int asynciterations;
     int batches;
     std::string blocksizevar;
     std::string csv;  // TODO: save results in a csv file
@@ -45,6 +47,9 @@ class Args {
             TCLAP::SwitchArg _approximate("", "approximate", "If set, an approximate version of the block merge "
                                           "step will be used. It's slightly faster, but less accurate for complex "
                                           "graphs.", parser, false);
+            TCLAP::ValueArg<int> _async_iterations("", "asynciterations", "The number of asynchronous iterations to "
+                                                   "run before switching to metropolis hastings.", false,
+                                                   std::numeric_limits<int>::max(), "[1, infinity]", parser);
             TCLAP::ValueArg<int> _batches("", "batches", "The number of batches to use for the asynchronous_gibbs "
                                           "algorithm. Too many batches will lead to many updates and little parallelism,"
                                           " but too few will lead to poor results or more iterations", false, 10, "int",
@@ -93,6 +98,7 @@ class Args {
             parser.parse(argc, argv);
             this->algorithm = _algorithm.getValue();
             this->approximate = _approximate.getValue();
+            this->asynciterations = _async_iterations.getValue();
             this->batches = _batches.getValue();
             this->blocksizevar = _blocksizevar.getValue();
             this->csv = _csv.getValue();

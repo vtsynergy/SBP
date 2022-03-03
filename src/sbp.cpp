@@ -74,7 +74,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
 //            write_results(0.5, file, graph, blockmodel, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
-        if (args.algorithm == "async_gibbs")
+        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else  // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
@@ -122,6 +122,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
                   << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
+    int iteration = 0;
     while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
@@ -129,11 +130,12 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         }
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
         if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
-        if (args.algorithm == "async_gibbs")
+        if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
             blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        iteration++;
     }
     std::cout << "Total MCMC iterations: " << finetune::num_iterations << std::endl;
     return blockmodel;
