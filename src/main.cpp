@@ -31,7 +31,7 @@ Args args;
 void write_results(const Graph &graph, const evaluate::Eval &eval) {
     std::vector<sbp::Intermediate> intermediate_results = sbp::get_intermediates();
     std::ostringstream filepath_stream;
-    filepath_stream << "./mdl_results/" << args.numvertices;
+    filepath_stream << args.csv << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
     filepath_stream << "/" << args.type << ".csv";
     std::string filepath = filepath_stream.str();
