@@ -32,22 +32,6 @@ typedef struct proposal_evaluation_t {
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
                                     const std::vector<int> &best_merge_for_each_block, int num_edges);
 
-/// Computes the change in entropy under a proposed block merge.
-double compute_delta_entropy(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
-                             EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
-
-/// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
-double compute_delta_entropy_sparse(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
-                                    SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
-
-/// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
-double compute_delta_entropy_sparse(int current_block, const Blockmodel &blockmodel, const Delta &delta,
-                                    common::NewBlockDegrees &block_degrees);
-
-/// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
-double compute_delta_entropy(int current_block, utils::ProposalAndEdgeCounts proposal, const Blockmodel &blockmodel,
-                             const Delta &delta);
-
 /// Returns the potential changes to the blockmodel if `current_block` was merged into `proposed_block`.
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel);
 

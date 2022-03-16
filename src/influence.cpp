@@ -13,6 +13,7 @@
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "block_merge.hpp"
+#include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
 #include "graph.hpp"
@@ -88,7 +89,7 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
         Blockmodel blockmodel(block_number, graph.out_neighbors(), 0.5, modified_assignment);
 //        std::cout << "log_posterior_prob: " << blockmodel.log_posterior_probability() << " exp(log_p) = " << std::exp(blockmodel.log_posterior_probability()) << std::endl;
         if (mdl)
-            distribution[block] = 0.0 - finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
+            distribution[block] = 0.0 - entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         else  // use log posterior probability
             distribution[block] = blockmodel.log_posterior_probability();
     }
@@ -137,7 +138,7 @@ std::vector<double> neighbor_conditional_distribution(const Graph &graph, const 
         }
         Blockmodel blockmodel(block_number, graph.out_neighbors(), 0.5, modified_assignment);
         if (mdl)
-            distribution.push_back(0.0 - finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges()));
+            distribution.push_back(0.0 - entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
         else  // use log posterior probability
             distribution.push_back(blockmodel.log_posterior_probability());
     }
@@ -760,8 +761,8 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
     auto influence_duration = std::chrono::duration_cast<std::chrono::seconds>(t2);
     std::cout << "influence took " << influence_duration.count() << "/" << full_duration.count() << " seconds ("
               << 100.0 * double(influence_duration.count()) / double(full_duration.count()) << ")" << std::endl;
-    double mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
-    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+    double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_minimal_csv(csv_row, mdl, f1, tag);
 }
 
@@ -801,8 +802,8 @@ void stochastic_block_partition_neighbor_influence_comparison(Graph &graph, cons
 //            csv_row.push_back(compute_influence(graph, blockmodel, false, true));
         }
     }
-    double mdl = finetune::overall_entropy(blockmodel, graph.num_vertices(), graph.num_edges());
-    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel);
+    double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_neighbor_csv(csv_row, mdl, f1, tag);
 }
 

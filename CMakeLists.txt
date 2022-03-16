@@ -7,7 +7,7 @@ set(CMAKE_C_COMPILER mpicc)
 set(CMAKE_CXX_COMPILER mpic++)
 
 # set the project name
-project(DistributedSBP VERSION 2021.08.29)
+project(DistributedSBP VERSION 2022.02.04)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -18,60 +18,61 @@ add_subdirectory(extern/abseil-cpp)
 add_subdirectory(extern/robin-map)
 
 set(INCLUDE_DIRS
-    include
-    include/blockmodel
-    include/blockmodel/sparse
-    extern/tclap-1.2.2/include
-    patches
-    extern/hungarian
-    extern/abseil-cpp
-    extern/robin-map/include
+        include
+        include/blockmodel
+        include/blockmodel/sparse
+        extern/tclap-1.2.2/include
+        patches
+        extern/hungarian
+        extern/abseil-cpp
+        extern/robin-map/include
         )
 
 # add the executable
 add_library(SBP STATIC
-    graph.cpp
-    utils.cpp
-    sbp.cpp
-    evaluate.cpp
-    common.cpp
-    finetune.cpp
-    block_merge.cpp
-    partition.cpp
-    blockmodel/blockmodel.cpp
-    blockmodel/blockmodel_triplet.cpp
-    blockmodel/dist_blockmodel.cpp
-    blockmodel/sparse/dict_matrix.cpp
-    blockmodel/sparse/dict_transpose_matrix.cpp
-#    blockmodel/sparse/dist_dict_matrix.cpp
+        src/graph.cpp
+        src/utils.cpp
+        src/sbp.cpp
+        src/entropy.cpp
+        src/evaluate.cpp
+        src/common.cpp
+        src/finetune.cpp
+        src/block_merge.cpp
+        src/partition.cpp
+        src/blockmodel/blockmodel.cpp
+        src/blockmodel/blockmodel_triplet.cpp
+        src/blockmodel/dist_blockmodel.cpp
+        src/blockmodel/sparse/dict_matrix.cpp
+        src/blockmodel/sparse/dict_transpose_matrix.cpp
+        #    blockmodel/sparse/dist_dict_matrix.cpp
         )
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DistributedSBP main.cpp)
+add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(Influence influence.cpp)
+add_executable(Influence src/influence.cpp)
 target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
 
-if(DEBUG)
-#    To check for heap overflows and such, use -fsanitize=address
-#    To run with valgrind, do NOT use -fsanitize=address
+if (DEBUG)
+    #    To check for heap overflows and such, use -fsanitize=address
+    #    To run with valgrind, do NOT use -fsanitize=address
     target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
     target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
     target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
-#    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
-#    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
-#    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
-#    target_link_libraries(Influence PUBLIC SBP -g3)
-else(DEBUG)
-#    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
-#    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs)
+    #    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
+    #    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
+    #    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
+    #    target_link_libraries(Influence PUBLIC SBP -g3)
+else (DEBUG)
+    #    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
+    #    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs)
     target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
     target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map)
     target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map)
-endif(DEBUG)
+endif (DEBUG)
 
 # Google Test Suite
 enable_testing()
@@ -82,9 +83,10 @@ add_executable(Test
         test/common_test.cpp
         test/dict_matrix_test.cpp
         test/dict_transpose_matrix_test.cpp
+        test/entropy_test.cpp
+        test/evaluate_test.cpp
         test/finetune_test.cpp
-        test/toy_example.hpp
-        test/evaluate_test.cpp)
+        test/toy_example.hpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)

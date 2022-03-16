@@ -115,8 +115,8 @@
 //    void num_blocks_to_merge(int num) { this->_num_blocks_to_merge = num; }
 //    int &num_blocks() { return this->_num_blocks; }
 //    void num_blocks(int num) { this->_num_blocks = num; }
-//    float &overall_entropy() { return this->_overall_entropy; }
-//    void overall_entropy(float entropy) { this->_overall_entropy = entropy; }
+//    float &mdl() { return this->_overall_entropy; }
+//    void mdl(float entropy) { this->_overall_entropy = entropy; }
 //    // std::vector<int> &ownership() { return this->_ownership; }
 //    // int &ownership(int block) { return this->_ownership[block]; }
 //    // void ownership(std::vector<int> new_ownership) { this->_ownership = new_ownership; }
