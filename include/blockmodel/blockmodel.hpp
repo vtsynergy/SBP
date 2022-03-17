@@ -89,10 +89,8 @@ class Blockmodel {
     double difficulty_score() const;
     /// TODO
     void initialize_edge_counts(const NeighborList &neighbors);
-    /// TODO
+    /// Calculates the log posterior probability of this blockmodel.
     double log_posterior_probability() const;
-    /// TODO
-    double log_posterior_probability(int num_edges) const;
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.

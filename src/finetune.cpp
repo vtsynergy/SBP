@@ -313,8 +313,7 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
             entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
                                          new_block_degrees);
     double delta_entropy =
-            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-                               new_block_degrees);
+            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     if (accept(delta_entropy, hastings))
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     return VertexMove{delta_entropy, false, -1, -1};
@@ -366,8 +365,7 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAnd
             entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
                                          new_block_degrees);
     double delta_entropy =
-            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-                               new_block_degrees);
+            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                                new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);

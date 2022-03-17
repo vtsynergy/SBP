@@ -214,26 +214,8 @@ double Blockmodel::log_posterior_probability() const {
     }
     std::vector<double> temp = values * utils::nat_log<double>(
         values / (degrees_out * degrees_in));
-    return utils::sum<double>(temp);
-}
-
-double Blockmodel::log_posterior_probability(int num_edges) const {
-    if (args.undirected) {
-        Indices nonzero_indices = this->_blockmatrix->nonzero();
-        std::vector<double> values = utils::to_double<int>(this->_blockmatrix->values());
-        std::vector<double> degrees_in;
-        std::vector<double> degrees_out;
-        for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
-            // This is OK bcause _block_degrees_in == _block_degrees_out == _block_degrees
-            degrees_in.push_back(this->_block_degrees_in[nonzero_indices.cols[i]] / (2.0));
-            degrees_out.push_back(this->_block_degrees_out[nonzero_indices.rows[i]] / (2.0));
-        }
-        std::vector<double> temp = values * utils::nat_log<double>(
-            (values / (2.0)) / (degrees_out * degrees_in));
-        double result = 0.5 * utils::sum<double>(temp);
-        return result;
-    }
-    return log_posterior_probability();
+    auto log_posterior = utils::sum<double>(temp);
+    return args.undirected ? 0.5 * log_posterior : log_posterior;
 }
 
 void Blockmodel::update_block_assignment(int from_block, int to_block) {

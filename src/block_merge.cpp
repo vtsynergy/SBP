@@ -325,8 +325,7 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double delta_entropy =
-            entropy::block_merge_delta_mdl(current_block, proposal.proposal, num_edges, blockmodel, updates,
-                                  new_block_degrees);
+            entropy::block_merge_delta_mdl(current_block, proposal.proposal, blockmodel, updates, new_block_degrees);
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 

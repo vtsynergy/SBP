@@ -102,6 +102,7 @@ protected:
 };
 
 class BlockMergeTest : public ToyExample {
+public:
     void SetUp() override {
         ToyExample::SetUp();
         Updates = EdgeCountUpdates();

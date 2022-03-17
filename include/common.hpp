@@ -39,7 +39,7 @@ inline float cell_entropy(float value, float degree_in, float degree_out) {
     //     std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
     //     throw std::invalid_argument("something is wrong");
     // }
-    return entropy;
+    return args.undirected ? float(0.5 * entropy) : entropy;
     // return value * std::log(value / degree_in / degree_out);
 }
 
@@ -56,14 +56,13 @@ NewBlockDegrees compute_new_block_degrees(int current_block, const Blockmodel &b
                                           int proposed_block_self_edges, utils::ProposalAndEdgeCounts &proposal);
 
 /// Computes the entropy of one row or column of data.
-double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);
+double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
 
 // /// Computes the entropy of one row or column of sparse data
 // double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &_block_degrees, int degree);
 
 /// Computes the entropy of one row or column of sparse data.
-double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                          int num_edges);
+double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
 
 // /// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`
 // double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &_block_degrees, int degree,
@@ -71,7 +70,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 
 /// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`.
 double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                          int current_block, int proposal, int num_edges);
+                          int current_block, int proposal);
 
 /// Removes entries from in whose index is index1 or index
 std::vector<int> exclude_indices(const std::vector<int> &in, int index1, int index2);
@@ -101,34 +100,34 @@ int propose_random_block(int current_block, int num_blocks);
 /// Returns a random integer between low and high
 int random_integer(int low, int high);
 
-namespace directed {
+//namespace directed {
 
 /// Computes the entropy of one row or column of data for a directed graph.
-double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
+//double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree);
+//
+///// Computes the entropy of one row or column of sparse data for a directed graph.
+//double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
+//
+///// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`, for a
+///// directed graph.
+//double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+//                          int current_block, int proposal);
+//}
 
-/// Computes the entropy of one row or column of sparse data for a directed graph.
-double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree);
-
-/// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`, for a
-/// directed graph.
-double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                          int current_block, int proposal);
-}
-
-namespace undirected {
-
-/// Computes the entropy of one row or column of data for an undirected graph.
-double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);
-
-/// Computes the entropy of one row or column of sparse data for an undirected graph.
-double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                          int num_edges);
-
-/// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`, for an
-/// undirected graph.
-double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
-                          int current_block, int proposal, int num_edges);
-}
+//namespace undirected {
+//
+///// Computes the entropy of one row or column of data for an undirected graph.
+//double delta_entropy_temp(std::vector<int> &row_or_col, std::vector<int> &block_degrees, int degree, int num_edges);
+//
+///// Computes the entropy of one row or column of sparse data for an undirected graph.
+//double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+//                          int num_edges);
+//
+///// Computes the entropy of one row or column of sparse data, ignoring indices `current_block` and `proposal`, for an
+///// undirected graph.
+//double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
+//                          int current_block, int proposal, int num_edges);
+//}
 
 namespace dist {
 

@@ -11,11 +11,11 @@
 namespace entropy {
 
 /// Computes the change in entropy under a proposed block merge.
-double block_merge_delta_mdl(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+double block_merge_delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
-double block_merge_delta_mdl(int current_block, int proposal, int num_edges, const Blockmodel &blockmodel,
+double block_merge_delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
@@ -29,13 +29,13 @@ double block_merge_delta_mdl(int current_block, utils::ProposalAndEdgeCounts pro
 
 /// Computes the change in blockmodel minimum description length when a vertex moves from `current_block` to `proposal`.
 /// Uses a dense version of `updates` to the blockmodel, and requires pre-calculated updated `block_degrees`.
-double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
-                 EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, EdgeCountUpdates &updates,
+                 common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in blockmodel minimum description length when a vertex moves from `current_block` to `proposal`.
 /// Uses a sparse version of `updates` to the blockmodel, and requires pre-calculated updated `block_degrees`.
-double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, int num_edges,
-                 SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
+double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, SparseEdgeCountUpdates &updates,
+                 common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in blockmodel minimum description length when a vertex moves from one block to another. Uses
 /// changes to the blockmodel, stored in `delta`, to perform the computation, and does not require pre-calculated
@@ -56,8 +56,8 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
 double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
                            int current_block, const utils::ProposalAndEdgeCounts &proposal);
 
-/// Calculates the minimum description length of `blockmodel` for a directed graph with `num_vertices` vertices and
-/// `num_edges` edges.
+/// Calculates the minimum description length of `blockmodel` for a graph with `num_vertices` vertices and
+/// `num_edges` edges. Calls `undirected_mdl` if args.undirected == True.
 double mdl(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 
 /// Computes the normalized minimum description length using `null_mdl_v1`.
@@ -77,7 +77,7 @@ double null_mdl_v2(long num_vertices, long num_edges);
 
 namespace dist {
 
-/// Computes the overall entropy of the given blockmodel for a directed graph.
+/// Computes the overall entropy of the given blockmodel.
 double mdl(const TwoHopBlockmodel &blockmodel, int num_vertices, int num_edges);
 
 // TODO: add an undirected distributed mdl
