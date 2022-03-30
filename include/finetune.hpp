@@ -23,7 +23,7 @@
  ******************/
 namespace finetune {
 
-extern int num_iterations;
+extern int MCMC_iterations;
 
 typedef struct vertex_move_t {
     double delta_entropy;

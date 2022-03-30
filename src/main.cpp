@@ -43,7 +43,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval) {
     if (!file_exists) {
         file << "tag, numvertices, overlap, blocksizevar, undirected, algorithm, iteration, mdl, normalized_mdl_v1, "
              << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, nmi, true_mdl, "
-             << "true_mdl_v1, true_mdl_v2" << std::endl;
+             << "true_mdl_v1, true_mdl_v2, mcmc_iterations" << std::endl;
     }
     for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << args.overlap << ", " << args.blocksizevar << ", "
@@ -52,7 +52,8 @@ void write_results(const Graph &graph, const evaluate::Eval &eval) {
              << temp.interblock_edges << ", " << temp.block_size_variation << ", " << eval.f1_score << ", "
              << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
-             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << std::endl;
+             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << ", "
+             << temp.mcmc_iterations << std::endl;
     }
     file.close();
 }

@@ -34,11 +34,11 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     double interblock_edges = blockmodel.interblock_edges();
     double block_size_variation = blockmodel.block_size_variation();
     intermediate_results.push_back(Intermediate { iteration, mdl, normalized_mdl_v1, normalized_mdl_v2,
-            modularity, interblock_edges, block_size_variation });
+            modularity, interblock_edges, block_size_variation, finetune::MCMC_iterations });
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
               << " v2 normalized: " << normalized_mdl_v2 << " modularity: " << modularity
               << " interblock edge %: " << interblock_edges << " block size variation: " << block_size_variation
-              << std::endl;
+              << " MCMC iterations: " << finetune::MCMC_iterations << std::endl;
 }
 
 Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
@@ -49,17 +49,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), float(BLOCK_REDUCTION_RATE));
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-//    double initial_modularity = graph.modularity(blockmodel.block_assignment());
-//    double null_model_mdl_v1 = entropy::null_mdl_v1(graph.num_edges());
-//    double null_model_mdl_v2 = entropy::null_mdl_v2(graph.num_vertices(), graph.num_edges());
-//    std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
-//              << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
-//    std::cout << "Initial MDL = " << initial_mdl
-//              << " log posterior probability = " << blockmodel.log_posterior_probability(graph.num_edges())
-//              << " Modularity = " << initial_modularity << std::endl;
     add_intermediate(0, graph, blockmodel, initial_mdl);
-//    write_results(0, file, graph, blockmodel, initial_mdl);
-//    std::cout << "Null model MDL v1 = " << null_model_mdl_v1 << " v2 = " << null_model_mdl_v2 << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     float iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
@@ -71,7 +61,6 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         if (iteration < 1) {
             double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
             add_intermediate(0.5, graph, blockmodel, mdl);
-//            write_results(0.5, file, graph, blockmodel, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
@@ -80,15 +69,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
 //        iteration++;
         add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
-//        write_results(iteration, file, graph, blockmodel, blockmodel.getOverall_entropy());
-//        std::cout << "Iteration " << iteration << ": MDL = " << blockmodel.getOverall_entropy()
-//                  << " log posterior probability = " << blockmodel.log_posterior_probability(graph.num_edges())
-//                  << " Modularity = " << graph.modularity(blockmodel.block_assignment()) << std::endl;
-//        std::cout << "interblock E = " << blockmodel.interblock_edges() << " var = "
-//                  << blockmodel.block_size_variation() << " composite = " << blockmodel.difficulty_score() << std::endl;
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
-//    file.close();
     return blockmodel;
 }
 
@@ -137,7 +119,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         iteration++;
     }
-    std::cout << "Total MCMC iterations: " << finetune::num_iterations << std::endl;
+    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
     return blockmodel;
 }
 
