@@ -178,6 +178,8 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
             // Get count
             int neighbor = vertex_neighbors[i];
             int neighbor_block = this->_block_assignment[neighbor];
+            if (args.undirected && block == neighbor_block && neighbor > vertex)
+                continue;  // prevent double counting (e.g.: 1 -- 2 && 2 -- 1) in undirected graphs
             // TODO: change this once code is updated to support weighted graphs
             int weight = 1;
             // int weight = vertex_neighbors[i];
@@ -191,6 +193,7 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
                 this->_block_degrees[neighbor_block] += weight;
         }
     }
+
 }
 
 double Blockmodel::interblock_edges() const {

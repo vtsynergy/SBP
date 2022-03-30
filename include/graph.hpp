@@ -28,6 +28,7 @@
 // TODO: replace _out_neighbors and _in_neighbors with our DictTransposeMatrix
 class Graph {
 public:
+    // TODO: figure out how to get rid of in_neighbors for undirected graphs (save some space)
     Graph(NeighborList &out_neighbors, NeighborList &in_neighbors, int num_vertices, int num_edges,
           const std::vector<int> &assignment = std::vector<int>()) {
         this->_out_neighbors = out_neighbors;
