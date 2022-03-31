@@ -28,7 +28,7 @@
 MPI_t mpi;
 Args args;
 
-void write_results(const Graph &graph, const evaluate::Eval &eval) {
+void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::Intermediate> intermediate_results = sbp::get_intermediates();
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
@@ -43,7 +43,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval) {
     if (!file_exists) {
         file << "tag, numvertices, overlap, blocksizevar, undirected, algorithm, iteration, mdl, normalized_mdl_v1, "
              << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, nmi, true_mdl, "
-             << "true_mdl_v1, true_mdl_v2" << std::endl;
+             << "true_mdl_v1, true_mdl_v2, runtime" << std::endl;
     }
     for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << args.overlap << ", " << args.blocksizevar << ", "
@@ -52,7 +52,8 @@ void write_results(const Graph &graph, const evaluate::Eval &eval) {
              << temp.interblock_edges << ", " << temp.block_size_variation << ", " << eval.f1_score << ", "
              << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
-             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << std::endl;
+             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << ", "
+             << runtime << std::endl;
     }
     file.close();
 }
@@ -83,7 +84,7 @@ int main(int argc, char* argv[]) {
             evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
             std::cout << "Final F1 score = " << result.f1_score << std::endl;
             std::cout << "Community detection runtime = " << end - start << "s" << std::endl;
-            write_results(graph, result);
+            write_results(graph, result, end - start);
         }
         // double avg_f1;
         // Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
@@ -102,7 +103,7 @@ int main(int argc, char* argv[]) {
         evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
         std::cout << "Final F1 score = " << result.f1_score << std::endl;
         std::cout << "Community detection runtime = " << runtime.count() << "s" << std::endl;
-        write_results(graph, result);
+        write_results(graph, result, runtime.count());
     }
 
     MPI_Finalize();
