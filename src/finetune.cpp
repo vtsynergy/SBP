@@ -11,7 +11,7 @@
 
 namespace finetune {
 
-int num_iterations = 0;
+int MCMC_iterations = 0;
 std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
@@ -60,6 +60,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
         std::cout << delta_entropy / initial_entropy << std::endl;
         total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
             break;
@@ -276,14 +277,6 @@ VertexMove eval_vertex_move(int vertex, int current_block, utils::ProposalAndEdg
     if (args.nodelta)
         return eval_vertex_move_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
-//    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-//                                   + delta.get(current_block, current_block);
-////                                   + get(delta, std::make_pair(current_block, current_block));
-//    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-//                                    + delta.get(proposal.proposal, proposal.proposal);
-////                                    + get(delta, std::make_pair(proposal.proposal, proposal.proposal));
-//    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
@@ -297,13 +290,6 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
                                     EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-//    int self_edge_weight = 0;
-//    for (uint i = 0; i < out_edges.indices.size(); ++i) {
-//        if (out_edges.indices[i] == vertex) {
-//            self_edge_weight = out_edges.values[i];
-//            break;
-//        }
-//    }
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
     int current_block_self_edges = updates.block_row[current_block];
@@ -328,13 +314,6 @@ VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCoun
     Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
                                    blockmodel);
 
-//    int current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-//                                   + delta.get(current_block, current_block);
-//    int proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-//                                    + delta.get(proposal.proposal, proposal.proposal);
-//    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
@@ -350,13 +329,6 @@ VertexMove move_vertex_nodelta(int vertex, int current_block, utils::ProposalAnd
                                EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-//    int self_edge_weight = 0;
-//    for (uint i = 0; i < out_edges.indices.size(); ++i) {
-//        if (out_edges.indices[i] == vertex) {
-//            self_edge_weight = out_edges.values[i];
-//            break;
-//        }
-//    }
     SparseEdgeCountUpdates updates;
     edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
     int current_block_self_edges = updates.block_row[current_block];
@@ -430,6 +402,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
         std::cout << delta_entropy << std::endl;
         total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, blockmodels, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
@@ -529,7 +502,6 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     double t0;
     double t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-        num_iterations++;
         int vertex_moves = 0;
         double num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices() / num_batches));
@@ -561,7 +533,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             // MPI COMMUNICATION
             int rank_moves[mpi.num_processes];
             t1 = MPI_Wtime();
-            my_file << mpi.rank << "," << num_iterations << "," << t1 - t0 << std::endl;
+            my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
             MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
             int offsets[mpi.num_processes];
             offsets[0] = 0;
@@ -590,6 +562,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
             break;
@@ -630,7 +603,6 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         // Block assignment used to re-create the Blockmodel after each iteration to incorporate moves from other ranks
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates;
-        num_iterations++;
         int vertex_moves = 0;
         for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
             if (!blockmodel.owns_vertex(vertex)) continue;
@@ -645,7 +617,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         // MPI COMMUNICATION
         int rank_moves[mpi.num_processes];
         t1 = MPI_Wtime();
-        my_file << mpi.rank << "," << num_iterations << "," << t1 - t0 << std::endl;
+        my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
         MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
         int offsets[mpi.num_processes];
         offsets[0] = 0;
@@ -673,6 +645,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
             break;
         }

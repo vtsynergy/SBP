@@ -23,6 +23,7 @@ struct Intermediate {
     double modularity;
     double interblock_edges;
     double block_size_variation;
+    int mcmc_iterations;
 };
 
 std::vector<Intermediate> get_intermediates();

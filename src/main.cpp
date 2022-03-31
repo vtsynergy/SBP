@@ -43,7 +43,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     if (!file_exists) {
         file << "tag, numvertices, overlap, blocksizevar, undirected, algorithm, iteration, mdl, normalized_mdl_v1, "
              << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, nmi, true_mdl, "
-             << "true_mdl_v1, true_mdl_v2, runtime" << std::endl;
+             << "true_mdl_v1, true_mdl_v2, runtime, mcmc_iterations" << std::endl;
     }
     for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << args.overlap << ", " << args.blocksizevar << ", "
@@ -53,7 +53,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
              << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << ", "
-             << runtime << std::endl;
+             << runtime << ", " << temp.mcmc_iterations << std::endl;
     }
     file.close();
 }
