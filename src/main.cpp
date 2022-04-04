@@ -45,7 +45,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, nmi, true_mdl, "
              << "true_mdl_v1, true_mdl_v2, runtime, mcmc_iterations" << std::endl;
     }
-    for (const sbp::Intermediate &temp : intermediate_results) {
+    for (const sbp::Intermediate temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << args.overlap << ", " << args.blocksizevar << ", "
              << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", " << temp.mdl << ", "
              << temp.normalized_mdl_v1 << ", " << temp.normalized_mdl_v2 << ", " << temp.modularity << ", "

@@ -33,8 +33,16 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     double modularity = graph.modularity(blockmodel.block_assignment());
     double interblock_edges = blockmodel.interblock_edges();
     double block_size_variation = blockmodel.block_size_variation();
-    intermediate_results.push_back(Intermediate { iteration, mdl, normalized_mdl_v1, normalized_mdl_v2,
-            modularity, interblock_edges, block_size_variation, finetune::MCMC_iterations });
+    Intermediate intermediate {};
+    intermediate.iteration = iteration;
+    intermediate.mdl = mdl;
+    intermediate.normalized_mdl_v1 = normalized_mdl_v1;
+    intermediate.normalized_mdl_v2 = normalized_mdl_v2;
+    intermediate.modularity = modularity;
+    intermediate.interblock_edges = interblock_edges;
+    intermediate.block_size_variation = block_size_variation;
+    intermediate.mcmc_iterations = finetune::MCMC_iterations;
+    intermediate_results.push_back(intermediate);
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
               << " v2 normalized: " << normalized_mdl_v2 << " modularity: " << modularity
               << " interblock edge %: " << interblock_edges << " block size variation: " << block_size_variation
