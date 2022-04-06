@@ -43,7 +43,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(blockmodel.block_assignment());
-#pragma omp parallel for schedule(dynamic) default(none) \
+            #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment)
             for (int vertex = start; vertex < end; ++vertex) {
                 VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);

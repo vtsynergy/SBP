@@ -5,6 +5,13 @@ void DictTransposeMatrix::add(int row, int col, int val) {
     check_row_bounds(row);
     check_col_bounds(col);
     this->matrix[row][col] += val;
+//    this->matrix_transpose[col][row] += val;
+}
+
+void DictTransposeMatrix::add_transpose(int row, int col, int val) {
+    // TODO: bound checking includes branching, may get rid of it for performance
+    check_row_bounds(row);
+    check_col_bounds(col);
     this->matrix_transpose[col][row] += val;
 }
 

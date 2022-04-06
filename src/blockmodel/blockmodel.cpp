@@ -154,43 +154,130 @@ Blockmodel Blockmodel::from_sample(int num_blocks, NeighborList &neighbors, std:
     return Blockmodel(num_blocks, neighbors, block_reduction_rate, _block_assignment);
 }
 
-void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+//void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+//    double start = omp_get_wtime();
+////    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
+//    /// TODO: this recreates the matrix (possibly unnecessary)
+//    if (args.transpose) {
+//        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+//    } else {
+//        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+//    }
+//    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
+//    this->_block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+//    this->_block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+//    this->_block_degrees = utils::constant<int>(this->num_blocks, 0);
+//    // Initialize the blockmodel
+//    // TODO: find a way to parallelize the matrix filling step
+//    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+//        std::vector<int> vertex_neighbors = neighbors[vertex];
+//        if (vertex_neighbors.empty()) {
+//            continue;
+//        }
+//        int block = this->_block_assignment[vertex];
+//        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
+//            // Get count
+//            int neighbor = vertex_neighbors[i];
+//            int neighbor_block = this->_block_assignment[neighbor];
+//            // TODO: change this once code is updated to support weighted graphs
+//            int weight = 1;
+//            // int weight = vertex_neighbors[i];
+//            // Update blockmodel
+//            this->_blockmatrix->add(block, neighbor_block, weight);
+//            // Update degrees
+//            this->_block_degrees_out[block] += weight;
+//            this->_block_degrees_in[neighbor_block] += weight;
+//            this->_block_degrees[block] += weight;
+//            if (block != neighbor_block)
+//                this->_block_degrees[neighbor_block] += weight;
+//        }
+//    }
+//    double end = omp_get_wtime();
+//    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
+//}
+
+void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {  // Parallel version!
+//    double start = omp_get_wtime();
 //    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
     /// TODO: this recreates the matrix (possibly unnecessary)
+    std::shared_ptr<ISparseMatrix> blockmatrix;
     if (args.transpose) {
-        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
     } else {
-        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->_block_degrees_in = utils::constant<int>(this->num_blocks, 0);
-    this->_block_degrees_out = utils::constant<int>(this->num_blocks, 0);
-    this->_block_degrees = utils::constant<int>(this->num_blocks, 0);
+    std::vector<int> block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    std::vector<int> block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    std::vector<int> block_degrees = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.empty()) {
-            continue;
+    #pragma omp parallel default(none) \
+    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, neighbors, std::cout, args)
+    {
+        int tid = omp_get_thread_num();
+        int num_threads = omp_get_num_threads();
+        int my_num_blocks = ceil(double(this->num_blocks) / double(num_threads));
+        int start = my_num_blocks * tid;
+        int end = start + my_num_blocks;
+        for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+            std::vector<int> vertex_neighbors = neighbors[vertex];
+            if (vertex_neighbors.empty()) {
+                continue;
+            }
+            int block = this->_block_assignment[vertex];
+//            std::cout << "vertex = " << vertex << " and block = " << block << std::endl;
+            if (block < start || block >= end)  // only modify blocks this thread is responsible for
+                continue;
+            for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
+                // Get count
+                int neighbor = vertex_neighbors[i];
+                int neighbor_block = this->_block_assignment[neighbor];
+                // TODO: change this once code is updated to support weighted graphs
+                int weight = 1;
+                // int weight = vertex_neighbors[i];
+                // Update blockmodel
+                blockmatrix->add(block, neighbor_block, weight);
+                // Update degrees
+                block_degrees_out[block] += weight;
+                #pragma omp atomic
+                block_degrees_in[neighbor_block] += weight;
+                block_degrees[block] += weight;
+                if (block != neighbor_block) {
+                    #pragma omp atomic
+                    block_degrees[neighbor_block] += weight;
+                }
+            }
         }
-        int block = this->_block_assignment[vertex];
-        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
-            // Get count
-            int neighbor = vertex_neighbors[i];
-            int neighbor_block = this->_block_assignment[neighbor];
-            // TODO: change this once code is updated to support weighted graphs
-            int weight = 1;
-            // int weight = vertex_neighbors[i];
-            // Update blockmodel
-            this->_blockmatrix->add(block, neighbor_block, weight);
-            // Update degrees
-            this->_block_degrees_out[block] += weight;
-            this->_block_degrees_in[neighbor_block] += weight;
-            this->_block_degrees[block] += weight;
-            if (block != neighbor_block)
-                this->_block_degrees[neighbor_block] += weight;
+        if (args.transpose) {  // Update the transpose matrix
+            #pragma omp barrier
+            for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+                std::vector<int> vertex_neighbors = neighbors[vertex];
+                if (vertex_neighbors.empty()) {
+                    continue;
+                }
+                int block = this->_block_assignment[vertex];
+                for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
+                    int neighbor = vertex_neighbors[i];
+                    int neighbor_block = this->_block_assignment[neighbor];
+                    if (neighbor_block < start || neighbor_block >= end)  // only modify blocks this thread is responsible for
+                        continue;
+                    // TODO: change this once code is updated to support weighted graphs
+                    int weight = 1;
+                    // int weight = vertex_neighbors[i];
+                    // Update blockmodel
+                    std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
+                    blockmatrix_dtm->add_transpose(block, neighbor_block, weight);
+                }
+            }
         }
-    }
+    }  // OMP_PARALLEL
+    this->_blockmatrix = std::move(blockmatrix);
+    this->_block_degrees_out = std::move(block_degrees_out);
+    this->_block_degrees_in = std::move(block_degrees_in);
+    this->_block_degrees = std::move(block_degrees);
+//    double end = omp_get_wtime();
+//    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
 }
 
 double Blockmodel::interblock_edges() const {

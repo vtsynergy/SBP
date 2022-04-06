@@ -32,6 +32,7 @@ class DictTransposeMatrix : public ISparseMatrix {
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
     virtual void add(int row, int col, int val) override;
+    virtual void add_transpose(int row, int col, int val);
     // virtual void add(int row, std::vector<int> cols, std::vector<int> values) override;
     /// Clears the value in a given row. Complexity ~O(number of blocks).
     virtual void clearrow(int row) override;
