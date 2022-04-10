@@ -35,10 +35,10 @@ typedef struct new_block_degrees_t {
 inline float cell_entropy(float value, float degree_in, float degree_out) {
     if (value == 0.0) return 0.0;
     float entropy = value * logf(value / (degree_in * degree_out));
-    // if (std::isnan(entropy) || std::isinf(entropy)) {
-    //     std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
-    //     throw std::invalid_argument("something is wrong");
-    // }
+    /* if (std::isnan(entropy) || std::isinf(entropy)) {
+        std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
+        throw std::invalid_argument("something is wrong");
+    } */
     return entropy;
     // return value * std::log(value / degree_in / degree_out);
 }

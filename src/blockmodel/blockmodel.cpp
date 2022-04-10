@@ -240,13 +240,13 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {  // Par
                 blockmatrix->add(block, neighbor_block, weight);
                 // Update degrees
                 block_degrees_out[block] += weight;
-                #pragma omp atomic
-                block_degrees_in[neighbor_block] += weight;
+                // #pragma omp atomic
+                // block_degrees_in[neighbor_block] += weight;
                 block_degrees[block] += weight;
-                if (block != neighbor_block) {
-                    #pragma omp atomic
-                    block_degrees[neighbor_block] += weight;
-                }
+                // if (block != neighbor_block) {
+                //     #pragma omp atomic
+                //     block_degrees[neighbor_block] += weight;
+                // }
             }
         }
         if (args.transpose) {  // Update the transpose matrix
@@ -268,6 +268,11 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {  // Par
                     // Update blockmodel
                     std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
                     blockmatrix_dtm->add_transpose(block, neighbor_block, weight);
+                    // Update degrees
+                    block_degrees_in[neighbor_block] += weight;
+                    if (block != neighbor_block) {
+                        block_degrees[neighbor_block] += weight;
+                    }
                 }
             }
         }
@@ -298,6 +303,11 @@ double Blockmodel::log_posterior_probability() const {
     for (uint i = 0; i < nonzero_indices.rows.size(); ++i) {
         degrees_in.push_back(this->_block_degrees_in[nonzero_indices.cols[i]]);
         degrees_out.push_back(this->_block_degrees_out[nonzero_indices.rows[i]]);
+    }
+    for (uint i = 0; i < values.size(); ++i) {
+        if (degrees_in[i] == 0.0 || degrees_out[i] == 0.0) {
+            std::cout << "value: " << values[i] << " degree_in: " << degrees_in[i] << " degree_out: " << degrees_out[i] << std::endl;
+        }
     }
     std::vector<double> temp = values * utils::nat_log<double>(
         values / (degrees_out * degrees_in));
@@ -371,8 +381,8 @@ void Blockmodel::move_vertex(int vertex, const Delta &delta, utils::ProposalAndE
                                     + delta.get(proposal.proposal, proposal.proposal);
     this->_block_degrees_out[current_block] -= proposal.num_out_neighbor_edges;
     this->_block_degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
-    this->_block_degrees_in[current_block] -= proposal.num_in_neighbor_edges;
-    this->_block_degrees_in[proposal.proposal] += proposal.num_in_neighbor_edges;
+    this->_block_degrees_in[current_block] -= (proposal.num_in_neighbor_edges + delta.self_edge_weight());
+    this->_block_degrees_in[proposal.proposal] += (proposal.num_in_neighbor_edges + delta.self_edge_weight());
     this->_block_degrees[current_block] = this->_block_degrees_out[current_block] +
             this->_block_degrees_in[current_block] - current_block_self_edges;
     this->_block_degrees[proposal.proposal] = this->_block_degrees_out[proposal.proposal] +

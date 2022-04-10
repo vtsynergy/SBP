@@ -27,14 +27,18 @@ private:
     MapVector<int> _proposed_block_col;
     int _current_block;
     int _proposed_block;
+    int _self_edge_weight;
+
 public:
     Delta() {
         this->_current_block = -1;
         this->_proposed_block = -1;
+        this->_self_edge_weight = 0;
     }
     Delta(int current_block, int proposed_block, int buckets = 10) {
         this->_current_block = current_block;
         this->_proposed_block = proposed_block;
+        this->_self_edge_weight = 0;
         this->_current_block_row = MapVector<int>(buckets);
         this->_proposed_block_row = MapVector<int>(buckets);
         this->_current_block_col = MapVector<int>(buckets);
@@ -44,6 +48,7 @@ public:
           const MapVector<int> &proposed_row, const MapVector<int> &proposed_col) {
         this->_current_block = current_block;
         this->_proposed_block = proposed_block;
+        this->_self_edge_weight = 0;
         this->zero_init(block_row, block_col, proposed_row, proposed_col);
     }
     /// Adds `value` as the delta to cell matrix[`row`,`col`].
@@ -87,6 +92,14 @@ public:
         else if (col == this->_proposed_block)
             return map_vector::get(this->_proposed_block_col, row);
         throw std::logic_error("Neither the row nor column are current_block or proposed_block.");
+    }
+    /// Returns the weight of the self edge for this move, if any.
+    int self_edge_weight() const {
+        return this->_self_edge_weight;
+    }
+    /// Sets the weight of the self edge for this move, if any.
+    void self_edge_weight(int weight) {
+        this->_self_edge_weight = weight;
     }
     /// Adds -`value` (negative `value`) as the delta to cell matrix[`row`,`col`].
     void sub(int row, int col, int value) {

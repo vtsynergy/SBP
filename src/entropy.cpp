@@ -298,12 +298,12 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
     double delta_entropy = 0.0;
     int current_block = delta.current_block();
     int proposed_block = delta.proposed_block();
-    auto get_deg_in = [&blockmodel, &proposal, current_block, proposed_block](int index) -> float {
+    auto get_deg_in = [&blockmodel, &proposal, &delta, current_block, proposed_block](int index) -> float {
         int value = blockmodel.degrees_in(index);
         if (index == current_block)
-            value -= proposal.num_in_neighbor_edges;
+            value -= (proposal.num_in_neighbor_edges + delta.self_edge_weight());
         else if (index == proposed_block)
-            value += proposal.num_in_neighbor_edges;
+            value += (proposal.num_in_neighbor_edges + delta.self_edge_weight());
         return float(value);
     };
     auto get_deg_out = [&blockmodel, &proposal, current_block, proposed_block](int index) -> float {
@@ -320,8 +320,25 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         int change = std::get<2>(entry);
         delta_entropy += common::cell_entropy((float) matrix->get(row, col), (float) blockmodel.degrees_in(col),
                                               (float) blockmodel.degrees_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << matrix->get(row, col) << " delta: " << change << std::endl;
+            utils::print<int>(blockmodel.blockmatrix()->getrow_sparse(row));
+            utils::print<int>(blockmodel.blockmatrix()->getcol_sparse(col));
+            std::cout << "d_out[row]: " << blockmodel.degrees_out(row) << " d_in[col]: " << blockmodel.degrees_in(row) << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta for old bm when delta != 0");
+        }
         delta_entropy -= common::cell_entropy(float(matrix->get(row, col) + change), get_deg_in(col),
                                               get_deg_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << matrix->get(row, col) << " delta: " << change;
+            std::cout << " current: " << current_block << " proposed: " << proposed_block << std::endl;
+            utils::print<int>(blockmodel.blockmatrix()->getrow_sparse(row));
+            utils::print<int>(blockmodel.blockmatrix()->getcol_sparse(col));
+            std::cout << "d_out[row]: " << blockmodel.degrees_out(row) << " d_in[col]: " << blockmodel.degrees_in(col) << std::endl;
+            std::cout << "new d_out[row]: " << get_deg_out(row) << " d_in[col]: " << get_deg_in(col) << std::endl;
+            std::cout << "v_out: " << proposal.num_out_neighbor_edges << " v_in: " << proposal.num_in_neighbor_edges << " v_total: " << proposal.num_neighbor_edges << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta for new bm when delta != 0");
+        }
     }
     // Compute change in entropy for cells with no delta
     for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
@@ -333,6 +350,10 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         delta_entropy += common::cell_entropy((float) value, (float) blockmodel.degrees_in(col),
                                               (float) blockmodel.degrees_out(row));
         delta_entropy -= common::cell_entropy((float) value, get_deg_in(col), get_deg_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << value << " delta: 0" << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = current block");
+        }
     }
     for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         int row = proposed_block;
@@ -343,6 +364,10 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         delta_entropy += common::cell_entropy((float) value, (float) blockmodel.degrees_in(col),
                                               (float) blockmodel.degrees_out(row));
         delta_entropy -= common::cell_entropy((float) value, get_deg_in(col), get_deg_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << value << " delta: 0" << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = proposed block");
+        }
     }
     for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         int row = entry.first;
@@ -353,6 +378,10 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         delta_entropy += common::cell_entropy((float) value, (float) blockmodel.degrees_in(col),
                                               (float) blockmodel.degrees_out(row));
         delta_entropy -= common::cell_entropy((float) value, get_deg_in(col), get_deg_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << value << " delta: 0" << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta when delta = 0 and col = current block");
+        }
     }
     for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         int row = entry.first;
@@ -363,6 +392,10 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         delta_entropy += common::cell_entropy((float) value, (float) blockmodel.degrees_in(col),
                                               (float) blockmodel.degrees_out(row));
         delta_entropy -= common::cell_entropy((float) value, get_deg_in(col), get_deg_out(row));
+        if (std::isnan(delta_entropy) || std::isinf(delta_entropy)) {
+            std::cout << delta_entropy << " for row: " << row << " col: " << col << " val: " << value << " delta: 0" << std::endl;
+            throw std::invalid_argument("nan/inf in bm delta when delta = 0 and col = proposed block");
+        }
     }
     return delta_entropy;
 }

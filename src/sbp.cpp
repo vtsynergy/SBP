@@ -8,6 +8,7 @@
 #include "mpi_data.hpp"
 
 #include "assert.h"
+#include <fenv.h>
 #include <sstream>
 
 namespace sbp {
@@ -19,12 +20,14 @@ std::vector<Intermediate> get_intermediates() {
 }
 
 void write_results(float iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
+    // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     file << args.tag << "," << graph.num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
     file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
     file << entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges()) << ",";
     file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
+    // feenableexcept(FE_INVALID | FE_OVERFLOW);
 }
 
 void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
@@ -32,7 +35,9 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     double normalized_mdl_v2 = entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges());
     double modularity = graph.modularity(blockmodel.block_assignment());
     double interblock_edges = blockmodel.interblock_edges();
+    // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     double block_size_variation = blockmodel.block_size_variation();
+    // feenableexcept(FE_INVALID | FE_OVERFLOW);
     Intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;

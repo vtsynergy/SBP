@@ -1,6 +1,7 @@
 
 #include <chrono>
 #include <execinfo.h>
+#include <fenv.h>  // break on nans or infs
 #include <iostream>
 #include <mpi.h>
 #include <signal.h>
@@ -97,6 +98,8 @@ int main(int argc, char* argv[]) {
         // }
     } else {
         auto start = std::chrono::steady_clock::now();
+        // feenableexcept(FE_INVALID | FE_OVERFLOW);
+        //    feenableexcept(FE_ALL_EXCEPT);
         Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> runtime = end - start;

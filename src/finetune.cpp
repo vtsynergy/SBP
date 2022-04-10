@@ -7,6 +7,7 @@
 #include "typedefs.hpp"
 
 #include <cassert>
+#include <fenv.h>
 #include <iostream>
 
 namespace finetune {
@@ -15,10 +16,14 @@ int MCMC_iterations = 0;
 std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
+    // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     double random_probability = distribution(common::generator);
+    // std::cout << "dE: " << delta_entropy << " hastings correction: " << hastings_correction << std::endl;
+    // TODO: if delta_entropy > X (or less than?) return true (accept the move)
     double accept_probability = exp(-3.0 * delta_entropy) * hastings_correction;
     accept_probability = (accept_probability >= 1.0) ? 1.0 : accept_probability;
+    // feenableexcept(FE_INVALID | FE_OVERFLOW);
     return random_probability <= accept_probability;
 }
 
@@ -104,6 +109,7 @@ Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const 
         int edge_weight = out_edges.values[i];
         if (vertex == out_vertex) {
             delta.add(proposed_block, proposed_block, edge_weight);
+            delta.self_edge_weight(1);
         } else {
             delta.add(proposed_block, out_block, edge_weight);
         }
@@ -115,6 +121,7 @@ Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const 
         int edge_weight = in_edges.values[i];
         if (vertex == in_vertex) {
             delta.add(proposed_block, proposed_block, edge_weight);
+            delta.self_edge_weight(1);
         } else {
             delta.add(in_block, proposed_block, edge_weight);
         }
@@ -377,6 +384,18 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Gr
     if (proposal.proposal == current_block) {
         return VertexMove{0.0, did_move, -1, -1};
     }
+    /**if (blockmodel.degrees_in(proposal.proposal) == 0 && proposal.num_in_neighbor_edges == 0) {
+        std::cout << "out neighbors for " << vertex << " --> " << proposal.proposal << ": ";
+        for (int n : graph.out_neighbors(vertex)) {
+            std::cout << n << " (" << blockmodel.block_assignment(n) << "), ";
+        }
+        std::cout << std::endl;
+        std::cout << "in neighbors for " << vertex << " --> " << proposal.proposal << ": ";
+        for (int n : graph.in_neighbors(vertex)) {
+            std::cout << n << " (" << blockmodel.block_assignment(n) << "), ";
+        }
+        std::cout << std::endl;
+    }*/
     return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
