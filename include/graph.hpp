@@ -35,6 +35,24 @@ public:
         this->_num_vertices = num_vertices;
         this->_num_edges = num_edges;
         this->_assignment = assignment;
+        this->_high_degree_vertex = MapVector<bool>();
+        std::vector<int> vertex_degrees;
+        for (int vertex = 0; vertex < num_vertices; ++vertex) {
+            // TODO: check for self-edges
+            // Currently this is an approximation, since self-edges are double-counted
+            vertex_degrees.push_back(int(out_neighbors[vertex].size() + in_neighbors[vertex].size()));
+        }
+        std::vector<int> indices = utils::range<int>(0, num_vertices);
+        std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
+                  [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
+        for (int index = 0; index < num_vertices; ++index) {
+            int vertex = indices[index];
+            if (index < 0.05 * num_vertices) {
+                this->_high_degree_vertex[vertex] = true;
+            } else {
+                this->_high_degree_vertex[vertex] = false;
+            }
+        }
     }
     Graph() = default;
     /// Loads the graph. Assumes the file is saved in the following directory:
@@ -57,6 +75,8 @@ public:
     const NeighborList &in_neighbors() const { return this->_in_neighbors; }
     /// Returns a const reference to the in neighbors of vertex `v`
     const std::vector<int> &in_neighbors(int v) const { return this->_in_neighbors[v]; }
+    /// Returns true if vertex is a high-degree vertex
+    bool is_high_degree_vertex(int v) const { return this->_high_degree_vertex.at(v); }
     /// Calculates the modularity of this graph given a particular vertex-to-block `assignment`
     double modularity(const std::vector<int> &assignment) const;
     /// Returns the number of edges in this graph
@@ -68,17 +88,19 @@ public:
     /// Returns a const reference to the out neighbors of vertex `v`
     const std::vector<int> &out_neighbors(int v) const { return this->_out_neighbors[v]; }
 private:
-    /// For every vertex, stores the outgoing neighbors as a std::vector<int>
-    NeighborList _out_neighbors;
+    /// For every vertex, stores the community they belong to.
+    /// If assignment[v] = -1, then the community of v is not known
+    std::vector<int> _assignment;
+    /// Stores true if vertex is one of the highest degree vertices
+    MapVector<bool> _high_degree_vertex;
     /// For every vertex, stores the incoming neighbors as a std::vector<int>
     NeighborList _in_neighbors;
+    /// For every vertex, stores the outgoing neighbors as a std::vector<int>
+    NeighborList _out_neighbors;
     /// The number of vertices in the graph
     int _num_vertices;
     /// The number of edges in the graph
     int _num_edges;
-    /// For every vertex, stores the community they belong to.
-    /// If assignment[v] = -1, then the community of v is not known
-    std::vector<int> _assignment;
     /// Parses a directed graph from csv contents
     static void parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
                                std::vector<std::vector<std::string>> &contents);

@@ -26,7 +26,7 @@ class Args {
     int numvertices;
     std::string overlap;
     std::string partition;
-    std::string tag;  // TODO: add tag to saved results
+    std::string tag;
     int threads;
     bool transpose;
     std::string type;
@@ -43,7 +43,7 @@ class Args {
             TCLAP::ValueArg<std::string> _algorithm("a", "algorithm", "The algorithm to use for the finetuning/MCMC "
                                                     "step of stochastic block blockmodeling. Note: there is currently no "
                                                     "parallel implementation of metropolis hastings", false,
-                                                    "async_gibbs", "async_gibbs|metropolis_hastings", parser);
+                                                    "async_gibbs", "async_gibbs|metropolis_hastings|hybrid_mcmc", parser);
             TCLAP::SwitchArg _approximate("", "approximate", "If set, an approximate version of the block merge "
                                           "step will be used. It's slightly faster, but less accurate for complex "
                                           "graphs.", parser, false);
