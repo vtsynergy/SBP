@@ -35,7 +35,7 @@ public:
         this->_num_vertices = num_vertices;
         this->_num_edges = num_edges;
         this->_assignment = assignment;
-        this->_high_degree_vertex = MapVector<bool>();
+//        this->_high_degree_vertex = MapVector<bool>();
         std::vector<int> vertex_degrees;
         for (int vertex = 0; vertex < num_vertices; ++vertex) {
             // TODO: check for self-edges
@@ -47,10 +47,12 @@ public:
                   [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
         for (int index = 0; index < num_vertices; ++index) {
             int vertex = indices[index];
-            if (index < 0.05 * num_vertices) {
-                this->_high_degree_vertex[vertex] = true;
+            if (index < 0.02 * num_vertices) {
+                this->_high_degree_vertices.push_back(vertex);
+//                this->_high_degree_vertex[vertex] = true;
             } else {
-                this->_high_degree_vertex[vertex] = false;
+                this->_low_degree_vertices.push_back(vertex);
+//                this->_high_degree_vertex[vertex] = false;
             }
         }
     }
@@ -75,8 +77,12 @@ public:
     const NeighborList &in_neighbors() const { return this->_in_neighbors; }
     /// Returns a const reference to the in neighbors of vertex `v`
     const std::vector<int> &in_neighbors(int v) const { return this->_in_neighbors[v]; }
+    /// Returns the list of high degree vertices
+    const std::vector<int> &high_degree_vertices() const { return this->_high_degree_vertices; }
+    /// Returns the list of low degree vertices
+    const std::vector<int> &low_degree_vertices() const { return this->_low_degree_vertices; }
     /// Returns true if vertex is a high-degree vertex
-    bool is_high_degree_vertex(int v) const { return this->_high_degree_vertex.at(v); }
+//    bool is_high_degree_vertex(int v) const { return this->_high_degree_vertex.at(v); }
     /// Calculates the modularity of this graph given a particular vertex-to-block `assignment`
     double modularity(const std::vector<int> &assignment) const;
     /// Returns the number of edges in this graph
@@ -92,7 +98,11 @@ private:
     /// If assignment[v] = -1, then the community of v is not known
     std::vector<int> _assignment;
     /// Stores true if vertex is one of the highest degree vertices
-    MapVector<bool> _high_degree_vertex;
+//    MapVector<bool> _high_degree_vertex;
+    /// Stores a list of the high degree vertices
+    std::vector<int> _high_degree_vertices;
+    /// Stores a list of the low degree vertices
+    std::vector<int> _low_degree_vertices;
     /// For every vertex, stores the incoming neighbors as a std::vector<int>
     NeighborList _in_neighbors;
     /// For every vertex, stores the outgoing neighbors as a std::vector<int>

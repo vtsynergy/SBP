@@ -323,30 +323,37 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet 
     int total_vertex_moves = 0;
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     double initial_entropy = blockmodel.getOverall_entropy();
+    double num_batches = args.batches;
+//        int batch_size = int(ceil(graph.num_vertices() / num_batches));
+    int num_low_degree_vertices = int(graph.low_degree_vertices().size());
+    int batch_size = int(ceil(num_low_degree_vertices / num_batches));
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         int vertex_moves = 0;
         double delta_entropy = 0.0;
-        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            if (!graph.is_high_degree_vertex(vertex)) continue;  // Only run Metropolis-Hastings on high-degree vertices
+        for (int vertex : graph.high_degree_vertices()) {
+//        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+//            if (!graph.is_high_degree_vertex(vertex)) continue;  // Only run Metropolis-Hastings on high-degree vertices
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
                 delta_entropy += proposal.delta_entropy;
             }
         }
-        double num_batches = args.batches;
-        int batch_size = int(ceil(graph.num_vertices() / num_batches));
-        for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
+//        for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
+        for (int batch = 0; batch < num_low_degree_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
-            int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
+            int end = std::min(num_low_degree_vertices, (batch + 1) * batch_size);
+//            int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(blockmodel.block_assignment());
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment)
-            for (int vertex = start; vertex < end; ++vertex) {
-                if (graph.is_high_degree_vertex(vertex)) continue;  // only process low-degree vertices
+            for (int index = start; index < end; ++index) {
+                int vertex = graph.low_degree_vertices()[index];
+//            for (int vertex = start; vertex < end; ++vertex) {
+//                if (graph.is_high_degree_vertex(vertex)) continue;  // only process low-degree vertices
                 VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     #pragma omp atomic
