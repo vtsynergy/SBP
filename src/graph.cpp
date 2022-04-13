@@ -46,6 +46,8 @@ Graph Graph::load(Args &args) {
             }
             assignment[vertex] = community;
         }
+    } else {
+        assignment = utils::constant(num_vertices, 0);
     }
     return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
 }

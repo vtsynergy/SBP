@@ -47,7 +47,7 @@ public:
                   [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
         for (int index = 0; index < num_vertices; ++index) {
             int vertex = indices[index];
-            if (index < 0.02 * num_vertices) {
+            if (index < 0.075 * num_vertices) {
                 this->_high_degree_vertices.push_back(vertex);
 //                this->_high_degree_vertex[vertex] = true;
             } else {
