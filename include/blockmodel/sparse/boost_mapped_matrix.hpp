@@ -4,6 +4,8 @@
 #ifndef CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP
 #define CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP
 
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+
 #include "csparse_matrix.hpp"
 // TODO: figure out where to put utils.hpp so this never happens
 #include "../../utils.hpp"

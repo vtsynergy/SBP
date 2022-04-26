@@ -116,9 +116,13 @@ dmypy.json
 .pyre/
 
 # Custom added
-# VSCode stuff
+# IDE stuff
 *.code-workspace
 **/.vscode
+.idea
+
+# CMake stuff
+cmake-build-debug/
 
 # Data and trial runs
 **/eval
@@ -126,8 +130,15 @@ dmypy.json
 *.py
 *.ipynb
 r0*/
+*r0*/
 vtune*
+generator/test_*
+generator/version*
 
 # output files
 main
 *.o
+*.out
+*.csv
+*.xlsx
+*.png
