@@ -18,6 +18,7 @@ public:
         this->_num_vertices = num_vertices;
         this->_num_edges = 0;
         this->_self_edges = utils::constant<bool>(num_vertices, false);
+        this->_assignment = utils::constant<int>(num_vertices, -1);
         while (this->_out_neighbors.size() < size_t(num_vertices)) {
             this->_out_neighbors.push_back(std::vector<int>());
         }

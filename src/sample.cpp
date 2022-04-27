@@ -14,7 +14,7 @@ Sample max_degree(const Graph &graph) {
     for (int index = 0; index < int(args.samplesize * float(graph.num_vertices())); ++index) {
         int vertex = indices[index];
         sampled.push_back(vertex);
-        mapping[vertex] = index;  // from full graph ID to full graph ID
+        mapping[vertex] = index;  // from full graph ID to sample graph ID
     }
     Graph sampled_graph(int(sampled.size()));
     for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
@@ -26,7 +26,9 @@ Sample max_degree(const Graph &graph) {
             if (neighbor_id == -1) continue;
             sampled_graph.add_edge(vertex_id, neighbor_id);
         }
+        sampled_graph.assign(vertex_id, graph.assignment(vertex));
     }
+    // TODO: re-map the assignments
     return Sample { sampled_graph, mapping };
 }
 
