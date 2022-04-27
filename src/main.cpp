@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
-    Graph graph = Graph::load(args);
+    Graph graph = Graph::load();
 
     if (mpi.num_processes > 1) {
         MPI_Barrier(MPI_COMM_WORLD);  // keep start - end as close as possible for all processes

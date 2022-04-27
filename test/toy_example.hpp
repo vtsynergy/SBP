@@ -19,6 +19,7 @@ class ToyExample : public ::testing::Test {
 protected:
     // My variables
     std::vector<int> assignment;
+    std::vector<bool> self_edges;
     Blockmodel B, B2;
     utils::ProposalAndEdgeCounts Proposal;
     Graph graph;
@@ -56,6 +57,7 @@ protected:
         int num_vertices = 11;
         int num_edges = (int) edges.size();
         assignment = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
+        self_edges = { true, false, false, false, false, true, false, false, false, false, true };
         NeighborList out_neighbors;
         NeighborList in_neighbors;
         for (const std::vector<int> &edge : edges) {
@@ -64,7 +66,7 @@ protected:
             utils::insert_nodup(out_neighbors, from , to);
             utils::insert_nodup(in_neighbors, to, from);
         }
-        graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
+        graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
         B = Blockmodel(3, graph.out_neighbors(), 0.5, assignment);
         new_block_degrees.block_degrees_out = { 10, 7, 6 };
         new_block_degrees.block_degrees_in = { 12, 7, 4 };

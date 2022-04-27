@@ -509,6 +509,7 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
     int num_edges = (int) graph_edges.size();
     NeighborList out_neighbors;
     NeighborList in_neighbors;
+    std::vector<bool> self_edges;
     for (const std::vector<int> &edge : graph_edges) {
         int from = edge[0];
         int to = edge[1];
@@ -516,6 +517,12 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
         utils::insert_nodup(in_neighbors, to, from);
         int max_v = std::max(from + 1, to + 1);
         num_vertices = std::max(max_v, num_vertices);
+        while (self_edges.size() < num_vertices) {
+            self_edges.push_back(false);
+        }
+        if (from == to) {
+            self_edges[from] = true;
+        }
     }
     while (out_neighbors.size() < size_t(num_vertices)) {
         out_neighbors.push_back(std::vector<int>());
@@ -524,7 +531,7 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
         in_neighbors.push_back(std::vector<int>());
     }
     std::vector<int> assignment = utils::range<int>(0, num_vertices);
-    Graph graph(out_neighbors, in_neighbors, num_vertices, num_edges, assignment);
+    Graph graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
     return graph;
 }
 
@@ -809,7 +816,7 @@ void stochastic_block_partition_neighbor_influence_comparison(Graph &graph, cons
 
 int main(int argc, char* argv[]) {
     args = Args(argc, argv);
-    Graph G = Graph::load(args);
+    Graph G = Graph::load();
 //    Graph G = to_graph(Graph1);
     stochastic_block_partition(G, args.tag);
 //    stochastic_block_partition_neighbor_influence_comparison(G, args.tag);
