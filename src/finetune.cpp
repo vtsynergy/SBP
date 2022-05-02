@@ -501,6 +501,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, Blockmodel
 }
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
+    std::cout << "Fine-tuning partition results after sample results have been extended to full graph" << std::endl;
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     int total_vertex_moves = 0;

@@ -1,19 +1,21 @@
 
 #include <chrono>
-#include <execinfo.h>
-#include <fenv.h>  // break on nans or infs
+//#include <execinfo.h>
+//#include <fenv.h>  // break on nans or infs
 #include <iostream>
 #include <mpi.h>
-#include <signal.h>
+//#include <signal.h>
 #include <string>
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
+#include "finetune.hpp"
 #include "graph.hpp"
 #include "mpi_data.hpp"
 #include "partition.hpp"
+#include "sample.hpp"
 #include "sbp.hpp"
 
 
@@ -28,6 +30,11 @@
 
 MPI_t mpi;
 Args args;
+
+struct Partition {
+    Graph graph;
+    Blockmodel blockmodel;
+};
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::Intermediate> intermediate_results = sbp::get_intermediates();
@@ -59,6 +66,30 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     file.close();
 }
 
+void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
+    if (mpi.rank != 0) return;
+    evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
+    std::cout << "Final F1 score = " << result.f1_score << std::endl;
+    std::cout << "Community detection runtime = " << runtime << "s" << std::endl;
+    write_results(graph, result, runtime);
+}
+
+void run(Partition &partition) {
+    if (mpi.num_processes > 1) {
+//        MPI_Barrier(MPI_COMM_WORLD);  // keep start - end as close as possible for all processes
+//        double start = MPI_Wtime();
+        partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args);
+//        double end = MPI_Wtime();
+//        if (mpi.rank == 0)
+//        evaluate_partition(partition.graph, partition.blockmodel, end - start);
+    } else {
+//        auto start = std::chrono::steady_clock::now();
+        partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args);
+//        auto end = std::chrono::steady_clock::now();
+//        evaluate_partition(partition.graph, partition.blockmodel, std::chrono::duration<double>(end - start).count());
+    }
+}
+
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // int rank, num_processes;
@@ -74,40 +105,31 @@ int main(int argc, char* argv[]) {
         // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
-    Graph graph = Graph::load();
-
-    if (mpi.num_processes > 1) {
-        MPI_Barrier(MPI_COMM_WORLD);  // keep start - end as close as possible for all processes
-        double start = MPI_Wtime();
-        Blockmodel blockmodel = sbp::dist::stochastic_block_partition(graph, args);
-        double end = MPI_Wtime();
-        if (mpi.rank == 0) {
-            evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
-            std::cout << "Final F1 score = " << result.f1_score << std::endl;
-            std::cout << "Community detection runtime = " << end - start << "s" << std::endl;
-            write_results(graph, result, end - start);
-        }
-        // double avg_f1;
-        // Graph partition = partition::partition(graph, mpi.rank, mpi.num_processes, args);
-        // Blockmodel partial_blockmodel = sbp::stochastic_block_partition(partition, args);
-        // double f1 = evaluate::evaluate_blockmodel(partition, partial_blockmodel);
-        // MPI_Reduce(&f1, &avg_f1, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        // if (mpi.rank == 0) {
-        //     avg_f1 /= mpi.num_processes;
-        //     std::cout << "Average F1 Score across " << mpi.num_processes << " partitions = " << avg_f1 << std::endl;
-        // }
+    Partition partition;
+    partition.graph = Graph::load();
+    double start = MPI_Wtime();
+    if (args.samplesize <= 0.0) {
+        std::cerr << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
+        exit(-5);
+    } else if (args.samplesize < 1.0) {
+        std::cout << "Running sampling with size: " << args.samplesize << std::endl;
+        sample::Sample s = sample::max_degree(partition.graph);
+        Partition sample_partition;
+        sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
+        // add timer
+        run(sample_partition);
+        s.graph = std::move(sample_partition.graph);  // refill s.graph
+        // extend sample to full graph
+        partition.blockmodel = sample::extend(partition.graph, sample_partition.blockmodel, s);
+        // fine-tune full graph
+        partition.blockmodel = finetune::finetune_assignment(partition.blockmodel, partition.graph);
     } else {
-        auto start = std::chrono::steady_clock::now();
-        // feenableexcept(FE_INVALID | FE_OVERFLOW);
-        //    feenableexcept(FE_ALL_EXCEPT);
-        Blockmodel blockmodel = sbp::stochastic_block_partition(graph, args);
-        auto end = std::chrono::steady_clock::now();
-        std::chrono::duration<double> runtime = end - start;
-        evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
-        std::cout << "Final F1 score = " << result.f1_score << std::endl;
-        std::cout << "Community detection runtime = " << runtime.count() << "s" << std::endl;
-        write_results(graph, result, runtime.count());
+        std::cout << "Running without sampling." << std::endl;
+        run(partition);
     }
+    // evaluate
+    double end = MPI_Wtime();
+    evaluate_partition(partition.graph, partition.blockmodel, end - start);
 
     MPI_Finalize();
 }

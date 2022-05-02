@@ -275,6 +275,28 @@ void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {  // Par
                     }
                 }
             }
+        } else {  // Still need to update block_degrees_in
+            #pragma omp barrier
+            for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
+                std::vector<int> vertex_neighbors = neighbors[vertex];
+                if (vertex_neighbors.empty()) {
+                    continue;
+                }
+                int block = this->_block_assignment[vertex];
+                for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
+                    int neighbor = vertex_neighbors[i];
+                    int neighbor_block = this->_block_assignment[neighbor];
+                    if (neighbor_block < start || neighbor_block >= end)  // only modify blocks this thread is responsible for
+                        continue;
+                    // TODO: change this once code is updated to support weighted graphs
+                    int weight = 1;
+                    // Update degrees
+                    block_degrees_in[neighbor_block] += weight;
+                    if (block != neighbor_block) {
+                        block_degrees[neighbor_block] += weight;
+                    }
+                }
+            }
         }
     }  // OMP_PARALLEL
     this->_blockmatrix = std::move(blockmatrix);
@@ -307,6 +329,7 @@ double Blockmodel::log_posterior_probability() const {
     for (uint i = 0; i < values.size(); ++i) {
         if (degrees_in[i] == 0.0 || degrees_out[i] == 0.0) {
             std::cout << "value: " << values[i] << " degree_in: " << degrees_in[i] << " degree_out: " << degrees_out[i] << std::endl;
+            exit(-1000);
         }
     }
     std::vector<double> temp = values * utils::nat_log<double>(
