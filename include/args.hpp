@@ -27,6 +27,7 @@ class Args {
     std::string overlap;
     std::string partition;
     float samplesize;
+    std::string samplingalg;
     std::string tag;
     int threads;
     bool transpose;
@@ -87,6 +88,8 @@ class Args {
                                                     false, "round_robin", "round_robin|random|snowball", parser);
             TCLAP::ValueArg<float> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
                                                false, 1.0, "0 < x <= 1.0", parser);
+            TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
+                                                      false, "random", "random|max_degree|expansion_snowball", parser);
             TCLAP::ValueArg<std::string> _tag("", "tag", "The tag value for this run, for differentiating different "
                                               "runs or adding custom parameters to the save file", false, "default tag",
                                               "string or param1=value1;param2=value2", parser);
@@ -113,6 +116,7 @@ class Args {
             this->overlap = _overlap.getValue();
             this->partition = _partition.getValue();
             this->samplesize = _samplesize.getValue();
+            this->samplingalg = _samplingalg.getValue();
             this->tag = _tag.getValue();
             this->threads = _threads.getValue();
             this->transpose = _transpose.getValue();

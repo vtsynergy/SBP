@@ -113,7 +113,8 @@ int main(int argc, char* argv[]) {
         exit(-5);
     } else if (args.samplesize < 1.0) {
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
-        sample::Sample s = sample::max_degree(partition.graph);
+//        sample::Sample s = sample::max_degree(partition.graph);
+        sample::Sample s = sample::sample(partition.graph);
         Partition sample_partition;
         sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
         // add timer
