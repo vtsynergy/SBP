@@ -60,7 +60,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), float(BLOCK_REDUCTION_RATE));
+    Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     add_intermediate(0, graph, blockmodel, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
@@ -70,7 +70,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
-        blockmodel = block_merge::merge_blocks(blockmodel, graph.out_neighbors(), graph.num_edges());
+        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
         if (iteration < 1) {
             double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
             add_intermediate(0.5, graph, blockmodel, mdl);

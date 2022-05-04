@@ -58,8 +58,8 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelT
                     block_assignment[vertex] = proposal.proposed_block;
                 }
             }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
-                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(),
+                                    block_assignment);
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
@@ -362,8 +362,8 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet 
                     block_assignment[vertex] = proposal.proposed_block;
                 }
             }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph.out_neighbors(),
-                                    blockmodel.getBlock_reduction_rate(), block_assignment);
+            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(),
+                                    block_assignment);
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";

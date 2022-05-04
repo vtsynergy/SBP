@@ -111,7 +111,7 @@ Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const
         }
         assignment[vertex] = likely_community;
     }
-    return Blockmodel(sample_blockmodel.getNum_blocks(), graph.out_neighbors(), 0.5, assignment);
+    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
 }
 
 Sample from_vertices(const Graph &graph, const std::vector<int> &vertices, const std::vector<int> &mapping) {

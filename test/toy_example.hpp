@@ -67,7 +67,7 @@ protected:
             utils::insert_nodup(in_neighbors, to, from);
         }
         graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
-        B = Blockmodel(3, graph.out_neighbors(), 0.5, assignment);
+        B = Blockmodel(3, graph, 0.5, assignment);
         new_block_degrees.block_degrees_out = { 10, 7, 6 };
         new_block_degrees.block_degrees_in = { 12, 7, 4 };
         new_block_degrees.block_degrees = { 14, 9, 7 };
@@ -96,7 +96,7 @@ protected:
         Proposal = {0, 2, 3, 5};
         std::vector<int> assignment2(assignment);
         assignment2[7] = Proposal.proposal;
-        B2 = Blockmodel(3, graph.out_neighbors(), 0.5, assignment2);
+        B2 = Blockmodel(3, graph, 0.5, assignment2);
     }
 //    virtual void TearDown() {
 //
@@ -127,7 +127,7 @@ class BlockMergeTest : public ToyExample {
         new_block_degrees.block_degrees_in = { 0, 16, 7 };
         new_block_degrees.block_degrees = { 0, 17, 9 };
         std::vector<int> assignment2 = { 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
-        B2 = Blockmodel(3, graph.out_neighbors(), 0.5, assignment2);
+        B2 = Blockmodel(3, graph, 0.5, assignment2);
     }
 };
 
@@ -138,10 +138,10 @@ protected:
         ToyExample::SetUp();
         Proposal = { 0, 1, 2, 3 };
         assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
-        B = Blockmodel(6, graph.out_neighbors(), 0.5, assignment);
+        B = Blockmodel(6, graph, 0.5, assignment);
         std::vector<int> assignment2(assignment);
         assignment2[6] = Proposal.proposal;
-        B2 = Blockmodel(6, graph.out_neighbors(), 0.5, assignment2);
+        B2 = Blockmodel(6, graph, 0.5, assignment2);
         Updates.block_row = { 1, 0, 1, 1, 1, 0 };
         Updates.block_col = { 0, 1, 0, 1, 0, 1 };
         Updates.proposal_row = { 4, 1, 1, 0, 0, 0 };
