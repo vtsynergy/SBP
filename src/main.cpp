@@ -19,15 +19,6 @@
 #include "sbp.hpp"
 
 
-// void handler(int sig) {
-//     void *array[100];
-//     size_t size;
-//     size = backtrace(array, 100);
-//     fprintf(stderr, "Error: signal %d:\n", sig);
-//     backtrace_symbols_fd(array, size, STDERR_FILENO);
-//     exit(-1);
-// }
-
 MPI_t mpi;
 Args args;
 
@@ -50,17 +41,17 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     file.open(filepath, std::ios_base::app);
     if (!file_exists) {
         file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
-             << "normalized_mdl_v1, normalized_mdl_v2, modularity, interblock_edges, block_size_variation, f1_score, "
-             << "nmi, true_mdl, true_mdl_v1, true_mdl_v2, runtime, mcmc_iterations" << std::endl;
+             << "normalized_mdl_v1, sample_size, modularity, interblock_edges, block_size_variation, f1_score, "
+             << "nmi, true_mdl, true_mdl_v1, sampling_algorithm, runtime, mcmc_iterations" << std::endl;
     }
     for (const sbp::Intermediate temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
-             << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << temp.normalized_mdl_v2 << ", "
+             << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << temp.interblock_edges << ", " << temp.block_size_variation << ", "
              << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
-             << entropy::normalize_mdl_v2(eval.true_mdl, graph.num_vertices(), graph.num_edges()) << ", "
+             << args.samplingalg << ", "
              << runtime << ", " << temp.mcmc_iterations << std::endl;
     }
     file.close();
