@@ -28,29 +28,18 @@ Graph Graph::load() {
     fs::path truth_path = base_path + "_truePartition.tsv";
     // TODO: Handle weighted graphs
     std::vector<std::vector<std::string>> csv_contents = utils::read_csv(graph_path);
-    NeighborList out_neighbors;
-    NeighborList in_neighbors;
-//    size_t num_edges = csv_contents.size();
-    int num_vertices = 0;
-    std::vector<bool> self_edges;
-    if (args.undirected)
-        Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
-    else
-        Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
-    // std::cout << "num_edges before: " << num_edges << std::endl;
-    int num_edges = 0;  // TODO: unnecessary re-counting of edges?
-    for (const std::vector<int> &neighborhood : out_neighbors) {
-        num_edges += (int)neighborhood.size();
-//        for (int neighbor : neighborhood) {
-//            num_edges++;
-//        }
+    if (csv_contents.empty()) {
+        graph_path = base_path + ".mtx";
+        csv_contents = utils::read_csv(graph_path);
     }
-    if (args.undirected) {
-        num_edges /= 2;
+    Graph graph;
+    if (csv_contents[0][0] == "%%MatrixMarket") {
+        graph = Graph::load_matrix_market(csv_contents);
+    } else {
+        graph = Graph::load_text(csv_contents);
     }
-    // std::cout << "num_edges after: " << num_edges << std::endl;
     if (mpi.rank == 0)
-        std::cout << "V: " << num_vertices << " E: " << num_edges << std::endl;
+        std::cout << "V: " << graph.num_vertices() << " E: " << graph.num_edges() << std::endl;
 
     csv_contents = utils::read_csv(truth_path);
     std::vector<int> assignment;
@@ -67,9 +56,87 @@ Graph Graph::load() {
             assignment[vertex] = community;
         }
     } else {
-        assignment = utils::constant(num_vertices, 0);
+        assignment = utils::constant(graph.num_vertices(), 0);
     }
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+    graph.assignment(assignment);
+    return graph;
+}
+
+/// Loads the graph if it's in a matrix market format.
+Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_contents) {
+    if (csv_contents[0][2] != "coordinate") {
+        std::cerr << "Dense matrices are not supported!" << std::endl;
+        exit(-1);
+    }
+    if (csv_contents[0][4] == "symmetric") {
+        std::cout << "Graph is symmetric" << std::endl;
+        args.undirected = true;
+    }
+    // Find index at which edges start
+    int index = 0;
+    int num_vertices, num_edges;
+    for (int i = 0; i < csv_contents.size(); ++i) {
+        const std::vector<std::string> &line = csv_contents[i];
+//        std::cout << "line: ";
+//        utils::print<std::string>(line);
+        if (line[0][0] == '%') continue;
+        num_vertices = std::stoi(line[0]);
+        if (num_vertices != std::stoi(line[1])) {
+            std::cerr << "Rectangular matrices are not supported!" << std::endl;
+            exit(-1);
+        }
+        num_edges = std::stoi(line[2]);
+        index = i + 1;
+        break;
+    }
+    NeighborList out_neighbors;
+    NeighborList in_neighbors;
+    std::vector<bool> self_edges = utils::constant<bool>(num_vertices, false);
+    for (int i = index; i < csv_contents.size(); ++i) {
+        const std::vector<std::string> &edge = csv_contents[i];
+        int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
+        int to = std::stoi(edge[1]) - 1;
+        num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
+        num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
+        utils::insert_nodup(out_neighbors, from , to);
+        utils::insert_nodup(in_neighbors, to , from);
+        if (args.undirected && from != to) {  // Force symmetric graph to be directed by including reverse edges.
+            utils::insert_nodup(out_neighbors, to, from);
+            utils::insert_nodup(in_neighbors, from , to);
+            num_edges++;
+        }
+        if (from == to) {
+            self_edges[from] = true;
+        }
+    }
+    // Pad the neighbors lists
+    while (out_neighbors.size() < size_t(num_vertices)) {
+        out_neighbors.push_back(std::vector<int>());
+    }
+    while (in_neighbors.size() < size_t(num_vertices)) {
+        in_neighbors.push_back(std::vector<int>());
+    }
+    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
+}
+
+/// Loads the graph if it's in a text format: a list of "from to" string pairs.
+Graph Graph::load_text(std::vector<std::vector<std::string>> &csv_contents) {
+    NeighborList out_neighbors;
+    NeighborList in_neighbors;
+    std::vector<bool> self_edges;
+    int num_vertices = 0;
+    if (args.undirected)
+        Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
+    else
+        Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
+    int num_edges = 0;  // TODO: unnecessary re-counting of edges?
+    for (const std::vector<int> &neighborhood : out_neighbors) {
+        num_edges += (int)neighborhood.size();
+    }
+    if (args.undirected) {
+        num_edges /= 2;
+    }
+    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
 }
 
 double Graph::modularity(const std::vector<int> &assignment) const {

@@ -58,6 +58,10 @@ public:
     /// Assumes the true assignment file is named:
     /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
     static Graph load();
+    /// Loads the graph if it's in a matrix market format.
+    static Graph load_matrix_market(std::vector<std::vector<std::string>> &csv_contents);
+    /// Loads the graph if it's in a text format: a list of "from to" string pairs.
+    static Graph load_text(std::vector<std::vector<std::string>> &csv_contents);
     //============================================
     // GETTERS & SETTERS
     //============================================
@@ -65,6 +69,8 @@ public:
     void add_edge(int from, int to);
     /// Returns a const reference to the assignmnet
     const std::vector<int> &assignment() const { return this->_assignment; }
+    /// Sets the assignment vector for the given graph
+    void assignment(const std::vector<int> &assignment_vector) { this->_assignment = assignment_vector; }
     /// Returns the block/community assignment of vertex `v`
     int assignment(int v) const { return this->_assignment[v]; }
     /// Sets the assignment of vertex `v` to block `b`
