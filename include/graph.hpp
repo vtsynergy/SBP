@@ -35,20 +35,7 @@ public:
         this->_num_edges = num_edges;
         this->_self_edges = self_edges;
         this->_assignment = assignment;
-        std::vector<int> vertex_degrees = this->degrees();
-        std::vector<int> indices = utils::range<int>(0, num_vertices);
-        std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
-                  [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
-        for (int index = 0; index < num_vertices; ++index) {
-            int vertex = indices[index];
-            if (index < 0.075 * num_vertices) {
-                this->_high_degree_vertices.push_back(vertex);
-//                this->_high_degree_vertex[vertex] = true;
-            } else {
-                this->_low_degree_vertices.push_back(vertex);
-//                this->_high_degree_vertex[vertex] = false;
-            }
-        }
+        this->sort_vertices();
     }
     Graph() = default;
     /// Loads the graph. Assumes the file is saved in the following directory:
@@ -95,6 +82,8 @@ public:
     const NeighborList &out_neighbors() const { return this->_out_neighbors; }
     /// Returns a const reference to the out neighbors of vertex `v`
     const std::vector<int> &out_neighbors(int v) const { return this->_out_neighbors[v]; }
+    /// Sorts the vertices into low and high degree vertices
+    void sort_vertices();
 private:
     /// For every vertex, stores the community they belong to.
     /// If assignment[v] = -1, then the community of v is not known

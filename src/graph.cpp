@@ -211,3 +211,18 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         in_neighbors.push_back(std::vector<int>());
     }
 }
+
+void Graph::sort_vertices() {
+    std::vector<int> vertex_degrees = this->degrees();
+    std::vector<int> indices = utils::range<int>(0, this->_num_vertices);
+    std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
+              [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
+    for (int index = 0; index < this->_num_vertices; ++index) {
+        int vertex = indices[index];
+        if (index < 0.075 * this->_num_vertices) {
+            this->_high_degree_vertices.push_back(vertex);
+        } else {
+            this->_low_degree_vertices.push_back(vertex);
+        }
+    }
+}

@@ -127,6 +127,7 @@ Sample from_vertices(const Graph &graph, const std::vector<int> &vertices, const
         }
         sampled_graph.assign(vertex_id, graph.assignment(vertex));
     }
+    sampled_graph.sort_vertices();
     return Sample { sampled_graph, mapping };
 }
 
