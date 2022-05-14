@@ -40,6 +40,7 @@ add_library(SBP STATIC
         src/block_merge.cpp
         src/partition.cpp
         src/sample.cpp
+        src/top_down.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
         src/blockmodel/dist_blockmodel.cpp

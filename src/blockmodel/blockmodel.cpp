@@ -46,21 +46,10 @@ double Blockmodel::difficulty_score() const {
     return (2.0 * norm_variance * interblock_edges) / (norm_variance + interblock_edges);
 }
 
-std::vector<int> Blockmodel::sort_indices(const std::vector<double> &unsorted) {
-    // initialize original index locations
-    std::vector<int> indices = utils::range<int>(0, unsorted.size());
-
-    // sort indexes based on comparing values in unsorted
-    std::sort(indices.data(), indices.data() + indices.size(),
-              [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
-
-    return indices;
-}
-
 // TODO: move to block_merge.cpp
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                        const std::vector<int> &best_merge_for_each_block) {
-    std::vector<int> best_merges = sort_indices(delta_entropy_for_each_block);
+    std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
     int num_merged = 0;
     int counter = 0;
