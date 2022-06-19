@@ -23,7 +23,11 @@
  ******************/
 namespace finetune {
 
+/// The total number of MCMC iterations completed, to be dynamically updated during execution.
 extern int MCMC_iterations;
+
+/// The total amount of time spent performing MCMC iterations, to be dynamically updated during execution.
+extern double MCMC_time;
 
 typedef struct vertex_move_t {
     double delta_entropy;
@@ -39,7 +43,7 @@ static const int MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning ite
 
 bool accept(double delta_entropy, double hastings_correction);
 
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
 EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
 
@@ -78,12 +82,12 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
 
 /// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
 /// Asynchronous Gibbs on the rest.
-Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
 VertexMove move_vertex(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,

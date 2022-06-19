@@ -47,11 +47,13 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     intermediate.interblock_edges = interblock_edges;
     intermediate.block_size_variation = block_size_variation;
     intermediate.mcmc_iterations = finetune::MCMC_iterations;
+    intermediate.mcmc_time = finetune::MCMC_time;
     intermediate_results.push_back(intermediate);
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
               << " v2 normalized: " << normalized_mdl_v2 << " modularity: " << modularity
               << " interblock edge %: " << interblock_edges << " block size variation: " << block_size_variation
-              << " MCMC iterations: " << finetune::MCMC_iterations << std::endl;
+              << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
+              << finetune::MCMC_time << std::endl;
 }
 
 Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
@@ -65,7 +67,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     add_intermediate(0, graph, blockmodel, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     float iteration = 0;
-    while (!done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
+    while (!done_blockmodeling(blockmodel, blockmodel_triplet)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
@@ -76,6 +78,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             add_intermediate(0.5, graph, blockmodel, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
+        double start = MPI_Wtime();
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else if (args.algorithm == "hybrid_mcmc")
@@ -83,6 +86,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
 //        iteration++;
+        finetune::MCMC_time += MPI_Wtime() - start;
         add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
