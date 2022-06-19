@@ -13,6 +13,7 @@
 namespace finetune {
 
 int MCMC_iterations = 0;
+double MCMC_time = 0.0;
 std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
@@ -27,7 +28,7 @@ bool accept(double delta_entropy, double hastings_correction) {
     return random_probability <= accept_probability;
 }
 
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
     std::cout << "Asynchronous Gibbs iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
@@ -314,7 +315,7 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
     std::cout << "Hybrid MCMC iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
@@ -372,6 +373,40 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet 
         MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, blockmodels, initial_entropy, delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
+}
+
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+    std::cout << "Metropolis hastings iteration" << std::endl;
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
+    }
+    std::vector<double> delta_entropies;
+    int total_vertex_moves = 0;
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        int vertex_moves = 0;
+        double delta_entropy = 0.0;
+        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            VertexMove proposal = propose_move(blockmodel, vertex, graph);
+            if (proposal.did_move) {
+                vertex_moves++;
+                delta_entropy += proposal.delta_entropy;
+            }
+        }
+        delta_entropies.push_back(delta_entropy);
+        std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
+        std::cout << delta_entropy << std::endl;
+        total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
+        // Early stopping
+        if (early_stop(iteration, blockmodels, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
         }
     }
@@ -464,40 +499,6 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Gr
         std::cout << std::endl;
     }*/
     return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
-}
-
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, Graph &graph, BlockmodelTriplet &blockmodels) {
-    std::cout << "Metropolis hastings iteration" << std::endl;
-    if (blockmodel.getNum_blocks() == 1) {
-        return blockmodel;
-    }
-    std::vector<double> delta_entropies;
-    int total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
-    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-        int vertex_moves = 0;
-        double delta_entropy = 0.0;
-        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            VertexMove proposal = propose_move(blockmodel, vertex, graph);
-            if (proposal.did_move) {
-                vertex_moves++;
-                delta_entropy += proposal.delta_entropy;
-            }
-        }
-        delta_entropies.push_back(delta_entropy);
-        std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
-        std::cout << delta_entropy << std::endl;
-        total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
-        // Early stopping
-        if (early_stop(iteration, blockmodels, blockmodel.getOverall_entropy(), delta_entropies)) {
-            break;
-        }
-    }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
-    return blockmodel;
 }
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {

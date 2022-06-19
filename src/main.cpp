@@ -42,17 +42,17 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     if (!file_exists) {
         file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
              << "normalized_mdl_v1, sample_size, modularity, interblock_edges, block_size_variation, f1_score, "
-             << "nmi, true_mdl, true_mdl_v1, sampling_algorithm, runtime, mcmc_iterations" << std::endl;
+             << "nmi, true_mdl, true_mdl_v1, sampling_algorithm, runtime, mcmc_iterations, mcmc_time" << std::endl;
     }
-    for (const sbp::Intermediate temp : intermediate_results) {
+    for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << temp.interblock_edges << ", " << temp.block_size_variation << ", "
              << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
-             << args.samplingalg << ", "
-             << runtime << ", " << temp.mcmc_iterations << std::endl;
+             << args.samplingalg << ", " << runtime << ", " << temp.mcmc_iterations << ", "
+             << temp.mcmc_time << std::endl;
     }
     file.close();
 }

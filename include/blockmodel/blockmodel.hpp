@@ -181,8 +181,6 @@ class Blockmodel {
     // Computed info
     float overall_entropy;
     int num_blocks_to_merge;
-    /// Sorts the indices of an array in descending order according to the values of the array
-    std::vector<int> sort_indices(const std::vector<double> &unsorted);
 };
 
 #endif // SBP_DELTA_HPP
