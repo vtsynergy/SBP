@@ -36,6 +36,20 @@ typedef struct vertex_move_t {
     int proposed_block;
 } VertexMove;
 
+//struct Neighbors {
+//    EdgeWeights out_neighbors;
+//    EdgeWeights in_neighbors;
+//};
+
+struct VertexMove_v2 {
+    double delta_entropy;
+    bool did_move;
+    int vertex;
+    int proposed_block;
+    EdgeWeights out_edges;
+    EdgeWeights in_edges;
+};
+
 //static const int MOVING_AVG_WINDOW = 3;      // Window for calculating change in entropy
 //static const double SEARCH_THRESHOLD = 5e-4; // Threshold before golden ratio is established
 //static const double GOLDEN_THRESHOLD = 1e-4; // Threshold after golden ratio is established
@@ -45,7 +59,9 @@ bool accept(double delta_entropy, double hastings_correction);
 
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
-EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, EdgeWeights &neighbor_weights);
+Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+
+EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, const EdgeWeights &neighbor_weights);
 
 /// Returns the potential changes to the blockmodel if the vertex with `out_edges` and `in_edges` moves from
 /// `current_block` into `proposed_block`.
@@ -73,6 +89,11 @@ EdgeWeights edge_weights(const NeighborList &neighbors, int vertex, bool ignore_
 VertexMove eval_vertex_move(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
                             const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                             EdgeWeights &in_edges);
+
+/// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
+VertexMove_v2 eval_vertex_move_v2(int vertex, int current_block, utils::ProposalAndEdgeCounts proposal,
+                                  const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                  EdgeWeights &in_edges);
 
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
 /// blockmodel deltas.
@@ -106,6 +127,9 @@ VertexMove propose_move(Blockmodel &blockmodel, int vertex, const Graph &graph);
 
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Graph &graph);
+
+/// Proposes a new Asynchronous Gibbs vertex move.
+VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, int vertex, const Graph &graph);
 
 //namespace directed {
 //
