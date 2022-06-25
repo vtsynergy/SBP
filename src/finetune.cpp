@@ -427,22 +427,36 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
             std::vector<int> block_assignment(blockmodel.block_assignment());
+            std::vector<VertexMove_v2> moves(graph.num_vertices());
             #pragma omp parallel for schedule(dynamic) default(none) \
-            shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment)
+            shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment, moves)
             for (int index = start; index < end; ++index) {
                 int vertex = graph.low_degree_vertices()[index];
 //            for (int vertex = start; vertex < end; ++vertex) {
 //                if (graph.is_high_degree_vertex(vertex)) continue;  // only process low-degree vertices
-                VertexMove proposal = propose_gibbs_move(blockmodel, vertex, graph);
+                VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     #pragma omp atomic
                     vertex_moves++;
                     delta_entropy += proposal.delta_entropy;
                     block_assignment[vertex] = proposal.proposed_block;
                 }
+                moves[vertex] = proposal;
             }
-            blockmodel = Blockmodel(blockmodel.getNum_blocks(), graph, blockmodel.getBlock_reduction_rate(),
-                                    block_assignment);
+            for (const VertexMove_v2 &move : moves) {
+                if (!move.did_move) continue;
+                const Delta delta = blockmodel_delta(move.vertex, blockmodel.block_assignment(move.vertex),
+                                                     move.proposed_block, move.out_edges, move.in_edges, blockmodel);
+                EdgeWeights out_blocks = block_edge_weights(blockmodel.block_assignment(), move.out_edges);
+                EdgeWeights in_blocks = block_edge_weights(blockmodel.block_assignment(), move.in_edges);
+                std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
+                std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
+                int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
+                int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
+                int k = k_out + k_in;
+                utils::ProposalAndEdgeCounts proposal {move.proposed_block, k_out, k_in, k};
+                blockmodel.move_vertex(move.vertex, delta, proposal);
+            }
         }
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
