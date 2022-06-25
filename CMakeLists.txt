@@ -39,6 +39,8 @@ add_library(SBP STATIC
         src/finetune.cpp
         src/block_merge.cpp
         src/partition.cpp
+        src/sample.cpp
+        src/top_down.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
         src/blockmodel/dist_blockmodel.cpp
@@ -86,6 +88,7 @@ add_executable(Test
         test/entropy_test.cpp
         test/evaluate_test.cpp
         test/finetune_test.cpp
+        test/sample_test.cpp
         test/toy_example.hpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)

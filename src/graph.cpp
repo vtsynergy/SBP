@@ -2,7 +2,26 @@
 #include "utils.hpp"
 #include "mpi_data.hpp"
 
-Graph Graph::load(Args &args) {
+void Graph::add_edge(int from, int to) {
+    utils::insert_nodup(this->_out_neighbors, from , to);
+    utils::insert_nodup(this->_in_neighbors, to, from);
+    this->_num_edges++;
+    if (from == to) {
+        this->_self_edges[from] = true;
+    }
+    // TODO: undirected version?
+}
+
+std::vector<int> Graph::degrees() const {
+    std::vector<int> vertex_degrees;
+    for (int vertex = 0; vertex < this->_num_vertices; ++vertex) {
+        vertex_degrees.push_back(int(this->_out_neighbors[vertex].size() + this->_in_neighbors[vertex].size()
+                                 - this->_self_edges[vertex]));
+    }
+    return vertex_degrees;
+}
+
+Graph Graph::load() {
     // TODO: Add capability to process multiple "streaming" graph parts
     std::string base_path = utils::build_filepath();
     fs::path graph_path = base_path + ".tsv";
@@ -72,6 +91,7 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
     }
     NeighborList out_neighbors;
     NeighborList in_neighbors;
+    std::vector<bool> self_edges = utils::constant<bool>(num_vertices, false);
     for (int i = index; i < csv_contents.size(); ++i) {
         const std::vector<std::string> &edge = csv_contents[i];
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
@@ -85,6 +105,9 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
             utils::insert_nodup(in_neighbors, from , to);
             num_edges++;
         }
+        if (from == to) {
+            self_edges[from] = true;
+        }
     }
     // Pad the neighbors lists
     while (out_neighbors.size() < size_t(num_vertices)) {
@@ -93,18 +116,19 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
     while (in_neighbors.size() < size_t(num_vertices)) {
         in_neighbors.push_back(std::vector<int>());
     }
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges);
+    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
 }
 
 /// Loads the graph if it's in a text format: a list of "from to" string pairs.
 Graph Graph::load_text(std::vector<std::vector<std::string>> &csv_contents) {
     NeighborList out_neighbors;
     NeighborList in_neighbors;
+    std::vector<bool> self_edges;
     int num_vertices = 0;
     if (args.undirected)
-        Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, csv_contents);
+        Graph::parse_undirected(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
     else
-        Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, csv_contents);
+        Graph::parse_directed(in_neighbors, out_neighbors, num_vertices, self_edges, csv_contents);
     int num_edges = 0;  // TODO: unnecessary re-counting of edges?
     for (const std::vector<int> &neighborhood : out_neighbors) {
         num_edges += (int)neighborhood.size();
@@ -112,7 +136,7 @@ Graph Graph::load_text(std::vector<std::vector<std::string>> &csv_contents) {
     if (args.undirected) {
         num_edges /= 2;
     }
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges);
+    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
 }
 
 double Graph::modularity(const std::vector<int> &assignment) const {
@@ -139,7 +163,7 @@ double Graph::modularity(const std::vector<int> &assignment) const {
 }
 
 void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
-                           std::vector<std::vector<std::string>> &contents) {
+                           std::vector<bool> &self_edges, std::vector<std::vector<std::string>> &contents) {
     for (std::vector<std::string> &edge : contents) {
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;
@@ -147,6 +171,12 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
         utils::insert_nodup(out_neighbors, from , to);
         utils::insert_nodup(in_neighbors, to, from);
+        while (self_edges.size() < num_vertices) {
+            self_edges.push_back(false);
+        }
+        if (from == to) {
+            self_edges[from] = true;
+        }
     }
     while (out_neighbors.size() < size_t(num_vertices)) {
         out_neighbors.push_back(std::vector<int>());
@@ -157,7 +187,7 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
 }
 
 void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neighbors, int &num_vertices,
-                             std::vector<std::vector<std::string>> &contents) {
+                             std::vector<bool> &self_edges, std::vector<std::vector<std::string>> &contents) {
     for (std::vector<std::string> &edge : contents) {
         int from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         int to = std::stoi(edge[1]) - 1;
@@ -166,12 +196,33 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         utils::insert_nodup(out_neighbors, from , to);
         if (from != to)
             utils::insert_nodup(out_neighbors, to, from);
-        in_neighbors = NeighborList(out_neighbors);
+        while (self_edges.size() < num_vertices) {
+            self_edges.push_back(false);
+        }
+        if (from == to) {
+            self_edges[from] = true;
+        }
     }
+    in_neighbors = NeighborList(out_neighbors);
     while (out_neighbors.size() < size_t(num_vertices)) {
         out_neighbors.push_back(std::vector<int>());
     }
     while (in_neighbors.size() < size_t(num_vertices)) {
         in_neighbors.push_back(std::vector<int>());
+    }
+}
+
+void Graph::sort_vertices() {
+    std::vector<int> vertex_degrees = this->degrees();
+    std::vector<int> indices = utils::range<int>(0, this->_num_vertices);
+    std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
+              [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
+    for (int index = 0; index < this->_num_vertices; ++index) {
+        int vertex = indices[index];
+        if (index < 0.075 * this->_num_vertices) {
+            this->_high_degree_vertices.push_back(vertex);
+        } else {
+            this->_low_degree_vertices.push_back(vertex);
+        }
     }
 }
