@@ -33,7 +33,9 @@ void write_results(float iteration, std::ofstream &file, const Graph &graph, con
 void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
     double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
     double normalized_mdl_v2 = entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges());
-    double modularity = graph.modularity(blockmodel.block_assignment());
+    double modularity = -1;
+    if (iteration == -1)
+        modularity = graph.modularity(blockmodel.block_assignment());
     double interblock_edges = blockmodel.interblock_edges();
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     double block_size_variation = blockmodel.block_size_variation();
@@ -92,6 +94,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
+    // only last iteration result will calculate expensive modularity
+    add_intermediate(-1, graph, blockmodel, blockmodel.getOverall_entropy());
     return blockmodel;
 }
 
