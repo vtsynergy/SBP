@@ -56,6 +56,9 @@ target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 add_executable(Influence src/influence.cpp)
 target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
 
+add_executable(TopDownSBP src/top_down_main.cpp)
+target_include_directories(TopDownSBP PUBLIC ${INCLUDE_DIRS})
+
 if (DEBUG)
     #    To check for heap overflows and such, use -fsanitize=address
     #    To run with valgrind, do NOT use -fsanitize=address
@@ -63,6 +66,7 @@ if (DEBUG)
     target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
     target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
+    target_link_libraries(TopDownSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address)
     #    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
     #    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
     #    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
@@ -74,6 +78,7 @@ else (DEBUG)
     target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map)
     target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map)
+    target_link_libraries(TopDownSBP PUBLIC SBP absl::hash absl::flat_hash_map)
 endif (DEBUG)
 
 # Google Test Suite

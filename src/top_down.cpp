@@ -4,16 +4,20 @@
 //
 #include "top_down.hpp"
 
+#include <iostream>
 #include <limits>
 #include <memory>
+#include <mpi.h>
 #include <random>
 #include <vector>
 
+#include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "common.hpp"
 #include "entropy.hpp"
 #include "graph.hpp"
 #include "utils.hpp"
+
 
 namespace top_down {
 
@@ -81,7 +85,6 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     std::vector<Split> best_split_for_each_block(num_blocks);
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
-//    std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             Split split = propose_split(current_block, graph, blockmodel);
