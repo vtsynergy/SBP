@@ -2,7 +2,7 @@
 
 #include "args.hpp"
 
-#include "assert.h"
+#include <cassert>
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -119,7 +119,7 @@ std::vector<int> nonzeros(std::vector<int> &in) {
 
 std::vector<int> nonzeros(MapVector<int> &in) {
     std::vector<int> values;
-    for (const std::pair<const int, int> &element : in) {
+    for (const auto &element : in) {
         if (element.second != 0) {
             values.push_back(element.second);
         }
@@ -137,8 +137,8 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     int k = k_out + k_in;
     int num_blocks = blockmodel.getNum_blocks();
-
-    if (k == 0) { // If the current block has no neighbors, propose merge with random block
+    // If the current block has no neighbors, propose merge with random block
+    if (k == 0 || (args.randomproposals && !block_merge)) {
         int proposal = propose_random_block(current_block, num_blocks);
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
@@ -161,7 +161,7 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
     const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
     MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
-    for (const std::pair<const int, int> &pair : col) {
+    for (const auto &pair : col) {
         edges[pair.first] += pair.second;
     }
     if (block_merge) {  // Make sure proposal != current_block
@@ -211,7 +211,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     // std::cout << "dE_temp_directed_sparse!" << std::endl;
     // throw std::runtime_error("SHOULD BE UNDIRECTED");
     double result = 0.0;
-    for (const std::pair<const int, int> &pair : row_or_col) {
+    for (const auto &pair : row_or_col) {
         if (pair.second == 0)  // 0s sometimes get inserted into the sparse matrix
             continue;
         double temp = (double) pair.second / (double) block_degrees[pair.first] / degree;
@@ -226,7 +226,7 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
     // std::cout << "dE_temp_directed_sparse_ignore!" << std::endl;
     // throw std::runtime_error("SHOULD BE UNDIRECTED");
     double result = 0.0;
-    for (const std::pair<const int, int> &pair : row_or_col) {
+    for (const auto &pair : row_or_col) {
         // 0s sometimes get inserted into the sparse matrix
         if (pair.second == 0 || pair.first == current_block || pair.first == proposal)
             continue;

@@ -26,6 +26,7 @@ class Args {
     int numvertices;
     std::string overlap;
     std::string partition;
+    bool randomproposals;
     float samplesize;
     std::string samplingalg;
     std::string tag;
@@ -86,6 +87,8 @@ class Args {
             TCLAP::ValueArg<std::string> _partition("p", "partition", "The type of partitioning to use to divide the "
                                                     "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                     false, "round_robin", "round_robin|random|snowball", parser);
+            TCLAP::SwitchArg _randomproposals("", "randomproposals", "If set, will use completely random move proposals",
+                                              parser, false);
             TCLAP::ValueArg<float> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
@@ -115,6 +118,7 @@ class Args {
             this->numvertices = _numvertices.getValue();
             this->overlap = _overlap.getValue();
             this->partition = _partition.getValue();
+            this->randomproposals = _randomproposals.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
             this->tag = _tag.getValue();

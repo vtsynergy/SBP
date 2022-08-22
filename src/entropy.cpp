@@ -341,7 +341,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         }
     }
     // Compute change in entropy for cells with no delta
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         int row = current_block;
         int col = entry.first;
         int value = entry.second;
@@ -355,7 +355,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = current block");
         }
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         int row = proposed_block;
         int col = entry.first;
         int value = entry.second;
@@ -369,7 +369,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = proposed block");
         }
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         int row = entry.first;
         int col = current_block;
         int value = entry.second;
@@ -383,7 +383,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and col = current block");
         }
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         int row = entry.first;
         int col = proposed_block;
         int value = entry.second;
@@ -403,7 +403,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0) {
+    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {
         return 1.0;
     }
     // Compute block weights
@@ -449,7 +449,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0) {
+    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {
         return 1.0;
     }
     // Compute block weights
@@ -494,7 +494,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
 
 double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
                            int current_block, const utils::ProposalAndEdgeCounts &proposal) {
-    if (proposal.num_neighbor_edges == 0) {
+    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {  // No correction needed with random proposals
         return 1.0;
     }
     // Compute block weights
