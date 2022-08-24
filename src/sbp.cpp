@@ -87,8 +87,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             blockmodel = finetune::asynchronous_gibbs_v2(blockmodel, graph, blockmodel_triplet);
         else if (args.algorithm == "hybrid_mcmc")
             blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet);
-        else if (args.algorithm == "hybrid_mcmc_size_balanced")
-            blockmodel = finetune::hybrid_mcmc_size_balanced(blockmodel, graph, blockmodel_triplet);
+        else if (args.algorithm == "hybrid_mcmc_load_balanced")
+            blockmodel = finetune::hybrid_mcmc_load_balanced(blockmodel, graph, blockmodel_triplet);
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
 //        iteration++;

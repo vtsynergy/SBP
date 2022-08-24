@@ -107,9 +107,12 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
 
 /// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
 /// Asynchronous Gibbs on the rest. Attempts to manually balance the workload using number of block neighbors.
-Blockmodel &hybrid_mcmc_size_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
+/// Returns a vector which determines which blocks a thread is responsible for.
+std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<int, int>> &block_neighbors);
 
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
@@ -134,6 +137,12 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, int vertex, const Gr
 
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, int vertex, const Graph &graph);
+
+/// Sorts blocks in order of number of neighbors - used for load balancing.
+std::vector<std::pair<int,int>> sort_blocks_by_neighbors(const Blockmodel &blockmodel);
+
+/// Sorts blocks in order of block size - used for load balancing.
+std::vector<std::pair<int,int>> sort_blocks_by_size(const Blockmodel &blockmodel);
 
 //namespace directed {
 //

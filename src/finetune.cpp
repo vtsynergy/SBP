@@ -392,7 +392,7 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-Blockmodel &hybrid_mcmc_size_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
         std::cout << "Hybrid MCMC iteration" << std::endl;
         if (blockmodel.getNum_blocks() == 1) {
             return blockmodel;
@@ -404,16 +404,10 @@ Blockmodel &hybrid_mcmc_size_balanced(Blockmodel &blockmodel, const Graph &graph
         double num_batches = args.batches;
         int num_low_degree_vertices = int(graph.low_degree_vertices().size());
         int batch_size = int(ceil(num_low_degree_vertices / num_batches));
+        std::vector<unsigned long> thread_degrees(omp_get_max_threads());
 
         for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-            std::vector<std::pair<int,int>> block_neighbors;
-            for (int i = 0; i < blockmodel.getNum_blocks(); ++i) {
-                block_neighbors.emplace_back(std::make_pair(i, blockmodel.blockmatrix()->distinct_edges(i)));
-            }
-            std::sort(block_neighbors.begin(), block_neighbors.end(),
-                      [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
-            std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
-            std::vector<unsigned long> thread_degrees(omp_get_max_threads());
+            std::vector<std::pair<int,int>> block_neighbors = sort_blocks_by_size(blockmodel);
             for (int i = 0; i < omp_get_max_threads(); ++i) {
                 thread_degrees[i] = 0;
             }
@@ -437,17 +431,7 @@ Blockmodel &hybrid_mcmc_size_balanced(Blockmodel &blockmodel, const Graph &graph
                 #pragma omp parallel default(none) shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment, moves, thread_degrees, block_neighbors)
                 {
                     // TODO: figure out how to make this happen once per iteration
-                    // Decide which blocks each thread is responsible for
-                    int thread_id = omp_get_thread_num();
-                    std::vector<bool> my_blocks = utils::constant<bool>(blockmodel.getNum_blocks(), false);
-                    for (int i = thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
-                        int block = block_neighbors[i].first;
-                        my_blocks[block] = true;
-                    }
-                    for (int i = 2 * omp_get_max_threads() - 1 - thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
-                        int block = block_neighbors[i].first;
-                        my_blocks[block] = true;
-                    }
+                    std::vector<bool> my_blocks = load_balance(blockmodel, block_neighbors);
                     for (int index = start; index < end; ++index) {
                         int vertex = graph.low_degree_vertices()[index];
                         int block = blockmodel.block_assignment(vertex);
@@ -579,6 +563,21 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
+}
+
+std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<int, int>> &block_neighbors) {
+    // Decide which blocks each thread is responsible for
+    int thread_id = omp_get_thread_num();
+    std::vector<bool> my_blocks = utils::constant<bool>(blockmodel.getNum_blocks(), false);
+    for (int i = thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
+        int block = block_neighbors[i].first;
+        my_blocks[block] = true;
+    }
+    for (int i = 2 * omp_get_max_threads() - 1 - thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
+        int block = block_neighbors[i].first;
+        my_blocks[block] = true;
+    }
+    return my_blocks;
 }
 
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
@@ -767,6 +766,31 @@ VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, int vertex, co
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
+}
+
+std::vector<std::pair<int, int>> sort_blocks_by_neighbors(const Blockmodel &blockmodel) {
+    std::vector<std::pair<int, int>> block_neighbors;
+    for (int i = 0; i < blockmodel.getNum_blocks(); ++i) {
+        block_neighbors.emplace_back(std::make_pair(i, blockmodel.blockmatrix()->distinct_edges(i)));
+    }
+    std::sort(block_neighbors.begin(), block_neighbors.end(),
+              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+    return block_neighbors;
+}
+
+std::vector<std::pair<int, int>> sort_blocks_by_size(const Blockmodel &blockmodel) {
+    std::vector<std::pair<int,int>> block_sizes;
+    for (int i = 0; i < blockmodel.getNum_blocks(); ++i) {
+        block_sizes.emplace_back(std::make_pair(i, 0));
+    }
+    for (const int &block : blockmodel.block_assignment()) {
+        block_sizes[block].second++;
+    }
+    std::sort(block_sizes.begin(), block_sizes.end(),
+              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+    return block_sizes;
 }
 
 //namespace undirected {
