@@ -196,6 +196,17 @@ Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const 
     return delta;
 }
 
+std::vector<int> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel) {
+    const std::vector<int> &low_degree_vertices = graph.low_degree_vertices();
+    std::vector<int> result = utils::constant<int>((int) low_degree_vertices.size(), 0);
+    for (int vertex : low_degree_vertices) {
+        int block = blockmodel.block_assignment(vertex);
+        int neighbors = blockmodel.blockmatrix()->distinct_edges(block);
+        result[block] += neighbors;
+    }
+    return result;
+}
+
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies) {
     size_t last_index = delta_entropies.size() - 1;
@@ -405,9 +416,11 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
         int num_low_degree_vertices = int(graph.low_degree_vertices().size());
         int batch_size = int(ceil(num_low_degree_vertices / num_batches));
         std::vector<unsigned long> thread_degrees(omp_get_max_threads());
+        std::vector<int> block_neighbors = count_low_degree_block_neighbors(graph, blockmodel);
+//        std::vector<std::pair<int,int>> vertex_properties = sort_vertices_by_degree(graph);
 
         for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-            std::vector<std::pair<int,int>> block_neighbors = sort_blocks_by_size(blockmodel);
+//            std::vector<std::pair<int,int>> block_neighbors = sort_vertices_by_degree(graph);
             for (int i = 0; i < omp_get_max_threads(); ++i) {
                 thread_degrees[i] = 0;
             }
@@ -431,11 +444,14 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 #pragma omp parallel default(none) shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment, moves, thread_degrees, block_neighbors)
                 {
                     // TODO: figure out how to make this happen once per iteration
-                    std::vector<bool> my_blocks = load_balance(blockmodel, block_neighbors);
+//                    std::vector<bool> my_blocks = load_balance(blockmodel, block_neighbors);
+//                    std::vector<bool> my_vertices = load_balance_vertices(graph, vertex_properties);
+                    std::vector<bool> my_vertices = load_balance_block_neighbors(graph, blockmodel, block_neighbors);
                     for (int index = start; index < end; ++index) {
                         int vertex = graph.low_degree_vertices()[index];
+                        if (!my_vertices[vertex]) continue;
                         int block = blockmodel.block_assignment(vertex);
-                        if (!my_blocks[block]) continue;  // Only process the vertices this thread is responsible for
+//                        if (!my_blocks[block]) continue;  // Only process the vertices this thread is responsible for
                         unsigned long num_neighbors = blockmodel.blockmatrix()->neighbors(block).size();
                         thread_degrees[omp_get_thread_num()] += num_neighbors;
                         VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
@@ -578,6 +594,47 @@ std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<s
         my_blocks[block] = true;
     }
     return my_blocks;
+}
+
+std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel, const std::vector<int> &block_neighbors) {
+    // Decide which blocks each thread is responsible for
+    int thread_id = omp_get_thread_num();
+    std::vector<bool> my_vertices = utils::constant<bool>(graph.num_vertices(), false);
+    int total_neighbors = 0;
+    for (int num_neighbors : block_neighbors) {
+        total_neighbors += num_neighbors;
+    }
+    int average_neighbors = (int) total_neighbors / omp_get_max_threads();
+    int thread = 0;
+    int current_neighbors = 0;
+    for (int vertex : graph.low_degree_vertices()) {
+        int block = blockmodel.block_assignment(vertex);
+        int neighbors = block_neighbors[block];
+        if (thread == thread_id) {
+            my_vertices[vertex] = true;
+        }
+        current_neighbors += neighbors;
+        if (current_neighbors >= average_neighbors && thread < (omp_get_max_threads() - 1)) {
+            current_neighbors = 0;
+            thread++;
+        }
+    }
+    return my_vertices;
+}
+
+std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<std::pair<int, int>> &vertex_properties) {
+    // Decide which blocks each thread is responsible for
+    int thread_id = omp_get_thread_num();
+    std::vector<bool> my_vertices = utils::constant<bool>(graph.num_vertices(), false);
+    for (int i = thread_id; i < graph.num_vertices(); i += 2 * omp_get_max_threads()) {
+        int vertex = vertex_properties[i].first;
+        my_vertices[vertex] = true;
+    }
+    for (int i = 2 * omp_get_max_threads() - 1 - thread_id; i < graph.num_vertices(); i += 2 * omp_get_max_threads()) {
+        int vertex = vertex_properties[i].first;
+        my_vertices[vertex] = true;
+    }
+    return my_vertices;
 }
 
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
@@ -791,6 +848,18 @@ std::vector<std::pair<int, int>> sort_blocks_by_size(const Blockmodel &blockmode
               [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
     std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return block_sizes;
+}
+
+std::vector<std::pair<int,int>> sort_vertices_by_degree(const Graph &graph) {
+    std::vector<std::pair<int,int>> vertex_degrees;
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        int degree = (int)(graph.out_neighbors(vertex).size() + graph.in_neighbors(vertex).size());
+        vertex_degrees.emplace_back(std::make_pair(vertex, degree));
+    }
+    std::sort(vertex_degrees.begin(), vertex_degrees.end(),
+              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+    return vertex_degrees;
 }
 
 //namespace undirected {

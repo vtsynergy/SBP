@@ -69,6 +69,9 @@ EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, const E
 Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const EdgeWeights &out_edges,
                        const EdgeWeights &in_edges, const Blockmodel &blockmodel);
 
+/// Counts the number of neighboring blocks for low degree vertices in the graph. Used for load balancing.
+std::vector<int> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel);
+
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
@@ -112,7 +115,13 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
 /// Returns a vector which determines which blocks a thread is responsible for.
-std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<int, int>> &block_neighbors);
+std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<int, int>> &block_properties);
+
+/// Returns a vector which determines which vertices a thread is responsible for.
+std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<std::pair<int, int>> &vertex_properties);
+
+/// Returns a vector which determines which vertices a thread is responsible for, using block neighbors.
+std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel, const std::vector<int> &block_neighbors);
 
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
@@ -143,6 +152,9 @@ std::vector<std::pair<int,int>> sort_blocks_by_neighbors(const Blockmodel &block
 
 /// Sorts blocks in order of block size - used for load balancing.
 std::vector<std::pair<int,int>> sort_blocks_by_size(const Blockmodel &blockmodel);
+
+/// Sorts vertices in order of degree - used for load balancing.
+std::vector<std::pair<int,int>> sort_vertices_by_degree(const Graph &graph);
 
 //namespace directed {
 //
