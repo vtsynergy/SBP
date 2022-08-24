@@ -40,6 +40,7 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual void clearcol(int col) override;
     /// Returns a copy of the current matrix.
     virtual ISparseMatrix* copy() const override;
+    int distinct_edges(int block) const override;
     std::vector<std::tuple<int, int, int>> entries() const override;
     virtual int get(int row, int col) const override;
     /// Returns all values in the requested column as a dense vector.

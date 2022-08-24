@@ -72,6 +72,9 @@ public:
     virtual void clearcol(int col) = 0;
     /// Returns a copy of this matrix.
     virtual ISparseMatrix* copy() const = 0;
+    /// Returns the number of distinct block-level edges of `block`. Directed edges between two blocks are counted
+    /// separately.
+    virtual int distinct_edges(int block) const = 0;
     /// Returns matrix entries in the form `std::tuple<int, int, int`.
     virtual std::vector<std::tuple<int, int, int>> entries() const = 0;
     /// Returns the value in `matrix[row, col]`.

@@ -67,6 +67,15 @@ ISparseMatrix* DictTransposeMatrix::copy() const {
     return new DictTransposeMatrix(dict_matrix);
 }
 
+int DictTransposeMatrix::distinct_edges(int block) const {
+    int result = (int) this->matrix[block].size();
+    result += (int) this->matrix_transpose[block].size();
+    if (this->matrix[block].contains(block)) {  // If block has a self edge, only count it once.
+        result -= 1;
+    }
+    return result;
+}
+
 std::vector<std::tuple<int, int, int>> DictTransposeMatrix::entries() const {
     throw std::logic_error("entries() is not implemented for DictTransposeMatrix!");
 }

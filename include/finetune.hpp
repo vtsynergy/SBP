@@ -105,6 +105,10 @@ VertexMove eval_vertex_move_nodelta(int vertex, int current_block, utils::Propos
 /// Asynchronous Gibbs on the rest.
 Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
+/// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
+/// Asynchronous Gibbs on the rest. Attempts to manually balance the workload using number of block neighbors.
+Blockmodel &hybrid_mcmc_size_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
 
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.

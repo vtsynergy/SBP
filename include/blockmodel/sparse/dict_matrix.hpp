@@ -34,6 +34,7 @@ class DictMatrix : public ISparseMatrix {
     void clearrow(int row) override;
     void clearcol(int col) override;
     ISparseMatrix* copy() const override;
+    int distinct_edges(int block) const override;
     std::vector<std::tuple<int, int, int>> entries() const override;
     int get(int row, int col) const override;
     std::vector<int> getcol(int col) const override;

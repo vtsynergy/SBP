@@ -47,6 +47,19 @@ ISparseMatrix* DictMatrix::copy() const {
 //    return new DictMatrix(dict_matrix);
 }
 
+int DictMatrix::distinct_edges(int block) const {
+    int result = (int) this->matrix[block].size();
+    for (int row = 0; row < this->nrows; ++row) {
+        if (row == block) continue;  // Do not double-count self-edge
+        const MapVector<int> &matrix_row = this->matrix[row];
+        const auto iterator = matrix_row.find(block);
+        if (iterator != matrix_row.end()) {
+            result += 1;
+        }
+    }
+    return result;
+}
+
 std::vector<std::tuple<int, int, int>> DictMatrix::entries() const {
     std::vector<std::tuple<int, int, int>> result;
     for (int row_index = 0; row_index < this->nrows; ++row_index) {
