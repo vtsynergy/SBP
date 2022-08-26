@@ -222,8 +222,8 @@ std::pair<std::vector<int>, int> count_low_degree_block_neighbors(const Graph &g
             thread++;
         }
     }
-    std::cout << "total: " << total << " ownership: ";
-    utils::print<int>(ownership);
+//    std::cout << "total: " << total << " ownership: ";
+//    utils::print<int>(ownership);
     return std::make_pair(ownership, total);
 }
 
@@ -491,7 +491,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                         moves[vertex] = proposal;
                         num_processed++;
                     }
-                    std::cout << thread_id << ": " << num_processed << std::endl;
+//                    std::cout << thread_id << ": " << num_processed << std::endl;
                 }
                 for (const VertexMove_v2 &move : moves) {
                     if (!move.did_move) continue;
