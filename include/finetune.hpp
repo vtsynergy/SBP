@@ -70,7 +70,7 @@ Delta blockmodel_delta(int vertex, int current_block, int proposed_block, const 
                        const EdgeWeights &in_edges, const Blockmodel &blockmodel);
 
 /// Counts the number of neighboring blocks for low degree vertices in the graph. Used for load balancing.
-std::vector<int> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel);
+std::pair<std::vector<int>, int> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel);
 
 bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
@@ -121,7 +121,8 @@ std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<s
 std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<std::pair<int, int>> &vertex_properties);
 
 /// Returns a vector which determines which vertices a thread is responsible for, using block neighbors.
-std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel, const std::vector<int> &block_neighbors);
+std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel,
+                                               const std::pair<std::vector<int>, int> &block_neighbors);
 
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
