@@ -13,6 +13,8 @@
 
 namespace sbp {
 
+double total_time = 0.0;
+
 std::vector<Intermediate> intermediate_results;
 
 std::vector<Intermediate> get_intermediates() {
@@ -32,30 +34,23 @@ void write_results(float iteration, std::ofstream &file, const Graph &graph, con
 
 void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
     double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
-    double normalized_mdl_v2 = entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges());
     double modularity = -1;
     if (iteration == -1)
         modularity = graph.modularity(blockmodel.block_assignment());
-    double interblock_edges = blockmodel.interblock_edges();
-    // fedisableexcept(FE_INVALID | FE_OVERFLOW);
-    double block_size_variation = blockmodel.block_size_variation();
-    // feenableexcept(FE_INVALID | FE_OVERFLOW);
     Intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
     intermediate.normalized_mdl_v1 = normalized_mdl_v1;
-    intermediate.normalized_mdl_v2 = normalized_mdl_v2;
     intermediate.modularity = modularity;
-    intermediate.interblock_edges = interblock_edges;
-    intermediate.block_size_variation = block_size_variation;
     intermediate.mcmc_iterations = finetune::MCMC_iterations;
     intermediate.mcmc_time = finetune::MCMC_time;
+    intermediate.block_merge_time = block_merge::BlockMerge_time;
+    intermediate.total_time = total_time;
     intermediate_results.push_back(intermediate);
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
-              << " v2 normalized: " << normalized_mdl_v2 << " modularity: " << modularity
-              << " interblock edge %: " << interblock_edges << " block size variation: " << block_size_variation
-              << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
-              << finetune::MCMC_time << std::endl;
+              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
+              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
+              << total_time << std::endl;
 }
 
 Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
@@ -74,13 +69,15 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
+        double start_bm = MPI_Wtime();
         blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
+        block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
         if (iteration < 1) {
             double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
             add_intermediate(0.5, graph, blockmodel, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
-        double start = MPI_Wtime();
+        double start_mcmc = MPI_Wtime();
         if (args.algorithm == "async_gibbs_old" && iteration < float(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
@@ -91,8 +88,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             blockmodel = finetune::hybrid_mcmc_load_balanced(blockmodel, graph, blockmodel_triplet);
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
-//        iteration++;
-        finetune::MCMC_time += MPI_Wtime() - start;
+        finetune::MCMC_time += MPI_Wtime() - start_mcmc;
+        total_time += MPI_Wtime() - start_bm;
         add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
