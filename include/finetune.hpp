@@ -29,6 +29,10 @@ extern int MCMC_iterations;
 /// The total amount of time spent performing MCMC iterations, to be dynamically updated during execution.
 extern double MCMC_time;
 
+/// The total amount of time spent in the main parallelizable loop of the MCMC iterations, to by dynamically
+/// updated during execution.
+extern double MCMC_loop_time;
+
 typedef struct vertex_move_t {
     double delta_entropy;
     bool did_move;

@@ -25,7 +25,9 @@ struct Intermediate {
     double modularity;
     int mcmc_iterations;
     double mcmc_time;
+    double mcmc_loop_time;
     double block_merge_time;
+    double block_merge_loop_time;
     double total_time;
 };
 

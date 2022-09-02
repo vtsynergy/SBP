@@ -24,6 +24,10 @@ namespace block_merge {
 /// The total amount of time spent performing block merges, to be dynamically updated during execution.
 extern double BlockMerge_time;
 
+/// The total amount of time spent in the main parallelizable loop of the block merge iterations, to by dynamically
+/// updated during execution.
+extern double BlockMerge_loop_time;
+
 static const int NUM_AGG_PROPOSALS_PER_BLOCK = 10;  // Proposals per block
 
 typedef struct proposal_evaluation_t {

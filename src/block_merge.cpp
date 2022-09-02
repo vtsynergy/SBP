@@ -11,6 +11,7 @@
 namespace block_merge {
 
 double BlockMerge_time = 0.0;
+double BlockMerge_loop_time = 0.0;
 
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
     Delta delta(current_block, proposed_block, blockmodel.degrees(current_block));
@@ -202,6 +203,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, int num_edg
     std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
     // TODO: keep track of already proposed merges, do not re-process those
     int num_avoided = 0;  // number of avoided/skipped calculations
+    double start_t = MPI_Wtime();
     #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided) default(none) \
     shared(num_blocks, num_edges, blockmodel, block_assignment, delta_entropy_for_each_block, best_merge_for_each_block)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
@@ -217,6 +219,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, int num_edg
             }
         }
     }
+    BlockMerge_loop_time += MPI_Wtime() - start_t;
     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons."
               << std::endl;
     if (args.approximate)

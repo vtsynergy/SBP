@@ -44,7 +44,9 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     intermediate.modularity = modularity;
     intermediate.mcmc_iterations = finetune::MCMC_iterations;
     intermediate.mcmc_time = finetune::MCMC_time;
+    intermediate.mcmc_loop_time = finetune::MCMC_loop_time;
     intermediate.block_merge_time = block_merge::BlockMerge_time;
+    intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
     intermediate.total_time = total_time;
     intermediate_results.push_back(intermediate);
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
