@@ -22,13 +22,11 @@
 class DictTransposeMatrix : public ISparseMatrix {
   public:
     DictTransposeMatrix() = default;
-    DictTransposeMatrix(int nrows, int ncols) {  // : ncols(ncols), nrows(nrows) {
+    DictTransposeMatrix(int nrows, int ncols, int buckets = 10) {
         this->ncols = ncols;
         this->nrows = nrows;
-//        this->matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
-//        this->matrix_transpose = std::vector<std::unordered_map<int, int>>(this->ncols, std::unordered_map<int, int>());
-        this->matrix = std::vector<MapVector<int>>(this->nrows, MapVector<int>());
-        this->matrix_transpose = std::vector<MapVector<int>>(this->ncols, MapVector<int>());
+        this->matrix = std::vector<MapVector<int>>(this->nrows, MapVector<int>(buckets));
+        this->matrix_transpose = std::vector<MapVector<int>>(this->ncols, MapVector<int>(buckets));
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
     virtual void add(int row, int col, int val) override;

@@ -50,7 +50,7 @@ class Blockmodel {
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<float>::max();
         if (args.transpose) {
-            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, 36);
         } else {
             this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
         }

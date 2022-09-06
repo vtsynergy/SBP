@@ -185,12 +185,11 @@ Blockmodel Blockmodel::from_sample(int num_blocks, const Graph &graph, std::vect
 //}
 
 void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
-//    double start = omp_get_wtime();
-//    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
+    int num_buckets = graph.num_edges() / graph.num_vertices();
     if (args.transpose) {
-        blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, num_buckets);
     } else {
         blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
@@ -201,7 +200,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     // Initialize the blockmodel
     // TODO: find a way to parallelize the matrix filling step
     #pragma omp parallel default(none) \
-    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, std::cout, args)
+    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, args)
     {
         int tid = omp_get_thread_num();
         int num_threads = omp_get_num_threads();
