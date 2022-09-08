@@ -39,12 +39,14 @@ class DictMatrix : public ISparseMatrix {
     int get(int row, int col) const override;
     std::vector<int> getcol(int col) const override;
     MapVector<int> getcol_sparse(int col) const override;
+    const MapVector<int>& getcol_sparseref(int col) const override;
     void getcol_sparse(int col, MapVector<int> &col_vector) const override;
     // virtual MapVector<int> getcol_sparse(int col) override;
     // virtual const MapVector<int>& getcol_sparse(int col) const override;
     std::vector<int> getrow(int row) const override;
     MapVector<int> getrow_sparse(int row) const override;
     void getrow_sparse(int row, MapVector<int> &row_vector) const override;
+    const MapVector<int>& getrow_sparseref(int row) const override;
     // virtual MapVector<int> getrow_sparse(int row) override;
     // virtual const MapVector<int>& getrow_sparse(int row) const override;
     EdgeWeights incoming_edges(int block) const override;

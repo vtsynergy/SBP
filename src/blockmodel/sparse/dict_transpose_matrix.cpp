@@ -106,6 +106,11 @@ MapVector<int> DictTransposeMatrix::getcol_sparse(int col) const {
     return this->matrix_transpose[col];
 }
 
+const MapVector<int>& DictTransposeMatrix::getcol_sparseref(int col) const {
+    check_row_bounds(col);
+    return this->matrix_transpose[col];
+}
+
 // const MapVector<int>& DictTransposeMatrix::getcol_sparse(int col) const {
 //     check_col_bounds(col);
 //     return this->matrix_transpose[col];
@@ -135,10 +140,10 @@ MapVector<int> DictTransposeMatrix::getrow_sparse(int row) const {
     return this->matrix[row];
 }
 
-// const MapVector<int>& DictTransposeMatrix::getrow_sparse(int row) const {
-//     check_row_bounds(row);
-//     return this->matrix[row];
-// }
+ const MapVector<int>& DictTransposeMatrix::getrow_sparseref(int row) const {
+     check_row_bounds(row);
+     return this->matrix[row];
+ }
 
 void DictTransposeMatrix::getrow_sparse(int row, MapVector<int> &row_vector) const {
     check_row_bounds(row);

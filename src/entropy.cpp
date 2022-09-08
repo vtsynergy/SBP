@@ -245,10 +245,10 @@ double delta_mdl(int current_block, int proposal, const Blockmodel &blockmodel, 
                  SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees) {
     // Blockmodel indexing
     const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
-    const MapVector<int> &old_block_row = matrix->getrow_sparse(current_block); // M_r_t1
-    const MapVector<int> &old_proposal_row = matrix->getrow_sparse(proposal);   // M_s_t1
-    const MapVector<int> &old_block_col = matrix->getcol_sparse(current_block); // M_t2_r
-    const MapVector<int> &old_proposal_col = matrix->getcol_sparse(proposal);   // M_t2_s
+    const MapVector<int> &old_block_row = matrix->getrow_sparseref(current_block); // M_r_t1
+    const MapVector<int> &old_proposal_row = matrix->getrow_sparseref(proposal);   // M_s_t1
+    const MapVector<int> &old_block_col = matrix->getcol_sparseref(current_block); // M_t2_r
+    const MapVector<int> &old_proposal_col = matrix->getcol_sparseref(proposal);   // M_t2_s
 
     double delta_entropy = 0.0;
     delta_entropy -= common::delta_entropy_temp(updates.block_row, block_degrees.block_degrees_in,

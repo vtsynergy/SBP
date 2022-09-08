@@ -116,6 +116,12 @@ MapVector<int> DictMatrix::getcol_sparse(int col) const {
     return col_vector;
 }
 
+const MapVector<int>& DictMatrix::getcol_sparseref(int col) const {
+    check_row_bounds(col);
+    throw std::logic_error("sparse reference to DictMatrix column impossible to implement!");
+//    return this->matrix_transpose[col];
+}
+
 void DictMatrix::getcol_sparse(int col, MapVector<int> &col_vector) const {
     check_col_bounds(col);
     for (int row = 0; row < this->nrows; ++row) {
@@ -155,6 +161,11 @@ MapVector<int> DictMatrix::getrow_sparse(int row) const {
 void DictMatrix::getrow_sparse(int row, MapVector<int> &col_vector) const {
     check_row_bounds(row);
     col_vector = this->matrix[row];
+}
+
+const MapVector<int>& DictMatrix::getrow_sparseref(int row) const {
+    check_row_bounds(row);
+    return this->matrix[row];
 }
 
 EdgeWeights DictMatrix::incoming_edges(int block) const {

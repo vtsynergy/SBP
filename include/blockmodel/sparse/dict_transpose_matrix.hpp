@@ -45,14 +45,13 @@ class DictTransposeMatrix : public ISparseMatrix {
     virtual std::vector<int> getcol(int col) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
     virtual MapVector<int> getcol_sparse(int col) const override;
-    /// Returns all values in the requested column as a sparse vector (ordered map) reference.
-    // const MapVector<int>& getcol_sparse(int col) const;
+    const MapVector<int>& getcol_sparseref(int col) const override;
     virtual void getcol_sparse(int col, MapVector<int> &col_vector) const override;
     /// Returns all values in the requested row as a dense vector.
     virtual std::vector<int> getrow(int row) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
     virtual MapVector<int> getrow_sparse(int row) const override;
-    /// Returns all values in the requested column as a sparse vector (ordered map) reference.
+    const MapVector<int>& getrow_sparseref(int row) const override;
     // const MapVector<int>& getrow_sparse(int row) const;
     virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
     virtual EdgeWeights incoming_edges(int block) const override;

@@ -83,6 +83,8 @@ public:
     virtual std::vector<int> getcol(int col) const = 0;
     /// Returns the column `col` as a sparse vector.
     virtual MapVector<int> getcol_sparse(int col) const = 0;
+    /// Returns the col `col` as a reference to a sparse vector.
+    virtual const MapVector<int>& getcol_sparseref(int col) const = 0;
     /// Populates the values in `col_vector` with the values of column `col`.
     virtual void getcol_sparse(int col, MapVector<int> &col_vector) const = 0;
     // virtual const MapVector<int>& getcol_sparse(int col) const = 0;
@@ -90,6 +92,8 @@ public:
     virtual std::vector<int> getrow(int row) const = 0;
     /// Returns the row `row` as a sparse vector.
     virtual MapVector<int> getrow_sparse(int row) const = 0;
+    /// Returns the row `row` as a reference to a sparse vector.
+    virtual const MapVector<int>& getrow_sparseref(int row) const = 0;
     /// Populates the values in `row_vector` with the values of row `row`.
     virtual void getrow_sparse(int row, MapVector<int> &row_vector) const = 0;
     // virtual const MapVector<int>& getrow_sparse(int row) const = 0;
