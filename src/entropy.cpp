@@ -341,7 +341,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
         }
     }
     // Compute change in entropy for cells with no delta
-    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparseref(current_block)) {
         int row = current_block;
         int col = entry.first;
         int value = entry.second;
@@ -355,7 +355,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = current block");
         }
     }
-    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getrow_sparseref(proposed_block)) {
         int row = proposed_block;
         int col = entry.first;
         int value = entry.second;
@@ -369,7 +369,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and row = proposed block");
         }
     }
-    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparseref(current_block)) {
         int row = entry.first;
         int col = current_block;
         int value = entry.second;
@@ -383,7 +383,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
             throw std::invalid_argument("nan/inf in bm delta when delta = 0 and col = current block");
         }
     }
-    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+    for (const auto &entry: blockmodel.blockmatrix()->getcol_sparseref(proposed_block)) {
         int row = entry.first;
         int col = proposed_block;
         int value = entry.second;
