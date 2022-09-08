@@ -47,10 +47,10 @@ add_library(SBP STATIC
         src/blockmodel/sparse/dict_matrix.cpp
         src/blockmodel/sparse/dict_transpose_matrix.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
-        )
+        src/fastlog.cpp)
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DistributedSBP src/main.cpp)
+add_executable(DistributedSBP src/main.cpp include/fastlog.hpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(Influence src/influence.cpp)
