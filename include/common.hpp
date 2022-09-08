@@ -14,6 +14,7 @@
 #include "blockmodel/dist_blockmodel.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
+#include "fastlog.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -32,9 +33,10 @@ typedef struct new_block_degrees_t {
 } NewBlockDegrees;
 
 /// Calculates the entropy of a single blockmodel cell.
-inline float cell_entropy(float value, float degree_in, float degree_out) {
-    if (value == 0.0) return 0.0;
-    float entropy = value * logf(value / (degree_in * degree_out));
+inline float cell_entropy(size_t value, size_t degree_in, size_t degree_out) {
+    if (value == 0) return 0.0;
+    float entropy = float(value) * (fastlog(value) - (fastlog(degree_in) + fastlog(degree_out)));
+//    float entropy = value * logf(value / (degree_in * degree_out));
     /* if (std::isnan(entropy) || std::isinf(entropy)) {
         std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
         throw std::invalid_argument("something is wrong");

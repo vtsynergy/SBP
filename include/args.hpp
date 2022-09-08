@@ -18,6 +18,7 @@ class Args {
     int asynciterations;
     int batches;
     std::string blocksizevar;
+    size_t cachesize;
     std::string csv;  // TODO: save results in a csv file
     std::string delimiter;
     std::string distribute;
@@ -59,6 +60,7 @@ class Args {
                                           parser);
             TCLAP::ValueArg<std::string> _blocksizevar("b", "blocksizevar", "The variation between the sizes of "
                                                        "communities", false, "low", "low|high|unk", parser);
+            TCLAP::ValueArg<size_t> _cachesize("", "cachesize", "The size of the log cache", false, 100, ">= 1", parser);
             TCLAP::ValueArg<std::string> _csv("c", "csv",
                                               "The path to the csv file in which the results will be stored, "
                                               "without the suffix, e.g.:\n"
@@ -110,6 +112,7 @@ class Args {
             this->asynciterations = _async_iterations.getValue();
             this->batches = _batches.getValue();
             this->blocksizevar = _blocksizevar.getValue();
+            this->cachesize = _cachesize.getValue();
             this->csv = _csv.getValue();
             this->delimiter = _delimiter.getValue();
             this->distribute = _distribute.getValue();
