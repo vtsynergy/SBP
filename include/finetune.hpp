@@ -81,6 +81,9 @@ bool early_stop(int iteration, BlockmodelTriplet &blockmodels, double initial_en
 
 bool early_stop(int iteration, double initial_entropy, std::vector<double> &delta_entropies);
 
+bool early_stop_parallel(int iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
+                         std::vector<double> &delta_entropies, std::vector<int> &vertex_moves);
+
 [[maybe_unused]] EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, int current_block, int proposed_block,
                                                      EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                                                      int self_edge_weight);

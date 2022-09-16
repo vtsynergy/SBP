@@ -119,13 +119,13 @@ public:
     void zero_init(const MapVector<int> &block_row, const MapVector<int> &block_col, const MapVector<int> &proposed_row,
                    const MapVector<int> &proposed_col) {
 //    void zero_init(const ISparseMatrix *matrix) {
-//        const MapVector<int> &block_row = matrix->getrow_sparse(this->_current_block);
+//        const MapVector<int> &block_row = matrix->getrow_sparse(this->_current_vertex);
         this->_current_block_row = MapVector<int>(block_row.bucket_count());
         for (const std::pair<const int, int> &entry : block_row) {
             int col = entry.first;
             this->add(this->_current_block, col, 0);
         }
-//        const MapVector<int> &block_col = matrix->getcol_sparse(this->_current_block);
+//        const MapVector<int> &block_col = matrix->getcol_sparse(this->_current_vertex);
         this->_current_block_col = MapVector<int>(block_col.bucket_count());
         for (const std::pair<const int, int> &entry : block_col) {
             int row = entry.first;
@@ -154,18 +154,18 @@ public:
 //    MapVector<int> _proposed_block_row;
 //    MapVector<int> _current_block_col;
 //    MapVector<int> _proposed_block_col;
-//    int _current_block;
+//    int _current_vertex;
 //    int _proposed_block;
 //    int _self_edge_weight;
 //
 //public:
 //    PointerDelta() {
-//        this->_current_block = -1;
+//        this->_current_vertex = -1;
 //        this->_proposed_block = -1;
 //        this->_self_edge_weight = 0;
 //    }
 //    PointerDelta(int current_block, int proposed_block, int buckets = 10) {
-//        this->_current_block = current_block;
+//        this->_current_vertex = current_block;
 //        this->_proposed_block = proposed_block;
 //        this->_self_edge_weight = 0;
 //        this->_current_block_row = MapVector<int>(buckets);
@@ -176,18 +176,18 @@ public:
 //    PointerDelta(int current_block, int proposed_block, const MapVector<int> &block_row,
 //                 const MapVector<int> &block_col, const MapVector<int> &proposed_row,
 //                 const MapVector<int> &proposed_col) {
-//        this->_current_block = current_block;
+//        this->_current_vertex = current_block;
 //        this->_proposed_block = proposed_block;
 //        this->_self_edge_weight = 0;
 //        this->zero_init(block_row, block_col, proposed_row, proposed_col);
 //    }
 //    /// Adds `value` as the delta to cell matrix[`row`,`col`].
 //    void add(int row, int col, int value) {
-//        if (row == this->_current_block)
+//        if (row == this->_current_vertex)
 //            this->_current_block_row[col] += value;
 //        else if (row == this->_proposed_block)
 //            this->_proposed_block_row[col] += value;
-//        else if (col == this->_current_block)
+//        else if (col == this->_current_vertex)
 //            this->_current_block_col[row] += value;
 //        else if (col == this->_proposed_block)
 //            this->_proposed_block_col[row] += value;
@@ -198,13 +198,13 @@ public:
 //    std::vector<std::tuple<int, int, int>> entries() const {
 //        std::vector<std::tuple<int, int, int>> result;
 //        for (const std::pair<const int, int> &entry : this->_current_block_row) {
-//            result.emplace_back(this->_current_block, entry.first, entry.second);
+//            result.emplace_back(this->_current_vertex, entry.first, entry.second);
 //        }
 //        for (const std::pair<const int, int> &entry : this->_proposed_block_row) {
 //            result.emplace_back(this->_proposed_block, entry.first, entry.second);
 //        }
 //        for (const std::pair<const int, int> &entry : this->_current_block_col) {
-//            result.emplace_back(entry.first, this->_current_block, entry.second);
+//            result.emplace_back(entry.first, this->_current_vertex, entry.second);
 //        }
 //        for (const std::pair<const int, int> &entry : this->_proposed_block_col) {
 //            result.emplace_back(entry.first, this->_proposed_block, entry.second);
@@ -213,11 +213,11 @@ public:
 //    }
 //    /// Returns the delta for matrix[`row`,`col`] without modifying the underlying data structure.
 //    int get(int row, int col) const {
-//        if (row == this->_current_block)
+//        if (row == this->_current_vertex)
 //            return map_vector::get(this->_current_block_row, col);
 //        else if (row == this->_proposed_block)
 //            return map_vector::get(this->_proposed_block_row, col);
-//        else if (col == this->_current_block)
+//        else if (col == this->_current_vertex)
 //            return map_vector::get(this->_current_block_col, row);
 //        else if (col == this->_proposed_block)
 //            return map_vector::get(this->_proposed_block_col, row);
@@ -233,11 +233,11 @@ public:
 //    }
 //    /// Adds -`value` (negative `value`) as the delta to cell matrix[`row`,`col`].
 //    void sub(int row, int col, int value) {
-//        if (row == this->_current_block)
+//        if (row == this->_current_vertex)
 //            this->_current_block_row[col] -= value;
 //        else if (row == this->_proposed_block)
 //            this->_proposed_block_row[col] -= value;
-//        else if (col == this->_current_block)
+//        else if (col == this->_current_vertex)
 //            this->_current_block_col[row] -= value;
 //        else if (col == this->_proposed_block)
 //            this->_proposed_block_col[row] -= value;
@@ -249,17 +249,17 @@ public:
 //    void zero_init(const MapVector<int> &block_row, const MapVector<int> &block_col, const MapVector<int> &proposed_row,
 //                   const MapVector<int> &proposed_col) {
 ////    void zero_init(const ISparseMatrix *matrix) {
-////        const MapVector<int> &block_row = matrix->getrow_sparse(this->_current_block);
+////        const MapVector<int> &block_row = matrix->getrow_sparse(this->_current_vertex);
 //        this->_current_block_row = MapVector<int>(block_row.bucket_count());
 //        for (const std::pair<const int, int> &entry : block_row) {
 //            int col = entry.first;
-//            this->add(this->_current_block, col, 0);
+//            this->add(this->_current_vertex, col, 0);
 //        }
-////        const MapVector<int> &block_col = matrix->getcol_sparse(this->_current_block);
+////        const MapVector<int> &block_col = matrix->getcol_sparse(this->_current_vertex);
 //        this->_current_block_col = MapVector<int>(block_col.bucket_count());
 //        for (const std::pair<const int, int> &entry : block_col) {
 //            int row = entry.first;
-//            this->add(row, this->_current_block, 0);
+//            this->add(row, this->_current_vertex, 0);
 //        }
 ////        const MapVector<int> &proposed_row = matrix->getrow_sparse(this->_proposed_block);
 //        this->_proposed_block_row = MapVector<int>(proposed_row.bucket_count());
@@ -274,7 +274,7 @@ public:
 //            this->add(row, this->_proposed_block, 0);
 //        }
 //    }
-//    int current_block() const { return this->_current_block; }
+//    int current_block() const { return this->_current_vertex; }
 //    int proposed_block() const { return this->_proposed_block; }
 //};
 
