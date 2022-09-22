@@ -10,6 +10,29 @@
 #include "absl/container/flat_hash_map.h"
 #include "tsl/robin_map.h"
 
+/// Stores a list of edges for a given structure (vertex or block) and their weights. Only stores the second portion
+/// of the edge, so additional information is needed to reconstruct the edge. i.e.: for a list of edges (1-->2), (1--4),
+/// (1-->6), only [2, 4, 6] and the corresponding weights will be stored.
+struct EdgeWeights {
+    std::vector<int> indices;
+    std::vector<int> values;
+
+    void print() {
+        if (this->indices.empty()) {
+            std::cout << "[]" << std::endl;
+            return;
+        }
+        std::cout << "[" << this->indices[0] << ": " << this->values[0] << ", ";
+        for (size_t num_printed = 1; num_printed < this->indices.size() - 1; num_printed++) {
+            if (num_printed % 25 == 0) {
+                std::cout << std::endl << " ";
+            }
+            std::cout << this->indices[num_printed] << ": " << this->values[num_printed] << ", ";
+        }
+        std::cout << this->indices[this->indices.size() - 1] << ": " << this->values[this->indices.size() - 1] << "]" << std::endl;
+    }
+};
+
 /// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
 struct IntPairHash {
     size_t operator() (const std::pair<int, int> &pair) const {
@@ -59,6 +82,22 @@ struct Merge {
 struct Membership {
     int vertex = -1;
     int block = -1;
+};
+
+struct VertexMove {
+    double delta_entropy;
+    bool did_move;
+    int vertex;
+    int proposed_block;
+};
+
+struct VertexMove_v2 {
+    double delta_entropy;
+    bool did_move;
+    int vertex;
+    int proposed_block;
+    EdgeWeights out_edges;
+    EdgeWeights in_edges;
 };
 
 typedef std::unordered_map<std::pair<int, int>, int, IntPairHash> PairIndexVector;

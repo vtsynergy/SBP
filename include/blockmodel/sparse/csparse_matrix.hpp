@@ -15,26 +15,6 @@
 
 // typedef Eigen::VectorXi Vector;
 
-typedef struct edge_weights_t {
-    std::vector<int> indices;
-    std::vector<int> values;
-
-    void print() {
-        if (this->indices.empty()) {
-            std::cout << "[]" << std::endl;
-            return;
-        }
-        std::cout << "[" << this->indices[0] << ": " << this->values[0] << ", ";
-        for (size_t num_printed = 1; num_printed < this->indices.size() - 1; num_printed++) {
-            if (num_printed % 25 == 0) {
-                std::cout << std::endl << " ";
-            }
-            std::cout << this->indices[num_printed] << ": " << this->values[num_printed] << ", ";
-        }
-        std::cout << this->indices[this->indices.size() - 1] << ": " << this->values[this->indices.size() - 1] << "]" << std::endl;
-    }
-} EdgeWeights;
-
 typedef struct indices_t {
     std::vector<int> rows;
     std::vector<int> cols;

@@ -33,26 +33,10 @@ extern double MCMC_time;
 /// updated during execution.
 extern double MCMC_loop_time;
 
-typedef struct vertex_move_t {
-    double delta_entropy;
-    bool did_move;
-    int vertex;
-    int proposed_block;
-} VertexMove;
-
 //struct Neighbors {
 //    EdgeWeights out_neighbors;
 //    EdgeWeights in_neighbors;
 //};
-
-struct VertexMove_v2 {
-    double delta_entropy;
-    bool did_move;
-    int vertex;
-    int proposed_block;
-    EdgeWeights out_edges;
-    EdgeWeights in_edges;
-};
 
 //static const int MOVING_AVG_WINDOW = 3;      // Window for calculating change in entropy
 //static const double SEARCH_THRESHOLD = 5e-4; // Threshold before golden ratio is established

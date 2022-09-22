@@ -358,6 +358,34 @@ void Blockmodel::move_vertex(int vertex, const Delta &delta, utils::ProposalAndE
             this->_block_degrees_in[proposal.proposal] - proposed_block_self_edges;
 }
 
+void Blockmodel::move_vertex(int vertex, int current_block, const VertexMove_v2 &move) {
+    for (const int &out_vertex : move.out_edges.indices) {  // Edge: vertex --> out_vertex
+        int out_block = this->_block_assignment[out_vertex];
+        this->_blockmatrix->sub(current_block, out_block, 1);
+        this->_block_degrees_out[current_block]--;
+        this->_block_degrees[current_block]--;
+        this->_block_degrees_out[move.proposed_block]++;
+        this->_block_degrees[move.proposed_block]++;
+        if (out_vertex == vertex) {  // handle self edge
+            this->_blockmatrix->add(move.proposed_block, move.proposed_block, 1);
+            this->_block_degrees_in[current_block]--;
+            this->_block_degrees_in[move.proposed_block]++;
+        } else {
+            this->_blockmatrix->add(move.proposed_block, out_block, 1);
+        }
+    }
+    for (const int &in_vertex : move.in_edges.indices) {  // Edge: in_vertex --> out_vertex
+        int in_block = this->_block_assignment[in_vertex];
+        this->_blockmatrix->sub(in_block, current_block, 1);
+        this->_block_degrees_in[current_block]--;
+        this->_block_degrees[current_block]--;
+        this->_blockmatrix->add(in_block, move.proposed_block, 1);
+        this->_block_degrees_in[move.proposed_block]++;
+        this->_block_degrees[move.proposed_block]++;
+    }
+    this->_block_assignment[vertex] = move.proposed_block;
+}
+
 void Blockmodel::print_blockmatrix() const {
     this->_blockmatrix->print();
 }

@@ -160,7 +160,7 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
             3, B3, 1, 4, proposal);
     Blockmodel B4 = B3.copy();
     Blockmodel B5 = B3.copy();
-    finetune::VertexMove result = finetune::move_vertex_nodelta(6, 3, proposal, B4, graph, out_edges, in_edges);
+    VertexMove result = finetune::move_vertex_nodelta(6, 3, proposal, B4, graph, out_edges, in_edges);
     B5.move_vertex(vertex, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
                    new_block_degrees.block_degrees);
     double E_before = entropy::mdl(B3, 11, 23);

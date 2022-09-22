@@ -20,13 +20,15 @@ protected:
     // My variables
     std::vector<int> assignment;
     std::vector<bool> self_edges;
-    Blockmodel B, B2;
+    Blockmodel B, B2, B3;
     utils::ProposalAndEdgeCounts Proposal;
     Graph graph;
     common::NewBlockDegrees  new_block_degrees;
     EdgeCountUpdates Updates;
     SparseEdgeCountUpdates SparseUpdates;
     Delta Deltas;
+    VertexMove_v2 Move;
+    VertexMove_v2 SelfEdgeMove;
     void SetUp() override {
         args.transpose = true;
         std::vector<std::vector<int>> edges {
@@ -97,6 +99,25 @@ protected:
         std::vector<int> assignment2(assignment);
         assignment2[7] = Proposal.proposal;
         B2 = Blockmodel(3, graph, 0.5, assignment2);
+        Move = {
+            -0.01,  // random change in entropy value
+            true,
+            7,
+            Proposal.proposal,
+            EdgeWeights { { 3, 9}, { 1, 1 } },
+            EdgeWeights { { 5, 8, 10 }, { 1, 1, 1 }}
+        };
+        SelfEdgeMove = {
+                -0.01,
+                true,
+                5,
+                0,
+                EdgeWeights { { 4, 5, 6, 7 }, { 1, 1, 1, 1 } },
+                EdgeWeights { { 3, 8 }, { 1, 1 }}
+        };
+        std::vector<int> assignment3(assignment);
+        assignment3[5] = 0;
+        B3 = Blockmodel(3, graph, 0.5, assignment3);
     }
 //    virtual void TearDown() {
 //
@@ -174,6 +195,17 @@ protected:
         BlockDegreesAfterUpdates.block_degrees_out = { 6, 4, 2, 4, 2, 5 };
         BlockDegreesAfterUpdates.block_degrees_in = { 9, 3, 2, 3, 3, 3 };
         BlockDegreesAfterUpdates.block_degrees = { 11, 7, 4, 6, 5, 6 };
+        Move = {
+                -0.01,  // random change in entropy value
+                true,
+                6,
+                Proposal.proposal,
+                EdgeWeights { { 4 }, { 1 } },
+                EdgeWeights { { 4, 5 }, { 1, 1 }}
+        };
+        std::vector<int> assignment3(assignment);
+        assignment3[5] = Proposal.proposal;
+        B3 = Blockmodel(6, graph, 0.5, assignment3);
     }
 //    virtual void TearDown() {
 //
