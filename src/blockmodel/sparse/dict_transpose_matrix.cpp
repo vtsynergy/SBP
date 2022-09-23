@@ -214,6 +214,10 @@ void DictTransposeMatrix::sub(int row, int col, int val) {
     // TODO: debug mode - if matrix[row][col] doesn't exist, throw exception
     this->matrix[row][col] -= val;
     this->matrix_transpose[col][row] -= val;
+    if (this->matrix[row][col] == 0) {
+        this->matrix[row].erase(col);
+        this->matrix_transpose[col].erase(row);
+    }
 }
 
 int DictTransposeMatrix::edges() const {

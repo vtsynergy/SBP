@@ -344,10 +344,10 @@ void Blockmodel::move_vertex(int vertex, const Delta &delta, utils::ProposalAndE
     this->_block_assignment[vertex] = proposal.proposal;
     this->_blockmatrix->update_edge_counts(delta);
     int current_block = delta.current_block();
-    int current_block_self_edges = this->_blockmatrix->get(current_block, current_block)
-                                   + delta.get(current_block, current_block);
-    int proposed_block_self_edges = this->_blockmatrix->get(proposal.proposal, proposal.proposal)
-                                    + delta.get(proposal.proposal, proposal.proposal);
+    int current_block_self_edges = this->_blockmatrix->get(current_block, current_block);
+//                                   + delta.get(current_block, current_block);
+    int proposed_block_self_edges = this->_blockmatrix->get(proposal.proposal, proposal.proposal);
+//                                    + delta.get(proposal.proposal, proposal.proposal);
     this->_block_degrees_out[current_block] -= proposal.num_out_neighbor_edges;
     this->_block_degrees_out[proposal.proposal] += proposal.num_out_neighbor_edges;
     this->_block_degrees_in[current_block] -= (proposal.num_in_neighbor_edges + delta.self_edge_weight());
@@ -358,32 +358,49 @@ void Blockmodel::move_vertex(int vertex, const Delta &delta, utils::ProposalAndE
             this->_block_degrees_in[proposal.proposal] - proposed_block_self_edges;
 }
 
-void Blockmodel::move_vertex(int vertex, int current_block, const VertexMove_v2 &move) {
+void Blockmodel::move_vertex(const VertexMove_v2 &move) {
+    int current_block = this->_block_assignment[move.vertex];
     for (const int &out_vertex : move.out_edges.indices) {  // Edge: vertex --> out_vertex
         int out_block = this->_block_assignment[out_vertex];
         this->_blockmatrix->sub(current_block, out_block, 1);
         this->_block_degrees_out[current_block]--;
-        this->_block_degrees[current_block]--;
         this->_block_degrees_out[move.proposed_block]++;
-        this->_block_degrees[move.proposed_block]++;
-        if (out_vertex == vertex) {  // handle self edge
+        if (out_vertex == move.vertex) {  // handle self edge
             this->_blockmatrix->add(move.proposed_block, move.proposed_block, 1);
+            if (args.transpose) {
+                std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
+                        std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
+                blockmatrix_dtm->add_transpose(move.proposed_block, move.proposed_block, 1);
+            }
             this->_block_degrees_in[current_block]--;
             this->_block_degrees_in[move.proposed_block]++;
         } else {
             this->_blockmatrix->add(move.proposed_block, out_block, 1);
+            if (args.transpose) {
+                std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
+                        std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
+                blockmatrix_dtm->add_transpose(move.proposed_block, out_block, 1);
+            }
         }
     }
     for (const int &in_vertex : move.in_edges.indices) {  // Edge: in_vertex --> out_vertex
         int in_block = this->_block_assignment[in_vertex];
         this->_blockmatrix->sub(in_block, current_block, 1);
         this->_block_degrees_in[current_block]--;
-        this->_block_degrees[current_block]--;
         this->_blockmatrix->add(in_block, move.proposed_block, 1);
+        if (args.transpose) {
+            std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
+            blockmatrix_dtm->add_transpose(in_block, move.proposed_block, 1);
+        }
         this->_block_degrees_in[move.proposed_block]++;
-        this->_block_degrees[move.proposed_block]++;
     }
-    this->_block_assignment[vertex] = move.proposed_block;
+    this->_block_degrees[current_block] = this->_block_degrees_in[current_block] +
+                                          this->_block_degrees_out[current_block] -
+                                          this->_blockmatrix->get(current_block, current_block);
+    this->_block_degrees[move.proposed_block] = this->_block_degrees_in[move.proposed_block] +
+                                          this->_block_degrees_out[move.proposed_block] -
+                                          this->_blockmatrix->get(move.proposed_block, move.proposed_block);
+    this->_block_assignment[move.vertex] = move.proposed_block;
 }
 
 void Blockmodel::print_blockmatrix() const {
@@ -417,13 +434,53 @@ void Blockmodel::update_edge_counts(int current_block, int proposed_block, Spars
 
 bool Blockmodel::validate(const Graph &graph) {
     Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, this->_block_assignment);
-
     for (int row = 0; row < this->num_blocks; ++row) {
         for (int col = 0; col < this->num_blocks; ++col) {
 //            int this_val = this->blockmatrix()->get(row, col);
             int correct_val = correct.blockmatrix()->get(row, col);
             if (!this->blockmatrix()->validate(row, col, correct_val)) return false;
 //            if (this_val != correct_val) return false;
+        }
+    }
+    for (int block = 0; block < this->num_blocks; ++block) {
+        bool valid = true;
+        if (this->_block_degrees[block] != correct.degrees(block)) {
+            std::cout << "block degrees of " << block << " is " << this->_block_degrees[block] <<
+            " when it should be " << correct.degrees(block) << std::endl;
+            valid = false;
+        }
+        if (this->_block_degrees_out[block] != correct.degrees_out(block)) {
+            std::cout << "block out-degrees of " << block << " is " << this->_block_degrees_out[block] <<
+            " when it should be " << correct.degrees_out(block) << std::endl;
+            valid = false;
+        }
+        if (this->_block_degrees_in[block] != correct.degrees_in(block)) {
+            std::cout << "block in-degrees of " << block << " is " << this->_block_degrees_in[block] <<
+            " when it should be " << correct.degrees_in(block) << std::endl;
+            valid = false;
+        }
+        if (!valid) {
+            std::cout << "error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
+                      this->_block_degrees_in[block] << " d: " << this->_block_degrees[block] <<
+                      " self_edges: " << this->blockmatrix()->get(block, block) << std::endl;
+            std::cout << "correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
+                      correct.degrees_in(block) << " d: " << correct.degrees(block) <<
+                      " self_edges: " << correct.blockmatrix()->get(block, block) << std::endl;
+            std::cout << "Checking matrix for errors..." << std::endl;
+            for (int row = 0; row < this->num_blocks; ++row) {
+                for (int col = 0; col < this->num_blocks; ++col) {
+        //            int this_val = this->blockmatrix()->get(row, col);
+                    int correct_val = correct.blockmatrix()->get(row, col);
+                    if (!this->blockmatrix()->validate(row, col, correct_val)) {
+                        std::cout << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                        " but should be " << correct_val << std::endl;
+                        return false;
+                    }
+        //            if (this_val != correct_val) return false;
+                }
+            }
+            std::cout << "No errors were found in matrix" << std::endl;
+            return false;
         }
     }
     return true;

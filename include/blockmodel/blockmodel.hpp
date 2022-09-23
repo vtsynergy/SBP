@@ -114,10 +114,10 @@ class Blockmodel {
     /// Moves `vertex` from one block to another. Updates the blockmodel using the new blockmodel values from `delta`,
     /// and updates the block degrees, which are calculated on-the-fly.
     void move_vertex(int vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal);
-    /// Moves `vertex` from one block to another. Updates the blockmodel based on the edges in `move`,
+    /// Moves a vertex from one block to another. Updates the blockmodel based on the edges in `move`,
     /// and updates the block degrees, which are calculated on-the-fly. NOTE: assumes self-edges are only included in
     /// move.out_edges.
-    void move_vertex(int vertex, int current_block, const VertexMove_v2 &move);
+    void move_vertex(const VertexMove_v2 &move);
     /// TODO
     void set_block_membership(int vertex, int block);
     /// TODO: Get rid of getters and setters?

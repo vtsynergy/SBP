@@ -7,28 +7,19 @@
 #include "toy_example.hpp"
 
 class BlockmodelTest : public ToyExample {
+protected:
+    void SetUp() override {
+        args.transpose = true;
+        ToyExample::SetUp();
+    }
 };
 
 class BlockmodelComplexTest : public ComplexExample {
-//protected:
-//    VertexMove_v2 Move {
-//            -0.01,  // random change in entropy value
-//            true,
-//            6,
-//            Proposal.proposal,
-//            EdgeWeights { { 4 }, { 1 } },
-//            EdgeWeights { { 4, 5 }, { 1, 1 }}
-//    };
-//    VertexMove_v2 SelfEdgeMove {
-//        -0.01,
-//        true,
-//        5,
-//        0,
-//        EdgeWeights { { 4, 5, 6, 7 }, { 1, 1, 1, 1 } },
-//        EdgeWeights { { 3, 8 }, { 1, 1 }}
-//    };
-//    std::vector<int> assignment3 = { 0, 0, 0, 1, 2, 0, 3, 4, 5, 1, 5 };
-//    Blockmodel B3 = Blockmodel(6, graph, 0.5, assignment3);
+protected:
+    void SetUp() override {
+        args.transpose = true;
+        ComplexExample::SetUp();
+    }
 };
 
 TEST_F(BlockmodelTest, BlockDegreesAreCorrectlyInstantiated) {
@@ -85,8 +76,22 @@ TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
     B.validate(graph);
 }
 
+TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasDynamicBlockDegreesIsCorrect) {
+    B.move_vertex(7, Deltas, Proposal);
+    for (int row = 0; row < B.getNum_blocks(); ++row) {
+        for (int col = 0; col < B.getNum_blocks(); ++col) {
+            int val1 = B.blockmatrix()->get(row, col);
+            int val2 = B2.blockmatrix()->get(row, col);
+            EXPECT_EQ(val1, val2)
+                                << "Blockmatrices differ at " << row << "," << col << " : using updates, value = " << val1
+                                << " using assignment, value = " << val2;
+        }
+    }
+    B.validate(graph);
+}
+
 TEST_F(BlockmodelTest, MoveVertexWithVertexEdgesIsCorrect) {
-    B.move_vertex(7, B.block_assignment(7), Move);
+    B.move_vertex(Move);
     for (int row = 0; row < B.getNum_blocks(); ++row) {
         for (int col = 0; col < B.getNum_blocks(); ++col) {
             int val1 = B.blockmatrix()->get(row, col);
@@ -102,7 +107,7 @@ TEST_F(BlockmodelTest, MoveVertexWithVertexEdgesIsCorrect) {
 TEST_F(BlockmodelTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
     std::cout << "Blockmatrix before move: " << std::endl;
     B.print_blockmatrix();
-    B.move_vertex(5, B.block_assignment(5), SelfEdgeMove);
+    B.move_vertex(SelfEdgeMove);
     std::cout << "Blockmatrix after move: " << std::endl;
     B.print_blockmatrix();
     std::cout << "Actual blockmatrix: " << std::endl;
@@ -178,7 +183,7 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasAndOnTheFlyBlockDegr
 TEST_F(BlockmodelComplexTest, MoveVertexWithVertexEdgesIsCorrect) {
     std::cout << "Blockmatrix before move: " << std::endl;
     B.print_blockmatrix();
-    B.move_vertex(6, B.block_assignment(6), Move);
+    B.move_vertex(Move);
     std::cout << "Blockmatrix after move: " << std::endl;
     B.print_blockmatrix();
     std::cout << "Actual blockmatrix: " << std::endl;
@@ -196,7 +201,7 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithVertexEdgesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
-    B.move_vertex(5, B.block_assignment(5), SelfEdgeMove);
+    B.move_vertex(SelfEdgeMove);
     for (int row = 0; row < B.getNum_blocks(); ++row) {
         for (int col = 0; col < B.getNum_blocks(); ++col) {
             int val1 = B.blockmatrix()->get(row, col);

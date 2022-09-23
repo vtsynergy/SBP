@@ -123,17 +123,7 @@ Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, Bl
             MCMC_loop_time += MPI_Wtime() - start_t;
             for (const VertexMove_v2 &move : moves) {
                 if (!move.did_move) continue;
-                const Delta delta = blockmodel_delta(move.vertex, blockmodel.block_assignment(move.vertex),
-                                                     move.proposed_block, move.out_edges, move.in_edges, blockmodel);
-                EdgeWeights out_blocks = block_edge_weights(blockmodel.block_assignment(), move.out_edges);
-                EdgeWeights in_blocks = block_edge_weights(blockmodel.block_assignment(), move.in_edges);
-                std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
-                std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
-                int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-                int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
-                int k = k_out + k_in;
-                utils::ProposalAndEdgeCounts proposal {move.proposed_block, k_out, k_in, k};
-                blockmodel.move_vertex(move.vertex, delta, proposal);
+                blockmodel.move_vertex(move);
             }
         }
         delta_entropies.push_back(delta_entropy);
@@ -521,34 +511,12 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 }
                 for (const VertexMove_v2 &move : moves) {
                     if (!move.did_move) continue;
-                    const Delta delta = blockmodel_delta(move.vertex, blockmodel.block_assignment(move.vertex),
-                                                         move.proposed_block, move.out_edges, move.in_edges, blockmodel);
-                    EdgeWeights out_blocks = block_edge_weights(blockmodel.block_assignment(), move.out_edges);
-                    EdgeWeights in_blocks = block_edge_weights(blockmodel.block_assignment(), move.in_edges);
-                    std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
-                    std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
-                    int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-                    int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
-                    int k = k_out + k_in;
-                    utils::ProposalAndEdgeCounts proposal {move.proposed_block, k_out, k_in, k};
-                    blockmodel.move_vertex(move.vertex, delta, proposal);
+                    blockmodel.move_vertex(move);
                 }
             }
-//            std::vector<int> temp = utils::constant<int>((int) graph.low_degree_vertices().size(), 0);
-//            for (int index = 0; index < graph.low_degree_vertices().size(); ++index) {
-//                int vertex = graph.low_degree_vertices()[index];
-//                int block = blockmodel.block_assignment(vertex);
-//                int neighbors = block_neighbors.first[block];
-//                temp[index] = neighbors;
-//            }
-//            std::cout << "total: " << block_neighbors.second << " block sizes: ";
-//            utils::print<int>(temp);
             delta_entropies.push_back(delta_entropy);
             std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
             std::cout << delta_entropy / initial_entropy << ", num surrounded vertices: " << num_surrounded << std::endl;
-//            std::cout << "thread neighbors: ";
-//            utils::print(thread_degrees);
-//            exit(-1000);
             total_vertex_moves += vertex_moves;
             MCMC_iterations++;
             // Early stopping
@@ -588,6 +556,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
                 delta_entropy += proposal.delta_entropy;
             }
         }
+//        assert(blockmodel.validate(graph));
         for (int batch = 0; batch < num_low_degree_vertices / batch_size; ++batch) {
             int start = batch * batch_size;
             int end = std::min(num_low_degree_vertices, (batch + 1) * batch_size);
@@ -613,18 +582,10 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             MCMC_loop_time += MPI_Wtime() - start_t;
             for (const VertexMove_v2 &move : moves) {
                 if (!move.did_move) continue;
-                const Delta delta = blockmodel_delta(move.vertex, blockmodel.block_assignment(move.vertex),
-                                                     move.proposed_block, move.out_edges, move.in_edges, blockmodel);
-                EdgeWeights out_blocks = block_edge_weights(blockmodel.block_assignment(), move.out_edges);
-                EdgeWeights in_blocks = block_edge_weights(blockmodel.block_assignment(), move.in_edges);
-                std::vector<int> neighbor_indices = utils::concatenate<int>(out_blocks.indices, in_blocks.indices);
-                std::vector<int> neighbor_weights = utils::concatenate<int>(out_blocks.values, in_blocks.values);
-                int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-                int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
-                int k = k_out + k_in;
-                utils::ProposalAndEdgeCounts proposal {move.proposed_block, k_out, k_in, k};
-                blockmodel.move_vertex(move.vertex, delta, proposal);
+                int current_block = blockmodel.block_assignment(move.vertex);
+                blockmodel.move_vertex(move);
             }
+//            assert(blockmodel.validate(graph));
         }
         delta_entropies.push_back(delta_entropy);
         vertex_moves.push_back(_vertex_moves);
