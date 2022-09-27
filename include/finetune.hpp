@@ -31,7 +31,10 @@ extern double MCMC_time;
 
 /// The total amount of time spent in the main parallelizable loop of the MCMC iterations, to by dynamically
 /// updated during execution.
-extern double MCMC_loop_time;
+extern double MCMC_sequential_time, MCMC_parallel_time, MCMC_vertex_move_time;
+
+/// The number of MCMC moves performed.
+extern uint MCMC_moves;
 
 //struct Neighbors {
 //    EdgeWeights out_neighbors;

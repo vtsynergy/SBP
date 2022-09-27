@@ -44,7 +44,10 @@ void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blo
     intermediate.modularity = modularity;
     intermediate.mcmc_iterations = finetune::MCMC_iterations;
     intermediate.mcmc_time = finetune::MCMC_time;
-    intermediate.mcmc_loop_time = finetune::MCMC_loop_time;
+    intermediate.mcmc_sequential_time = finetune::MCMC_sequential_time;
+    intermediate.mcmc_parallel_time = finetune::MCMC_parallel_time;
+    intermediate.mcmc_vertex_move_time = finetune::MCMC_vertex_move_time;
+    intermediate.mcmc_moves = finetune::MCMC_moves;
     intermediate.block_merge_time = block_merge::BlockMerge_time;
     intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
     intermediate.total_time = total_time;
