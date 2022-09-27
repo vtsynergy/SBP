@@ -97,9 +97,18 @@ int main(int argc, char* argv[]) {
         // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
+    Graph graph = Graph::load();
+    sample::Sample detached;
     Partition partition;
-    partition.graph = Graph::load();
     double start = MPI_Wtime();
+    if (args.detach) {
+        detached = sample::detach(graph);
+        partition.graph = std::move(detached.graph);
+        std::cout << "detached num vertices: " << partition.graph.num_vertices() << " E: "
+                  << partition.graph.num_edges() << std::endl;
+    } else {
+        partition.graph = std::move(graph);
+    }
     if (args.samplesize <= 0.0) {
         std::cerr << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
         exit(-5);
@@ -120,9 +129,15 @@ int main(int argc, char* argv[]) {
         std::cout << "Running without sampling." << std::endl;
         run(partition);
     }
+    if (args.detach) {
+        std::cout << "Reattaching island and 1-degree vertices" << std::endl;
+        partition.blockmodel = sample::reattach(graph, partition.blockmodel, detached);
+    } else {
+        graph = std::move(partition.graph);
+    }
     // evaluate
     double end = MPI_Wtime();
-    evaluate_partition(partition.graph, partition.blockmodel, end - start);
+    evaluate_partition(graph, partition.blockmodel, end - start);
 
     MPI_Finalize();
 }

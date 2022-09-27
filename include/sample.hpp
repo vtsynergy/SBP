@@ -29,6 +29,9 @@ struct Sample {
     std::vector<int> mapping;
 };
 
+/// Detaches island and 1-degree vertices from the graph.
+Sample detach(const Graph &graph);
+
 /// Adds `vertex` to the expansion snowball sample.
 void es_add_vertex(const Graph &graph, ES_State &state, std::vector<int> &sampled, std::vector<int> &mapping,
                    int vertex);
@@ -54,6 +57,9 @@ Sample random(const Graph &graph);
 
 /// Creates a sample using args.samplingalg algorithm
 Sample sample(const Graph &graph);
+
+/// Re-attaches island and 1-degree vertices to the graph.
+Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample);
 
 }
 

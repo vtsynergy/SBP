@@ -7,6 +7,22 @@
 
 namespace sample {
 
+Sample detach(const Graph &graph) {
+    std::vector<int> sampled;
+    std::vector<int> mapping = utils::constant(graph.num_vertices(), -1);
+    std::vector<int> degrees = graph.degrees();
+    int index = 0;
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        int degree = degrees[vertex];
+        if (degree > 1) {
+            sampled.push_back(vertex);
+            mapping[vertex] = index;
+            index++;
+        }
+    }
+    return from_vertices(graph, sampled, mapping);
+}
+
 void es_add_vertex(const Graph &graph, ES_State &state, std::vector<int> &sampled, std::vector<int> &mapping,
                    int vertex) {
     sampled.push_back(vertex);
@@ -169,6 +185,46 @@ Sample sample(const Graph &graph) {
         return expansion_snowball(graph);
     else
         return random(graph);
+}
+
+Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
+    std::cout << "Extending the sample results to the full graph with size: " << graph.num_vertices() << std::endl;
+    std::vector<int> assignment = utils::constant<int>(graph.num_vertices(), -1);
+    // Embed the known assignments from the partitioned sample
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        int sample_vertex = sample.mapping[vertex];
+        if (sample_vertex == -1) continue;
+        assignment[vertex] = sample_blockmodel.block_assignment(sample_vertex);
+    }
+    // Infer membership of remaining vertices
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        if (assignment[vertex] != -1) continue;  // already assigned
+        int random_community = common::random_integer(0, sample_blockmodel.getNum_blocks() - 1);
+        // Assign to the same community as only neighbor
+        for (int neighbor : graph.out_neighbors(vertex)) {
+            int community = assignment[neighbor];
+            if (community == -1) {
+                assignment[vertex] = random_community;
+                assignment[neighbor] = random_community;
+                break;
+            }
+            assignment[vertex] = community;
+        }
+        for (int neighbor : graph.in_neighbors(vertex)) {
+            int community = assignment[neighbor];
+            if (community == -1) {
+                assignment[vertex] = random_community;
+                assignment[neighbor] = random_community;
+                break;
+            }
+            assignment[vertex] = community;
+        }
+        // Vertex is an island
+        if (assignment[vertex] < 0) {  // assign random community
+            assignment[vertex] = random_community;
+        }
+    }
+    return { sample_blockmodel.getNum_blocks(), graph, 0.5, assignment };
 }
 
 }

@@ -21,6 +21,7 @@ class Args {
     size_t cachesize;
     std::string csv;  // TODO: save results in a csv file
     std::string delimiter;
+    bool detach;
     std::string distribute;
     std::string directory;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
@@ -68,6 +69,8 @@ class Args {
                                               false, "./eval/test", "path", parser);
             TCLAP::ValueArg<std::string> _delimiter("", "delimiter", "The delimiter used in the file storing the graph",
                                                     false, "\t", "string, usually `\\t` or `,`", parser);
+            TCLAP::SwitchArg _detach("", "detach", "If set, will detach 1-degree vertices before running"
+                                     "community detection.", parser, false);
             TCLAP::ValueArg<std::string> _distribute("", "distribute", "The distribution scheme to use. Default = "
                                                      "2hop-snowball", false, "2hop-snowball", "none | 2hop-round-robin "
                                                      "| 2hop-size-balanced | 2hop-snowball", parser);
@@ -115,6 +118,7 @@ class Args {
             this->cachesize = _cachesize.getValue();
             this->csv = _csv.getValue();
             this->delimiter = _delimiter.getValue();
+            this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
             this->nodelta = _nodelta.getValue();
