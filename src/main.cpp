@@ -22,6 +22,10 @@
 MPI_t mpi;
 Args args;
 
+double sample_time = 0.0;
+double sample_extend_time = 0.0;
+double finetune_time = 0.0;
+
 struct Partition {
     Graph graph;
     Blockmodel blockmodel;
@@ -42,8 +46,9 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     if (!file_exists) {
         file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
              << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
-             << "runtime, mcmc_iterations, mcmc_time, sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, "
-             << "mcmc_moves, block_merge_time, block_merge_loop_time, total_time" << std::endl;
+             << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
+             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, block_merge_time, "
+             << "block_merge_loop_time, total_time" << std::endl;
     }
     for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
@@ -51,8 +56,9 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
              << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
-             << args.samplingalg << ", " << runtime << ", " << temp.mcmc_iterations << ", "
-             << temp.mcmc_time << ", " << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
+             << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
+             << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
+             << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
              << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << temp.block_merge_time << ", "
              << temp.block_merge_loop_time << ", " << temp.total_time << std::endl;
     }
@@ -114,18 +120,26 @@ int main(int argc, char* argv[]) {
         std::cerr << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
         exit(-5);
     } else if (args.samplesize < 1.0) {
+        double sample_start_t = MPI_Wtime();
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
 //        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
         Partition sample_partition;
         sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
         // add timer
+        double sample_end_t = MPI_Wtime();
+        sample_time = sample_end_t - sample_start_t;
         run(sample_partition);
+        double extend_start_t = MPI_Wtime();
         s.graph = std::move(sample_partition.graph);  // refill s.graph
         // extend sample to full graph
         partition.blockmodel = sample::extend(partition.graph, sample_partition.blockmodel, s);
         // fine-tune full graph
+        double finetune_start_t = MPI_Wtime();
         partition.blockmodel = finetune::finetune_assignment(partition.blockmodel, partition.graph);
+        double finetune_end_t = MPI_Wtime();
+        sample_extend_time = finetune_start_t - extend_start_t;
+        finetune_time = finetune_end_t - finetune_start_t;
     } else {
         std::cout << "Running without sampling." << std::endl;
         run(partition);
