@@ -11,7 +11,6 @@
 // #include <Eigen/Core>
 
 #include "blockmodel/blockmodel.hpp"
-#include "blockmodel/dist_blockmodel.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
 #include "fastlog.hpp"
@@ -131,15 +130,6 @@ double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<in
 double delta_entropy_temp(const MapVector<int> &row_or_col, const std::vector<int> &block_degrees, int degree,
                           int current_block, int proposal, int num_edges);
 }
-
-namespace dist {
-
-// TODO: get rid of block_assignment, just use blockmodel?
-utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                               const std::vector<int> &block_assignment, const TwoHopBlockmodel &blockmodel,
-                                               bool block_merge);
-
-} // namespace dist
 
 } // namespace common
 

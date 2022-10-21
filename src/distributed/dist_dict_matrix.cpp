@@ -1,4 +1,4 @@
-#include "dist_dict_matrix.hpp"
+#include "distributed/dist_dict_matrix.hpp"
 
 void DistDictMatrix::add(int row, int col, int val) {
     // TODO: bound checking includes branching, may get rid of it for performance

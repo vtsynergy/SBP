@@ -3,7 +3,7 @@
  */
 
 #include "blockmodel/blockmodel.hpp"
-#include "blockmodel/dist_blockmodel.hpp"
+#include "distributed/two_hop_blockmodel.hpp"
 #include "common.hpp"
 #include "delta.hpp"
 #include "utils.hpp"

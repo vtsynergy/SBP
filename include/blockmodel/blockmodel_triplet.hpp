@@ -8,7 +8,6 @@
 #include <limits>
 
 #include "blockmodel.hpp"
-#include "dist_blockmodel.hpp"
 
 class BlockmodelTriplet {
 
@@ -36,36 +35,6 @@ protected:
     /// Blockmodels arranged in order of decreasing number of blocks.
     /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
     Blockmodel blockmodels[3];
-    /// TODO
-    int lower_difference();
-    /// TODO
-    int upper_difference();
-};
-
-class DistBlockmodelTriplet {
-
-public:
-    DistBlockmodelTriplet() : optimal_num_blocks_found(false) {}
-    /// TODO
-    bool optimal_num_blocks_found;
-    /// TODO
-    TwoHopBlockmodel &get(int i) { return this->blockmodels[i]; }
-    /// TODO
-    TwoHopBlockmodel get_next_blockmodel(TwoHopBlockmodel &old_blockmodel);
-    /// TODO
-    bool golden_ratio_not_reached();
-    /// TODO
-    bool is_done();
-    /// TODO
-    void update(TwoHopBlockmodel &blockmodel);
-    /// TODO
-    void status();
-
-private:
-    /// Blockmodels arranged in order of decreasing number of blocks.
-    /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
-    /// TODO
-    TwoHopBlockmodel blockmodels[3];
     /// TODO
     int lower_difference();
     /// TODO

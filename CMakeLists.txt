@@ -21,6 +21,7 @@ set(INCLUDE_DIRS
         include
         include/blockmodel
         include/blockmodel/sparse
+        include/distributed
         extern/tclap-1.2.2/include
         patches
         extern/hungarian
@@ -43,9 +44,14 @@ add_library(SBP STATIC
         src/top_down.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
-        src/blockmodel/dist_blockmodel.cpp
         src/blockmodel/sparse/dict_matrix.cpp
         src/blockmodel/sparse/dict_transpose_matrix.cpp
+        src/distributed/dist_block_merge.cpp
+        src/distributed/dist_blockmodel_triplet.cpp
+        src/distributed/dist_common.cpp
+        src/distributed/dist_finetune.cpp
+        src/distributed/dist_sbp.cpp
+        src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp)
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})

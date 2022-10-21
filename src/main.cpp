@@ -9,6 +9,7 @@
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "distributed/dist_sbp.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"

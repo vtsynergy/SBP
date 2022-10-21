@@ -12,7 +12,6 @@
 #include "common.hpp"
 #include "graph.hpp"
 #include "blockmodel/blockmodel.hpp"
-#include "blockmodel/dist_blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "blockmodel/sparse/delta.hpp"
 #include "utils.hpp"
@@ -164,26 +163,6 @@ std::vector<std::pair<int,int>> sort_vertices_by_degree(const Graph &graph);
 //double overall_entropy(const Blockmodel &blockmodel, int num_vertices, int num_edges);
 //
 //}  // namespace undirected
-
-namespace dist {
-
-/// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
-
-/// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
-bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
-                std::vector<double> &delta_entropies);
-
-/// Runs the Metropolis Hastings algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
-
-/// Proposes an asynchronous Gibbs move in a distributed setting.
-VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
-
-/// Proposes a metropolis hastings move in a distributed setting.
-VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
-
-}  // namespace dist
 
 } // namespace finetune
 

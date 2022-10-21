@@ -10,7 +10,7 @@
 #include "csparse_matrix.hpp"
 #include "mpi_data.hpp"
 // TODO: figure out where to put utils.hpp so this never happens
-#include "../../utils.hpp"
+#include "utils.hpp"
 #include "typedefs.hpp"
 
 // #include <Eigen/Core>
