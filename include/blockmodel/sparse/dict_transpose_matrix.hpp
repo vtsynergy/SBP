@@ -29,45 +29,46 @@ class DictTransposeMatrix : public ISparseMatrix {
         this->matrix_transpose = std::vector<MapVector<int>>(this->ncols, MapVector<int>(buckets));
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
-    virtual void add(int row, int col, int val) override;
-    virtual void add_transpose(int row, int col, int val);
-    // virtual void add(int row, std::vector<int> cols, std::vector<int> values) override;
+    void add(int row, int col, int val) override;
+    void add_transpose(int row, int col, int val);
+    // void add(int row, std::vector<int> cols, std::vector<int> values) override;
     /// Clears the value in a given row. Complexity ~O(number of blocks).
-    virtual void clearrow(int row) override;
+    void clearrow(int row) override;
     /// Clears the values in a given column. Complexity ~O(number of blocks).
-    virtual void clearcol(int col) override;
+    void clearcol(int col) override;
     /// Returns a copy of the current matrix.
-    virtual ISparseMatrix* copy() const override;
+    ISparseMatrix* copy() const override;
     int distinct_edges(int block) const override;
     std::vector<std::tuple<int, int, int>> entries() const override;
-    virtual int get(int row, int col) const override;
+    int get(int row, int col) const override;
     /// Returns all values in the requested column as a dense vector.
-    virtual std::vector<int> getcol(int col) const override;
+    std::vector<int> getcol(int col) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    virtual MapVector<int> getcol_sparse(int col) const override;
+    MapVector<int> getcol_sparse(int col) const override;
     const MapVector<int>& getcol_sparseref(int col) const override;
-    virtual void getcol_sparse(int col, MapVector<int> &col_vector) const override;
+    void getcol_sparse(int col, MapVector<int> &col_vector) const override;
     /// Returns all values in the requested row as a dense vector.
-    virtual std::vector<int> getrow(int row) const override;
+    std::vector<int> getrow(int row) const override;
     /// Returns all values in the requested column as a sparse vector (ordered map).
-    virtual MapVector<int> getrow_sparse(int row) const override;
+    MapVector<int> getrow_sparse(int row) const override;
     const MapVector<int>& getrow_sparseref(int row) const override;
     // const MapVector<int>& getrow_sparse(int row) const;
-    virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
-    virtual EdgeWeights incoming_edges(int block) const override;
+    void getrow_sparse(int row, MapVector<int> &row_vector) const override;
+    EdgeWeights incoming_edges(int block) const override;
     std::set<int> neighbors(int block) const override;
-    virtual Indices nonzero() const override;
-    virtual EdgeWeights outgoing_edges(int block) const override;
+    MapVector<int> neighbors_weights(int block) const override;
+    Indices nonzero() const override;
+    EdgeWeights outgoing_edges(int block) const override;
     /// Sets the values in a row equal to the input vector.
-    virtual void setrow(int row, const MapVector<int> &vector) override;
+    void setrow(int row, const MapVector<int> &vector) override;
     /// Sets the values in a column equal to the input vector.
-    virtual void setcol(int col, const MapVector<int> &vector) override;
-    virtual void sub(int row, int col, int val) override;
-    virtual int edges() const override;
+    void setcol(int col, const MapVector<int> &vector) override;
+    void sub(int row, int col, int val) override;
+    int edges() const override;
     void print() const override;
-    virtual std::vector<int> sum(int axis = 0) const override;
-    virtual int trace() const override;
-    virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
+    std::vector<int> sum(int axis = 0) const override;
+    int trace() const override;
+    void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
                                     std::vector<int> proposed_col) override;
     void update_edge_counts(int current_block, int proposed_block, MapVector<int> current_row,
@@ -75,7 +76,7 @@ class DictTransposeMatrix : public ISparseMatrix {
                             MapVector<int> proposed_col) override;
     void update_edge_counts(const Delta &delta) override;
     bool validate(int row, int col, int val) const override;
-    virtual std::vector<int> values() const override;
+    std::vector<int> values() const override;
 
   private:
     // void check_row_bounds(int row);

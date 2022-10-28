@@ -156,7 +156,7 @@ double block_merge_delta_mdl(int current_block, utils::ProposalAndEdgeCounts pro
         if (row == current_block || col == current_block) continue;  // the "new" cell entropy == 0;
         delta_entropy -= common::cell_entropy(value + change, get_deg_in(col), get_deg_out(row));
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+    for (const std::pair<int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         int row = proposed_block;
         int col = entry.first;
         auto value = (float) entry.second;
@@ -166,7 +166,7 @@ double block_merge_delta_mdl(int current_block, utils::ProposalAndEdgeCounts pro
                                               (float) blockmodel.degrees_out(row));
         delta_entropy -= common::cell_entropy(value, get_deg_in(col), get_deg_out(row));
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+    for (const std::pair<int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         int row = entry.first;
         int col = proposed_block;
         auto value = (float) entry.second;

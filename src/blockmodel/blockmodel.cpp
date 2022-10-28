@@ -49,6 +49,7 @@ double Blockmodel::difficulty_score() const {
 // TODO: move to block_merge.cpp
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                        const std::vector<int> &best_merge_for_each_block) {
+//    std::cout << "Performing best merges..." << std::endl;
     std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
     int num_merged = 0;
@@ -198,7 +199,6 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     std::vector<int> block_degrees_out = utils::constant<int>(this->num_blocks, 0);
     std::vector<int> block_degrees = utils::constant<int>(this->num_blocks, 0);
     // Initialize the blockmodel
-    // TODO: find a way to parallelize the matrix filling step
     #pragma omp parallel default(none) \
     shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, args)
     {
@@ -432,41 +432,47 @@ void Blockmodel::update_edge_counts(int current_block, int proposed_block, Spars
                                            updates.block_col, updates.proposal_col);
 }
 
-bool Blockmodel::validate(const Graph &graph) {
-    Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, this->_block_assignment);
+bool Blockmodel::validate(const Graph &graph) const {
+    std::cout << "Validating..." << std::endl;
+    std::vector<int> assignment(this->_block_assignment);
+    Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);
     for (int row = 0; row < this->num_blocks; ++row) {
         for (int col = 0; col < this->num_blocks; ++col) {
 //            int this_val = this->blockmatrix()->get(row, col);
             int correct_val = correct.blockmatrix()->get(row, col);
-            if (!this->blockmatrix()->validate(row, col, correct_val)) return false;
+            if (!this->blockmatrix()->validate(row, col, correct_val)) {
+                std::cout << "ERROR::matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                          " but should be " << correct_val << std::endl;
+                return false;
+            }
 //            if (this_val != correct_val) return false;
         }
     }
     for (int block = 0; block < this->num_blocks; ++block) {
         bool valid = true;
         if (this->_block_degrees[block] != correct.degrees(block)) {
-            std::cout << "block degrees of " << block << " is " << this->_block_degrees[block] <<
+            std::cout << "ERROR::block degrees of " << block << " is " << this->_block_degrees[block] <<
             " when it should be " << correct.degrees(block) << std::endl;
             valid = false;
         }
         if (this->_block_degrees_out[block] != correct.degrees_out(block)) {
-            std::cout << "block out-degrees of " << block << " is " << this->_block_degrees_out[block] <<
+            std::cout << "ERROR::block out-degrees of " << block << " is " << this->_block_degrees_out[block] <<
             " when it should be " << correct.degrees_out(block) << std::endl;
             valid = false;
         }
         if (this->_block_degrees_in[block] != correct.degrees_in(block)) {
-            std::cout << "block in-degrees of " << block << " is " << this->_block_degrees_in[block] <<
+            std::cout << "ERROR::block in-degrees of " << block << " is " << this->_block_degrees_in[block] <<
             " when it should be " << correct.degrees_in(block) << std::endl;
             valid = false;
         }
         if (!valid) {
-            std::cout << "error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
+            std::cout << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
                       this->_block_degrees_in[block] << " d: " << this->_block_degrees[block] <<
                       " self_edges: " << this->blockmatrix()->get(block, block) << std::endl;
-            std::cout << "correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
+            std::cout << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
                       correct.degrees_in(block) << " d: " << correct.degrees(block) <<
                       " self_edges: " << correct.blockmatrix()->get(block, block) << std::endl;
-            std::cout << "Checking matrix for errors..." << std::endl;
+            std::cout << "ERROR::Checking matrix for errors..." << std::endl;
             for (int row = 0; row < this->num_blocks; ++row) {
                 for (int col = 0; col < this->num_blocks; ++col) {
         //            int this_val = this->blockmatrix()->get(row, col);
@@ -479,7 +485,7 @@ bool Blockmodel::validate(const Graph &graph) {
         //            if (this_val != correct_val) return false;
                 }
             }
-            std::cout << "No errors were found in matrix" << std::endl;
+            std::cout << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
             return false;
         }
     }

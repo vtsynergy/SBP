@@ -252,7 +252,8 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
 }
 
 // TODO: get rid of block_assignment (block_assignment), just use blockmodel
-ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
+ProposalEvaluation
+propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
                                         std::vector<int> &block_assignment,
                                         std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);

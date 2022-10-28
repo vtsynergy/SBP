@@ -10,7 +10,7 @@
 namespace block_merge::dist {
 
 /// Merges entire blocks (communities) in blockmodel together in a distributed fashion.
-TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const NeighborList &out_neighbors, int num_edges);
+TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph);
 
 }  // namespace block_merge::dist
 

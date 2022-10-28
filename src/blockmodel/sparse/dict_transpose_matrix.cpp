@@ -164,11 +164,25 @@ EdgeWeights DictTransposeMatrix::incoming_edges(int block) const {
 
 std::set<int> DictTransposeMatrix::neighbors(int block) const {
     std::set<int> result;
-    for (const std::pair<const int, int> &entry : this->matrix[block]) {
+    for (const std::pair<int, int> &entry : this->matrix[block]) {
         result.insert(entry.first);
     }
-    for (const std::pair<const int, int> &entry : this->matrix_transpose[block]) {
+    for (const std::pair<int, int> &entry : this->matrix_transpose[block]) {
         result.insert(entry.first);
+    }
+    return result;
+}
+
+MapVector<int> DictTransposeMatrix::neighbors_weights(int block) const {
+    MapVector<int> result;
+    for (const std::pair<int, int> &entry : this->matrix[block]) {
+        result[entry.first] += entry.second;
+//        result.insert(entry.first);
+    }
+    for (const std::pair<int, int> &entry : this->matrix_transpose[block]) {
+        if (entry.second == block) continue;
+        result[entry.first] += entry.second;
+//        result.insert(entry.first);
     }
     return result;
 }

@@ -187,48 +187,85 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
     this->build_two_hop_blockmodel(neighbors);
 }
 
-void TwoHopBlockmodel::initialize_edge_counts(const NeighborList &neighbors) {
+void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
     /// TODO: this recreates the matrix (possibly unnecessary)
+    std::shared_ptr<ISparseMatrix> blockmatrix;
+    int num_buckets = graph.num_edges() / graph.num_vertices();
     if (args.transpose) {
-        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, num_buckets);
     } else {
-        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    this->_block_degrees_in = utils::constant<int>(this->num_blocks, 0);
-    this->_block_degrees_out = utils::constant<int>(this->num_blocks, 0);
-
-    for (uint vertex = 0; vertex < neighbors.size(); ++vertex) {
-        std::vector<int> vertex_neighbors = neighbors[vertex];
-        if (vertex_neighbors.empty()) {
-            continue;
-        }
-        int block = this->_block_assignment[vertex];
-        if (!this->_in_two_hop_radius[block]) {
-            continue;
-        }
-        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
-            // Get count
-            int neighbor = vertex_neighbors[i];
-            int neighbor_block = this->_block_assignment[neighbor];
-            if (!this->_in_two_hop_radius[neighbor_block]) {
+    std::vector<int> block_degrees_in = utils::constant<int>(this->num_blocks, 0);
+    std::vector<int> block_degrees_out = utils::constant<int>(this->num_blocks, 0);
+    std::vector<int> block_degrees = utils::constant<int>(this->num_blocks, 0);
+    // Initialize the blockmodel in parallel
+    #pragma omp parallel default(none) \
+    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, args)
+    {
+        int tid = omp_get_thread_num();
+        int num_threads = omp_get_num_threads();
+        int my_num_blocks = ceil(double(this->num_blocks) / double(num_threads));
+        int start = my_num_blocks * tid;
+        int end = start + my_num_blocks;
+        for (uint vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            int block = this->_block_assignment[vertex];
+            if (block < start || block >= end || !this->_in_two_hop_radius[block])  // only modify blocks this thread is responsible for
                 continue;
+            for (int neighbor : graph.out_neighbors(int(vertex))) {
+                int neighbor_block = this->_block_assignment[neighbor];
+                if (!this->_in_two_hop_radius[neighbor_block]) {
+                    continue;
+                }
+                int weight = 1;
+                blockmatrix->add(block, neighbor_block, weight);
+                block_degrees_out[block] += weight;
+                block_degrees[block] += weight;
             }
-            // TODO: change this once code is updated to support weighted graphs
-            int weight = 1;
-            // Update blockmodel
-            this->_blockmatrix->add(block, neighbor_block, weight);
-            // Update degrees
-            this->_block_degrees_out[block] += weight;
-            this->_block_degrees_in[neighbor_block] += weight;
+            for (int neighbor : graph.in_neighbors(int(vertex))) {
+                int neighbor_block = this->_block_assignment[neighbor];
+                if (!this->_in_two_hop_radius[neighbor_block]) {
+                    continue;
+                }
+                int weight = 1;
+                if (args.transpose) {
+                    std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
+                            std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
+                    blockmatrix_dtm->add_transpose(neighbor_block, block, weight);
+                }
+                block_degrees_in[block] += weight;
+                if (block != neighbor_block) {
+                    block_degrees[block] += weight;
+                }
+            }
+//            for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
+//                // Get count
+//                int neighbor = vertex_neighbors[i];
+//                int neighbor_block = this->_block_assignment[neighbor];
+//                if (!this->_in_two_hop_radius[neighbor_block]) {
+//                    continue;
+//                }
+//                // TODO: change this once code is updated to support weighted graphs
+//                int weight = 1;
+//                // Update blockmodel
+//                this->_blockmatrix->add(block, neighbor_block, weight);
+//                // Update degrees
+//                this->_block_degrees_out[block] += weight;
+//                this->_block_degrees_in[neighbor_block] += weight;
+//            }
         }
-    }
+    }  // OMP_PARALLEL
+    this->_blockmatrix = std::move(blockmatrix);
+    this->_block_degrees_out = std::move(block_degrees_out);
+    this->_block_degrees_in = std::move(block_degrees_in);
+    this->_block_degrees = std::move(block_degrees);
     // Count block degrees
-    if (args.undirected) {
-        this->_block_degrees = std::vector<int>(this->_block_degrees_out);
-    } else {
-        this->_block_degrees = this->_block_degrees_out + this->_block_degrees_in;
-    }
+//    if (args.undirected) {
+//        this->_block_degrees = std::vector<int>(this->_block_degrees_out);
+//    } else {
+//        this->_block_degrees = this->_block_degrees_out + this->_block_degrees_in;
+//    }
 }
 
 double TwoHopBlockmodel::log_posterior_probability() const {
@@ -301,4 +338,65 @@ std::vector<std::pair<int,int>> TwoHopBlockmodel::sorted_block_sizes() const {
 
 bool TwoHopBlockmodel::stores(int block) const {
     return this->_in_two_hop_radius[block];
+}
+
+bool TwoHopBlockmodel::validate(const Graph &graph) const {
+    std::cout << "Validating..." << std::endl;
+    std::vector<int> assignment(this->_block_assignment);
+    Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);
+    for (int row = 0; row < this->num_blocks; ++row) {
+        for (int col = 0; col < this->num_blocks; ++col) {
+            if (!(this->in_two_hop_radius()[row] || this->in_two_hop_radius()[col])) continue;
+//            int this_val = this->blockmatrix()->get(row, col);
+            int correct_val = correct.blockmatrix()->get(row, col);
+            if (!this->blockmatrix()->validate(row, col, correct_val)) {
+                std::cout << "ERROR::matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                          " but should be " << correct_val << std::endl;
+                return false;
+            }
+//            if (this_val != correct_val) return false;
+        }
+    }
+    for (int block = 0; block < this->num_blocks; ++block) {
+        bool valid = true;
+        if (this->_block_degrees[block] != correct.degrees(block)) {
+            std::cout << "ERROR::block degrees of " << block << " is " << this->_block_degrees[block] <<
+                      " when it should be " << correct.degrees(block) << std::endl;
+            valid = false;
+        }
+        if (this->_block_degrees_out[block] != correct.degrees_out(block)) {
+            std::cout << "ERROR::block out-degrees of " << block << " is " << this->_block_degrees_out[block] <<
+                      " when it should be " << correct.degrees_out(block) << std::endl;
+            valid = false;
+        }
+        if (this->_block_degrees_in[block] != correct.degrees_in(block)) {
+            std::cout << "ERROR::block in-degrees of " << block << " is " << this->_block_degrees_in[block] <<
+                      " when it should be " << correct.degrees_in(block) << std::endl;
+            valid = false;
+        }
+        if (!valid) {
+            std::cout << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
+                      this->_block_degrees_in[block] << " d: " << this->_block_degrees[block] <<
+                      " self_edges: " << this->blockmatrix()->get(block, block) << std::endl;
+            std::cout << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
+                      correct.degrees_in(block) << " d: " << correct.degrees(block) <<
+                      " self_edges: " << correct.blockmatrix()->get(block, block) << std::endl;
+            std::cout << "ERROR::Checking matrix for errors..." << std::endl;
+            for (int row = 0; row < this->num_blocks; ++row) {
+                for (int col = 0; col < this->num_blocks; ++col) {
+                    //            int this_val = this->blockmatrix()->get(row, col);
+                    int correct_val = correct.blockmatrix()->get(row, col);
+                    if (!this->blockmatrix()->validate(row, col, correct_val)) {
+                        std::cout << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                                  " but should be " << correct_val << std::endl;
+                        return false;
+                    }
+                    //            if (this_val != correct_val) return false;
+                }
+            }
+            std::cout << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
+            return false;
+        }
+    }
+    return true;
 }

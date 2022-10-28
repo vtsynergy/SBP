@@ -44,12 +44,17 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
-    const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
-    MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
-    for (const std::pair<int, int> &pair : col) {
-        edges[pair.first] += pair.second;
-    }
+    MapVector<int> edges = blockmodel.blockmatrix()->neighbors_weights(neighbor_block);
+//    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
+//    const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
+//    MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
+//    for (const std::pair<int, int> &pair : col) {
+//        edges[pair.first] += pair.second;
+//    }
+//    edges = blockmodel.blockmatrix()->getcol_sparse(neighbor_block);
+//    for (const std::pair<int, int> &pair : col) {
+//        edges[pair.first] += pair.second;
+//    }
     if (block_merge) {  // Make sure proposal != current_block
         edges[current_block] = 0;
         total_edges = utils::sum<double, int>(edges);
@@ -61,6 +66,13 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     } else {
         total_edges = utils::sum<double, int>(edges);
     }
+    if (edges.empty()) {
+        std::cerr << "ERROR: NO EDGES! k = " << blockmodel.degrees(neighbor_block) << " "
+        << blockmodel.degrees_out(neighbor_block) << " " << blockmodel.degrees_in(neighbor_block)
+        << std::endl;
+        utils::print<int>(blockmodel.blockmatrix()->getrow_sparse(neighbor_block));
+        utils::print<int>(blockmodel.blockmatrix()->getcol_sparse(neighbor_block));
+    } // exit(-1000); }
     // Propose a block based on the multinomial distribution of block neighbor edges
     SparseVector<double> multinomial_distribution;
     utils::div(edges, total_edges, multinomial_distribution);

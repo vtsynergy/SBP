@@ -29,7 +29,7 @@ public:
     // Constructors are not derived from base class
     TwoHopBlockmodel() : Blockmodel() {}
     TwoHopBlockmodel(int num_blocks, float block_reduction_rate) : Blockmodel(num_blocks, block_reduction_rate) {}
-    TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate)
+    TwoHopBlockmodel(int num_blocks, const Graph &graph, float block_reduction_rate)
             : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // If the block assignment is not provided, use round-robin assignment
         this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
@@ -37,14 +37,14 @@ public:
             this->_my_blocks[i] = true;
         }
         this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);  // no distribution
-        this->initialize_edge_counts(out_neighbors);
+        this->initialize_edge_counts(graph);
     }
-    TwoHopBlockmodel(int num_blocks, const NeighborList &out_neighbors, float block_reduction_rate,
+    TwoHopBlockmodel(int num_blocks, const Graph &graph, float block_reduction_rate,
                      std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
-        this->distribute(out_neighbors);
-        this->initialize_edge_counts(out_neighbors);
+        this->distribute(graph.out_neighbors());
+        this->initialize_edge_counts(graph);
     }
     /// Sets the _in_two_hop_radius for a 2-hop blockmodel.
     void build_two_hop_blockmodel(const NeighborList &neighbors);
@@ -55,7 +55,7 @@ public:
     void distribute(const NeighborList &neighbors);
     /// Returns the _in_two_hop_radius vector.
     const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
-    void initialize_edge_counts(const NeighborList &neighbors);
+    void initialize_edge_counts(const Graph &graph);
     double log_posterior_probability() const;
     /// Returns true if this blockmodel owns the compute for the requested block.
     bool owns_block(int block) const;
@@ -63,6 +63,7 @@ public:
     bool owns_vertex(int vertex) const;
     /// Returns true if this blockmodel owns storage for the requested block.
     bool stores(int block) const;
+    bool validate(const Graph &graph) const;
 private:
     // ===== Functions
     /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.

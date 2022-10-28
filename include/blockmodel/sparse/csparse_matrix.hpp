@@ -51,50 +51,52 @@ public:
     /// Set matrix column `col` to empty.
     virtual void clearcol(int col) = 0;
     /// Returns a copy of this matrix.
-    virtual ISparseMatrix* copy() const = 0;
+    [[nodiscard]] virtual ISparseMatrix* copy() const = 0;
     /// Returns the number of distinct block-level edges of `block`. Directed edges between two blocks are counted
     /// separately.
-    virtual int distinct_edges(int block) const = 0;
+    [[nodiscard]] virtual int distinct_edges(int block) const = 0;
     /// Returns matrix entries in the form `std::tuple<int, int, int`.
-    virtual std::vector<std::tuple<int, int, int>> entries() const = 0;
+    [[nodiscard]] virtual std::vector<std::tuple<int, int, int>> entries() const = 0;
     /// Returns the value in `matrix[row, col]`.
-    virtual int get(int row, int col) const = 0;
+    [[nodiscard]] virtual int get(int row, int col) const = 0;
     /// Returns the column `col` as a dense vector.
-    virtual std::vector<int> getcol(int col) const = 0;
+    [[nodiscard]] virtual std::vector<int> getcol(int col) const = 0;
     /// Returns the column `col` as a sparse vector.
-    virtual MapVector<int> getcol_sparse(int col) const = 0;
+    [[nodiscard]] virtual MapVector<int> getcol_sparse(int col) const = 0;
     /// Returns the col `col` as a reference to a sparse vector.
-    virtual const MapVector<int>& getcol_sparseref(int col) const = 0;
+    [[nodiscard]] virtual const MapVector<int>& getcol_sparseref(int col) const = 0;
     /// Populates the values in `col_vector` with the values of column `col`.
     virtual void getcol_sparse(int col, MapVector<int> &col_vector) const = 0;
     // virtual const MapVector<int>& getcol_sparse(int col) const = 0;
     /// Returns the row `row` as a dense vector.
-    virtual std::vector<int> getrow(int row) const = 0;
+    [[nodiscard]] virtual std::vector<int> getrow(int row) const = 0;
     /// Returns the row `row` as a sparse vector.
-    virtual MapVector<int> getrow_sparse(int row) const = 0;
+    [[nodiscard]] virtual MapVector<int> getrow_sparse(int row) const = 0;
     /// Returns the row `row` as a reference to a sparse vector.
-    virtual const MapVector<int>& getrow_sparseref(int row) const = 0;
+    [[nodiscard]] virtual const MapVector<int>& getrow_sparseref(int row) const = 0;
     /// Populates the values in `row_vector` with the values of row `row`.
     virtual void getrow_sparse(int row, MapVector<int> &row_vector) const = 0;
     // virtual const MapVector<int>& getrow_sparse(int row) const = 0;
     /// TODO: docstring
-    virtual EdgeWeights incoming_edges(int block) const = 0;
+    [[nodiscard]] virtual EdgeWeights incoming_edges(int block) const = 0;
     /// Returns the set of all neighbors of `block`. This includes `block` if it has self-edges.
-    virtual std::set<int> neighbors(int block) const = 0;
+    [[nodiscard]] virtual std::set<int> neighbors(int block) const = 0;
+    /// Returns the set of weighted neighbors of `block`. This includes `block` if it has self-edges.
+    [[nodiscard]] virtual MapVector<int> neighbors_weights(int block) const = 0;
     /// TODO: docstring
-    virtual Indices nonzero() const = 0;
+    [[nodiscard]] virtual Indices nonzero() const = 0;
     /// TODO: docstring
-    virtual EdgeWeights outgoing_edges(int block) const = 0;
+    [[nodiscard]] virtual EdgeWeights outgoing_edges(int block) const = 0;
     /// Sets the values in a row equal to the input vector `vector`.
     virtual void setrow(int row, const MapVector<int> &vector) = 0;
     /// Sets the values in a column equal to the input vector `vector`.
     virtual void setcol(int col, const MapVector<int> &vector) = 0;
     /// Subtracts `val` from `matrix[row, col]`.
     virtual void sub(int row, int col, int val) = 0;
-    virtual int edges() const = 0;
+    [[nodiscard]] virtual int edges() const = 0;
     virtual void print() const = 0;
-    virtual std::vector<int> sum(int axis = 0) const = 0;
-    virtual int trace() const = 0;
+    [[nodiscard]] virtual std::vector<int> sum(int axis = 0) const = 0;
+    [[nodiscard]] virtual int trace() const = 0;
     /// Updates the blockmatrix values in the rows and columns corresponding to `current_block` and `proposed_block`.
     virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
                                     std::vector<int> proposed_row, std::vector<int> current_col,
@@ -106,8 +108,8 @@ public:
     /// Updates the blockmatrix values using the changes to the blockmodel stored in `delta`.
     virtual void update_edge_counts(const Delta &delta) = 0;
     /// Returns true if the value in matrix[`row`, `col`] == `val`.
-    virtual bool validate(int row, int col, int val) const = 0;
-    virtual std::vector<int> values() const = 0;
+    [[nodiscard]] virtual bool validate(int row, int col, int val) const = 0;
+    [[nodiscard]] virtual std::vector<int> values() const = 0;
     std::pair<int, int> shape;
 
 protected:

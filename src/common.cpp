@@ -15,13 +15,17 @@ int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighb
 }
 
 int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
+//    std::cout << "multinomial distribution: ";
+//    utils::print<int>(multinomial_distribution.idx);
+//    utils::print<double>(multinomial_distribution.data);
     // std::cout << "in choose_neighbor" << std::endl;
     // std::cout << "data.size = " << multinomial_distribution.data.size() << " idx.size = ";
     // std::cout << multinomial_distribution.idx.size() << std::endl;
     std::discrete_distribution<int> distribution(
         multinomial_distribution.data.begin(), multinomial_distribution.data.end());
     int index = distribution(generator);
-    // std::cout << "index = " << index << std::endl;
+    if (index >= multinomial_distribution.idx.size()) { std::cout << "ERROR: index " << index << " dist size = " << multinomial_distribution.idx.size() << std::endl; }
+//     std::cout << "index = " << index << " out of " << multinomial_distribution.idx.size() << " | " << multinomial_distribution.data.size() << std::endl;
     return multinomial_distribution.idx[index];
 }
 
@@ -158,12 +162,13 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
 
     // Build multinomial distribution
     double total_edges = 0.0;
-    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
-    const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
-    MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
-    for (const auto &pair : col) {
-        edges[pair.first] += pair.second;
-    }
+    MapVector<int> edges = blockmodel.blockmatrix()->neighbors_weights(neighbor_block);
+//    const std::shared_ptr<ISparseMatrix> matrix = blockmodel.blockmatrix();
+//    const MapVector<int> &col = matrix->getcol_sparse(neighbor_block);
+//    MapVector<int> edges = blockmodel.blockmatrix()->getrow_sparse(neighbor_block);
+//    for (const auto &pair : col) {
+//        edges[pair.first] += pair.second;
+//    }
     if (block_merge) {  // Make sure proposal != current_block
         edges[current_block] = 0;
         total_edges = utils::sum<double, int>(edges);

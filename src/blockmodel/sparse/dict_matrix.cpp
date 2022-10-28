@@ -202,6 +202,23 @@ std::set<int> DictMatrix::neighbors(int block) const {
     return result;
 }
 
+MapVector<int> DictMatrix::neighbors_weights(int block) const {
+    MapVector<int> result;
+    for (const std::pair<int, int> &entry : this->matrix[block]) {
+        result[entry.first] += entry.second;
+    }
+    for (int row = 0; row < this->nrows; ++row) {
+        const MapVector<int> &matrix_row = this->matrix[row];
+//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
+        const auto iterator = matrix_row.find(block);
+        if (iterator != matrix_row.end() && iterator->second != block) {
+            result[iterator->first] += iterator->second;
+//            result.insert(iterator->first);
+        }
+    }
+    return result;
+}
+
 Indices DictMatrix::nonzero() const {
     std::vector<int> row_vector;
     std::vector<int> col_vector;

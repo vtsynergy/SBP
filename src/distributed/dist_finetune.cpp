@@ -113,7 +113,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             }
             blockmodel.set_block_assignment(block_assignment);
             blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
-            blockmodel.initialize_edge_counts(graph.out_neighbors());
+            blockmodel.initialize_edge_counts(graph);
             vertex_moves += batch_vertex_moves;
         }
         new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
@@ -182,28 +182,12 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
             }
         }
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
-//        int num_moves = (int) membership_updates.size();
-//        // MPI COMMUNICATION
-//        int rank_moves[mpi.num_processes];
-//        t1 = MPI_Wtime();
-//        my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
-//        MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
-//        int offsets[mpi.num_processes];
-//        offsets[0] = 0;
-//        for (int i = 1; i < mpi.num_processes; ++i) {
-//            offsets[i] = offsets[i - 1] + rank_moves[i - 1];
-//        }
-//        int batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
-//        std::vector<Membership> collected_membership_updates(batch_vertex_moves);
-//        MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
-//                       rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
-        // END MPI COMMUNICATION
         for (const Membership &membership: collected_membership_updates) {
             block_assignment[membership.vertex] = membership.block;
         }
         blockmodel.set_block_assignment(block_assignment);
         blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
-        blockmodel.initialize_edge_counts(graph.out_neighbors());
+        blockmodel.initialize_edge_counts(graph);
         vertex_moves += collected_membership_updates.size();
         new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
@@ -273,6 +257,7 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
+//    blockmodel.validate(graph);
     utils::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
             current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
     if (!blockmodel.stores(proposal.proposal)) {
