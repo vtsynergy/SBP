@@ -33,6 +33,9 @@ struct Intermediate {
     double total_time;
 };
 
+/// Adds intermediate results to be later saved in a CSV file.
+void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl);
+
 std::vector<Intermediate> get_intermediates();
 
 /// Performs community detection on the provided graph, using the stochastic block partitioning algorithm

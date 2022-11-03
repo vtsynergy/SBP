@@ -9,6 +9,7 @@
 #include "distributed/dist_blockmodel_triplet.hpp"
 #include "distributed/two_hop_blockmodel.hpp"
 #include "graph.hpp"
+#include "sbp.hpp"
 
 namespace sbp::dist {
 

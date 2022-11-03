@@ -31,11 +31,11 @@ void write_results(float iteration, std::ofstream &file, const Graph &graph, con
     // feenableexcept(FE_INVALID | FE_OVERFLOW);
 }
 
-void add_intermediate(float iteration, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
+void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl) {
     double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
-    double modularity = -1;
-    if (iteration == -1)
-        modularity = graph.modularity(blockmodel.block_assignment());
+//    double modularity = -1;
+//    if (iteration == -1)
+//        modularity = graph.modularity(blockmodel.block_assignment());
     Intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
@@ -65,7 +65,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-    add_intermediate(0, graph, blockmodel, initial_mdl);
+    add_intermediate(0, graph, -1, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     float iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet)) {
@@ -78,7 +78,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
         if (iteration < 1) {
             double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-            add_intermediate(0.5, graph, blockmodel, mdl);
+            add_intermediate(0.5, graph, -1, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
@@ -94,17 +94,17 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
         finetune::MCMC_time += MPI_Wtime() - start_mcmc;
         total_time += MPI_Wtime() - start_bm;
-        add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
+        add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     // only last iteration result will calculate expensive modularity
-    add_intermediate(-1, graph, blockmodel, blockmodel.getOverall_entropy());
+    add_intermediate(-1, graph, graph.modularity(blockmodel.block_assignment()), blockmodel.getOverall_entropy());
     return blockmodel;
 }
 
 bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
     if (min_num_blocks > 0) {
-        if ((blockmodel.getNum_blocks() <= min_num_blocks) || (blockmodel_triplet.get(2).empty == false)) {
+        if ((blockmodel.getNum_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
             return true;
         }
     }

@@ -40,13 +40,14 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         iteration++;
     }
     std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
+    add_intermediate(-1, graph, graph.modularity(blockmodel.block_assignment()), blockmodel.getOverall_entropy());
     return blockmodel;
 }
 
 bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
     if (mpi.rank == 0) std::cout << "distributed done_blockmodeling" << std::endl;
     if (min_num_blocks > 0) {
-        if ((blockmodel.getNum_blocks() <= min_num_blocks) || (blockmodel_triplet.get(2).empty == false)) {
+        if ((blockmodel.getNum_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
             return true;
         }
     }
