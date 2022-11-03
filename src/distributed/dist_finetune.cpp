@@ -75,7 +75,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             std::vector<Membership> membership_updates;
             #pragma omp parallel for schedule(dynamic) default(none) \
-        shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
+            shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
             for (int vertex = start; vertex < end; ++vertex) {
                 // TODO: separate "new" code so can be switched on/off
                 // TODO: batch by % of my vertices? Can be calculated same time as load balancing
@@ -90,21 +90,6 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                 }
             }
             std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
-//            int num_moves = (int) membership_updates.size();
-//            // MPI COMMUNICATION
-//            int rank_moves[mpi.num_processes];
-//            t1 = MPI_Wtime();
-//            my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
-//            MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
-//            int offsets[mpi.num_processes];
-//            offsets[0] = 0;
-//            for (int i = 1; i < mpi.num_processes; ++i) {
-//                offsets[i] = offsets[i - 1] + rank_moves[i - 1];
-//            }
-//            int batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
-//            std::vector<Membership> collected_membership_updates(batch_vertex_moves);
-//            MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
-//                           rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
             // END MPI COMMUNICATION
             int batch_vertex_moves = 0;
             for (const Membership &membership: collected_membership_updates) {
@@ -142,14 +127,103 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 
 // TODO: implement this!
 TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
-    throw std::logic_error("distributed hybrid mcmc not yet implemented!");
+    my_file.open(args.csv, std::ios::out | std::ios::app);
+    int membership_blocklengths[2] = {1, 1};  // Number of items in each field of Membership_t
+    MPI_Aint membership_displacements[2] = {0, sizeof(int)};
+    MPI_Datatype membership_types[2] = {MPI_INT, MPI_INT};
+    MPI_Type_create_struct(2, membership_blocklengths, membership_displacements, membership_types, &Membership_t);
+    MPI_Type_commit(&Membership_t);
+//    std::cout << "Distributed Hybrid MCMC iteration" << std::endl;
+    if (blockmodel.getNum_blocks() == 1) {
+        return blockmodel;
+    }
+    double old_entropy = 0.0;
+    std::vector<double> delta_entropies;
+//    std::vector<int> vertex_moves;
+    int total_vertex_moves = 0;
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+//    double initial_entropy = blockmodel.getOverall_entropy();
+    double num_batches = args.batches;
+    int num_low_degree_vertices = int(graph.low_degree_vertices().size());
+    int batch_size = int(ceil(num_low_degree_vertices / num_batches));
+    std::vector<Membership> membership_updates;
+    for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+        int _vertex_moves = 0;
+        double start_t = MPI_Wtime();
+        for (int vertex : graph.high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
+            if (!blockmodel.owns_vertex(vertex)) continue;
+            VertexMove proposal = dist::propose_mh_move(blockmodel, vertex, graph);
+            if (proposal.did_move) {
+                membership_updates.push_back(Membership{vertex, proposal.proposed_block});
+            }
+        }
+        double sequential_t = MPI_Wtime();
+        MCMC_sequential_time += sequential_t - start_t;
+//        assert(blockmodel.validate(graph));
+        for (int batch = 0; batch < num_low_degree_vertices / batch_size; ++batch) {
+            start_t = MPI_Wtime();
+            int start = batch * batch_size;
+            int end = std::min(num_low_degree_vertices, (batch + 1) * batch_size);
+            // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
+            // asynchronous Gibbs sampling
+            std::vector<int> block_assignment(blockmodel.block_assignment());
+            std::vector<VertexMove_v2> moves(graph.num_vertices());
+            #pragma omp parallel for schedule(dynamic) default(none) \
+            shared(start, end, blockmodel, graph, _vertex_moves, block_assignment, membership_updates)
+            for (int index = start; index < end; ++index) {
+                int vertex = graph.low_degree_vertices()[index];
+                VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
+                if (proposal.did_move) {
+                    #pragma omp critical (updates)
+                    {
+                        membership_updates.push_back(Membership{vertex, proposal.proposed_block});
+                    }
+                }
+            }
+            std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
+            for (const Membership &membership : collected_membership_updates) {
+                if (block_assignment[membership.vertex] != membership.block) _vertex_moves++;
+                block_assignment[membership.vertex] = membership.block;
+            }
+            blockmodel.set_block_assignment(block_assignment);
+            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
+            blockmodel.initialize_edge_counts(graph);
+            double parallel_t = MPI_Wtime();
+            MCMC_parallel_time += parallel_t - start_t;
+            for (const VertexMove_v2 &move : moves) {
+                if (!move.did_move) continue;
+//                int current_block = blockmodel.block_assignment(move.vertex);
+                blockmodel.move_vertex(move);
+            }
+            MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
+//            assert(blockmodel.validate(graph));
+        }
+        double new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double delta_entropy = new_entropy - old_entropy;
+        old_entropy = new_entropy;
+        delta_entropies.push_back(delta_entropy);;
+        if (mpi.rank == 0) {
+            std::cout << "Itr: " << iteration << " vertex moves: " << _vertex_moves << " delta S: "
+                      << delta_entropy / new_entropy << std::endl;
+        }
+        total_vertex_moves += _vertex_moves;
+        MCMC_iterations++;
+        // Early stopping
+        if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    MCMC_moves += total_vertex_moves;
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
 }
 
 TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     // std::cout << "running distributed metropolis hastings yo!" << std::endl;
     my_file.open(args.csv, std::ios::out | std::ios::app);
-    // MPI Datatype init
-//    MPI_Datatype Membership_t;
     int membership_blocklengths[2] = {1, 1};  // Number of items in each field of Membership_t
     MPI_Aint membership_displacements[2] = {0, sizeof(int)};
     MPI_Datatype membership_types[2] = {MPI_INT, MPI_INT};
@@ -165,9 +239,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     blockmodel.setOverall_entropy(old_entropy);
 //    double initial_entropy = blockmodel.getOverall_entropy();
     double new_entropy = 0;
-    double t0, t1;
+//    double t0, t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-        t0 = MPI_Wtime();
+//        t0 = MPI_Wtime();
         // Block assignment used to re-create the Blockmodel after each iteration to incorporate moves from other ranks
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates;
