@@ -41,6 +41,15 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     return collected_membership_updates;
 }
 
+void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
+    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), membership.vertex, false);
+    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), membership.vertex, true);
+    VertexMove_v2 move {
+            0.0, true, membership.vertex, membership.block, out_edges, in_edges
+    };
+    blockmodel.move_vertex(move);
+}
+
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     my_file.open(args.csv, std::ios::out | std::ios::app);
 //    MPI_Datatype Membership_t;
@@ -93,12 +102,15 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
             // END MPI COMMUNICATION
             int batch_vertex_moves = 0;
             for (const Membership &membership: collected_membership_updates) {
-                if (block_assignment[membership.vertex] != membership.block) batch_vertex_moves++;
-                block_assignment[membership.vertex] = membership.block;
+                if (block_assignment[membership.vertex] == membership.block) continue;
+                batch_vertex_moves++;
+                async_move(membership, graph, blockmodel);
+//                if (block_assignment[membership.vertex] != membership.block) batch_vertex_moves++;
+//                block_assignment[membership.vertex] = membership.block;
             }
-            blockmodel.set_block_assignment(block_assignment);
-            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
-            blockmodel.initialize_edge_counts(graph);
+//            blockmodel.set_block_assignment(block_assignment);
+//            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
+//            blockmodel.initialize_edge_counts(graph);
             vertex_moves += batch_vertex_moves;
         }
         new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
@@ -257,11 +269,19 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         }
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         for (const Membership &membership: collected_membership_updates) {
-            block_assignment[membership.vertex] = membership.block;
+            if (membership.block == block_assignment[membership.vertex]) continue;
+            async_move(membership, graph, blockmodel);
+//            EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
+//            EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+//            VertexMove_v2 move {
+//                0.0, true, membership.vertex, membership.block,
+//            };
+//            blockmodel.move_vertex(move):
+//            block_assignment[membership.vertex] = membership.block;
         }
-        blockmodel.set_block_assignment(block_assignment);
-        blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
-        blockmodel.initialize_edge_counts(graph);
+//        blockmodel.set_block_assignment(block_assignment);
+//        blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
+//        blockmodel.initialize_edge_counts(graph);
         vertex_moves += collected_membership_updates.size();
         new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;

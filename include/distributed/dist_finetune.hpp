@@ -3,6 +3,9 @@
 
 namespace finetune::dist {
 
+/// Updates `blockmodel` for one membership update contained in `membership`.
+void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel);
+
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
 
