@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.10)
 
 option(DEBUG "If ON, executable will try to diagnose where failures occur." OFF)
+option(SCOREP "If ON, will add score-p instrumentation to the executable." OFF)
 
 # set compilers
-set(CMAKE_C_COMPILER mpicc)
-set(CMAKE_CXX_COMPILER mpic++)
+if (SCOREP)
+    set(CMAKE_C_COMPILER scorep-mpicc)
+    set(CMAKE_CXX_COMPILER scorep-mpicxx)
+else (SCOREP)
+    set(CMAKE_C_COMPILER mpicc)
+    set(CMAKE_CXX_COMPILER mpic++)
+endif (SCOREP)
 
 # set the project name
 project(DistributedSBP VERSION 2022.02.04)

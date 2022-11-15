@@ -71,6 +71,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 //    double t0;
 //    double t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+//        blockmodel.validate(graph);
         int vertex_moves = 0;
         double num_batches = args.batches;
         int batch_size = int(ceil(graph.num_vertices() / num_batches));
