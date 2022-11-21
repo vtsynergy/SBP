@@ -49,7 +49,7 @@ bool accept(double delta_entropy, double hastings_correction);
 
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
-Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+//Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
 
 EdgeWeights block_edge_weights(const std::vector<int> &block_assignment, const EdgeWeights &neighbor_weights);
 
