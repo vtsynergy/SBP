@@ -44,11 +44,11 @@ public:  // Everything in here is public, because why not?
     Args(int argc, char** argv) {
         /** Use tclap to retrieve the arguments here */
         try {
-            TCLAP::CmdLine parser("Stochastic block blockmodeling algorithm", ' ', "alpha.0.1");
+            TCLAP::CmdLine parser("Stochastic block blockmodeling algorithm", ' ', "alpha.1.1");
             TCLAP::ValueArg<std::string> _algorithm("a", "algorithm", "The algorithm to use for the finetuning/MCMC "
                                                     "step of stochastic block blockmodeling. Note: there is currently no "
                                                     "parallel implementation of metropolis hastings", false,
-                                                    "async_gibbs", "async_gibbs|metropolis_hastings|hybrid_mcmc", parser);
+                                                    "hybrid_mcmc", "async_gibbs|metropolis_hastings|hybrid_mcmc", parser);
             TCLAP::SwitchArg _approximate("", "approximate", "If set, an approximate version of the block merge "
                                           "step will be used. It's slightly faster, but less accurate for complex "
                                           "graphs.", parser, false);
@@ -57,7 +57,7 @@ public:  // Everything in here is public, because why not?
                                                    std::numeric_limits<int>::max(), "[1, infinity]", parser);
             TCLAP::ValueArg<int> _batches("", "batches", "The number of batches to use for the asynchronous_gibbs "
                                           "algorithm. Too many batches will lead to many updates and little parallelism,"
-                                          " but too few will lead to poor results or more iterations", false, 10, "int",
+                                          " but too few will lead to poor results or more iterations", false, 1, "int",
                                           parser);
             TCLAP::ValueArg<std::string> _blocksizevar("b", "blocksizevar", "The variation between the sizes of "
                                                        "communities", false, "low", "low|high|unk", parser);
@@ -72,7 +72,7 @@ public:  // Everything in here is public, because why not?
             TCLAP::SwitchArg _detach("", "detach", "If set, will detach 1-degree vertices before running"
                                      "community detection.", parser, false);
             TCLAP::ValueArg<std::string> _distribute("", "distribute", "The distribution scheme to use. Default = "
-                                                     "2hop-snowball", false, "2hop-snowball", "none | 2hop-round-robin "
+                                                     "none", false, "none", "none | 2hop-round-robin "
                                                      "| 2hop-size-balanced | 2hop-snowball", parser);
             TCLAP::ValueArg<std::string> _directory("d", "directory",
                                 "The directory in which the graph is stored. The following structure is assumed:\n"
@@ -91,7 +91,7 @@ public:  // Everything in here is public, because why not?
                                               "int", parser);
             TCLAP::ValueArg<std::string> _overlap("o", "overlap", "The degree of overlap between communities", false,
                                                   "low", "low|high|unk", parser);
-            TCLAP::ValueArg<std::string> _partition("p", "partition", "The type of partitioning to use to divide the "
+            TCLAP::ValueArg<std::string> _partition("p", "partition", "Deprecated: The type of partitioning to use to divide the "
                                                     "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                     false, "round_robin", "round_robin|random|snowball", parser);
             TCLAP::ValueArg<float> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
@@ -102,9 +102,9 @@ public:  // Everything in here is public, because why not?
                                               "runs or adding custom parameters to the save file", false, "default tag",
                                               "string or param1=value1;param2=value2", parser);
             TCLAP::ValueArg<int> _threads("", "threads", "The number of OpenMP threads to use. If less than 1, will set "
-                                          "number of threads to number of logical CPU cores", false, 0, "int", parser);
+                                          "number of threads to number of logical CPU cores", false, 1, "int", parser);
             TCLAP::SwitchArg _transpose("", "transpose", "If set, will also store the matrix transpose for faster column"
-                                        "indexing", parser, false);
+                                        "indexing. Default = True", parser, true);
             TCLAP::ValueArg<std::string> _type("t", "type", "The type of streaming/name of the graph", false, "static",
                                                "string", parser);
             TCLAP::SwitchArg _undirected("", "undirected", "If set, graph will be treated as undirected", parser,
