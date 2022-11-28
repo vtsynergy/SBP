@@ -142,7 +142,7 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     int k = k_out + k_in;
     int num_blocks = blockmodel.getNum_blocks();
     // If the current block has no neighbors, propose merge with random block
-    if (k == 0 || (args.randomproposals && !block_merge)) {
+    if (k == 0 || (args.greedy && !block_merge)) {
         int proposal = propose_random_block(current_block, num_blocks);
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }

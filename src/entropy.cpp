@@ -403,7 +403,7 @@ double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {
+    if (proposal.num_neighbor_edges == 0 || args.greedy) {
         return 1.0;
     }
     // Compute block weights
@@ -449,7 +449,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees) {
-    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {
+    if (proposal.num_neighbor_edges == 0 || args.greedy) {
         return 1.0;
     }
     // Compute block weights
@@ -494,7 +494,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
 
 double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
                            int current_block, const utils::ProposalAndEdgeCounts &proposal) {
-    if (proposal.num_neighbor_edges == 0 || args.randomproposals) {  // No correction needed with random proposals
+    if (proposal.num_neighbor_edges == 0 || args.greedy) {  // No correction needed with greedy proposals
         return 1.0;
     }
     // Compute block weights

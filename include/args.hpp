@@ -11,7 +11,7 @@
 
 // TODO: add a verbose argument
 class Args {
-    public:  // Everything in here is public, because why not?
+public:  // Everything in here is public, because why not?
     /** Define all the arguments here for easy access */
     std::string algorithm;
     bool approximate;
@@ -24,11 +24,11 @@ class Args {
     bool detach;
     std::string distribute;
     std::string directory;
+    bool greedy;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     int numvertices;
     std::string overlap;
     std::string partition;
-    bool randomproposals;
     float samplesize;
     std::string samplingalg;
     std::string tag;
@@ -83,6 +83,8 @@ class Args {
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
+                                     parser, true);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
                                       "entropy calculations.", parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
@@ -92,8 +94,6 @@ class Args {
             TCLAP::ValueArg<std::string> _partition("p", "partition", "The type of partitioning to use to divide the "
                                                     "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                     false, "round_robin", "round_robin|random|snowball", parser);
-            TCLAP::SwitchArg _randomproposals("", "randomproposals", "If set, will use completely random move proposals",
-                                              parser, false);
             TCLAP::ValueArg<float> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
@@ -121,11 +121,11 @@ class Args {
             this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
+            this->greedy = _greedy.getValue();
             this->nodelta = _nodelta.getValue();
             this->numvertices = _numvertices.getValue();
             this->overlap = _overlap.getValue();
             this->partition = _partition.getValue();
-            this->randomproposals = _randomproposals.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
             this->tag = _tag.getValue();

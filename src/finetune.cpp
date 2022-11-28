@@ -23,6 +23,9 @@ int num_surrounded = 0;
 std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
+    if (args.greedy) {
+        return delta_entropy < 0.0;
+    }
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     double random_probability = distribution(common::generator);
