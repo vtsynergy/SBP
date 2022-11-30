@@ -66,7 +66,9 @@ void TwoHopBlockmodel::distribute(const NeighborList &neighbors) {
     else if (args.distribute == "2hop-snowball")
         distribute_2hop_snowball(neighbors);
     else
-        distribute_2hop_snowball(neighbors);
+        distribute_none();
+    if (args.distribute != "none")
+        std::cout << "WARNING: data distribution is NOT fully supported yet. We STRONGLY recommend running this software with --distribute none instead" << std::endl;
 }
 
 void TwoHopBlockmodel::distribute_none() {
