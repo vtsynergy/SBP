@@ -365,7 +365,6 @@ VertexMove_v2 eval_vertex_move_v2(int vertex, int current_block, utils::Proposal
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
-
     if (accept(delta_entropy, hastings))
         return VertexMove_v2{delta_entropy, true, vertex, proposal.proposal, out_edges, in_edges};
     return VertexMove_v2{delta_entropy, false, -1, -1, out_edges, in_edges};
