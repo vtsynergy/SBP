@@ -302,6 +302,23 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
     return log_posterior_probability();
 }
 
+void Blockmodel::merge_block(int from, int to, const Delta &delta) {
+    this->_blockmatrix->update_edge_counts(delta);
+    this->_blockmatrix->clearrow(from);
+    this->_blockmatrix->clearcol(from);
+    this->_forward_translator[from] = to;
+    this->_backward_translator[to] = from;  // TODO: get rid of backward translator? Change to map of lists?
+    this->_block_degrees_in[from] = 0;
+    this->_block_degrees_out[from] = 0;
+    this->_block_degrees[from] = 0;
+    this->_block_degrees_in[to] += this->_block_degrees_in[from];
+    this->_block_degrees_out[to] += this->_block_degrees_out[from];
+    this->_block_degrees[to] = this->_block_degrees_in[to] + this->_block_degrees_out[to]
+            - this->_blockmatrix->get(to, to);
+    this->update_block_assignment(from, to);
+    this->num_blocks--;
+}
+
 void Blockmodel::update_block_assignment(int from_block, int to_block) {
     for (size_t index = 0; index < this->_block_assignment.size(); ++index) {
         if (this->_block_assignment[index] == from_block) {

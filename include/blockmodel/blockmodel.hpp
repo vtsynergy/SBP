@@ -56,7 +56,9 @@ class Blockmodel {
         }
         // Set the block assignment to be the range [0, this->num_blocks)
         this->_block_assignment = utils::range<int>(0, this->num_blocks);
-
+        // Set up the initial translators
+        this->_forward_translator = utils::range<int>(0, this->num_blocks);
+        this->_backward_translator = utils::range<int>(0, this->num_blocks);
         // Number of blocks to merge
         this->num_blocks_to_merge = (int)(this->num_blocks * this->block_reduction_rate);
     }
@@ -94,6 +96,8 @@ class Blockmodel {
     double log_posterior_probability() const;
     /// TODO
     double log_posterior_probability(int num_edges) const;
+    /// Merges block `from` into block `to`, making use of changes to blockmodel `delta`.
+    void merge_block(int from, int to, const Delta &delta);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
@@ -181,6 +185,9 @@ class Blockmodel {
     std::vector<int> _block_degrees;
     std::vector<int> _block_degrees_in;
     std::vector<int> _block_degrees_out;
+    // Translators
+    std::vector<int> _forward_translator;
+    std::vector<int> _backward_translator;
     float block_reduction_rate;
     // Computed info
     float overall_entropy;
