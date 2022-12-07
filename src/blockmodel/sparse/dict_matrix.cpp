@@ -188,15 +188,14 @@ EdgeWeights DictMatrix::incoming_edges(int block) const {
 
 std::set<int> DictMatrix::neighbors(int block) const {
     std::set<int> result;
-    for (const std::pair<const int, int> &entry : this->matrix[block]) {
+    for (const std::pair<int, int> &entry : this->matrix[block]) {
         result.insert(entry.first);
     }
     for (int row = 0; row < this->nrows; ++row) {
         const MapVector<int> &matrix_row = this->matrix[row];
-//        const std::unordered_map<int, int> &matrix_row = this->matrix[row];
         const auto iterator = matrix_row.find(block);
         if (iterator != matrix_row.end()) {
-            result.insert(iterator->first);
+            result.insert(row);
         }
     }
     return result;
