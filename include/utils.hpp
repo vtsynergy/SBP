@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <execution>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -95,7 +96,7 @@ inline std::vector<int> sort_indices(const std::vector<double> &unsorted) {
     // initialize original index locations
     std::vector<int> indices = utils::range<int>(0, unsorted.size());
     // sort indexes based on comparing values in unsorted
-    std::sort(indices.data(), indices.data() + indices.size(),
+    std::sort(std::execution::par_unseq, indices.data(), indices.data() + indices.size(),
               [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
     return indices;
 }
