@@ -29,8 +29,13 @@ protected:
     Delta Deltas;
     VertexMove_v2 Move;
     VertexMove_v2 SelfEdgeMove;
+
     void SetUp() override {
-        args.transpose = true;
+        ToySetUp(true);
+    }
+
+    void ToySetUp(bool transpose) {
+        args.transpose = transpose;
         std::vector<std::vector<int>> edges {
                 {0, 0},
                 {0, 1},
@@ -100,12 +105,12 @@ protected:
         assignment2[7] = Proposal.proposal;
         B2 = Blockmodel(3, graph, 0.5, assignment2);
         Move = {
-            -0.01,  // random change in entropy value
-            true,
-            7,
-            Proposal.proposal,
-            EdgeWeights { { 3, 9}, { 1, 1 } },
-            EdgeWeights { { 5, 8, 10 }, { 1, 1, 1 }}
+                -0.01,  // random change in entropy value
+                true,
+                7,
+                Proposal.proposal,
+                EdgeWeights { { 3, 9}, { 1, 1 } },
+                EdgeWeights { { 5, 8, 10 }, { 1, 1, 1 }}
         };
         SelfEdgeMove = {
                 -0.01,
@@ -127,6 +132,7 @@ protected:
 class BlockMergeTest : public ToyExample {
     void SetUp() override {
         ToyExample::SetUp();
+        ToySetUp(true);
         Updates = EdgeCountUpdates();
         Updates.block_row = { 0, 0, 0 };
         Updates.block_col = { 0, 0, 0 };
@@ -155,8 +161,15 @@ class BlockMergeTest : public ToyExample {
 class ComplexExample : public ToyExample {
 protected:
     common::NewBlockDegrees BlockDegreesAfterUpdates;
+
     void SetUp() override {
         ToyExample::SetUp();
+        ToyExample::ToySetUp(true);
+        ComplexToySetUp(true);
+    }
+
+    void ComplexToySetUp(bool transpose) {
+        args.transpose = transpose;
         Proposal = { 0, 1, 2, 3 };
         assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
         B = Blockmodel(6, graph, 0.5, assignment);
