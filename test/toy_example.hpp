@@ -36,6 +36,11 @@ protected:
 
     void ToySetUp(bool transpose) {
         args.transpose = transpose;
+        //
+        // _ | 0 | 1 | 2
+        // 0 | 7   1   0
+        // 1 | 1   5   1
+        // 2 | 1   1   6
         std::vector<std::vector<int>> edges {
                 {0, 0},
                 {0, 1},
@@ -171,6 +176,38 @@ protected:
     void ComplexToySetUp(bool transpose) {
         args.transpose = transpose;
         Proposal = { 0, 1, 2, 3 };
+        // 0 0
+        // 0 0
+        // 0 0
+        // 0 0
+        // 0 1
+        // 1 0
+        // 1 0
+        // 1 3
+        // 2 0
+        // 2 3
+        // 3 2
+        // 3 3
+        // 3 3
+        // 3 4
+        // 3 2
+        // 4 1
+        // 4 1
+        // 5 3
+        // 5 4
+        // 1 5
+        // 5 4
+        // 5 5
+        // 5 5
+        //  _ | 0 | 1 | 2 | 3 | 4 | 5
+        //  0 | 4   1   0   0   0   0 | 5
+        //  1 | 2   0   0   1   0   1 | 4
+        //  2 | 1   0   0   1   0   0 | 2
+        //  3 | 0   0   2   2   1   0 | 5
+        //  4 | 0   2   0   0   0   0 | 2
+        //  5 | 0   0   0   1   2   2 | 5
+        //      7   3   2   5   3   3 | 23
+        //             0  1  2  3  4  5  6  7  8  9  10
         assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
         B = Blockmodel(6, graph, 0.5, assignment);
         std::vector<int> assignment2(assignment);

@@ -303,20 +303,42 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
 }
 
 void Blockmodel::merge_block(int from, int to, const Delta &delta) {
-    this->_blockmatrix->update_edge_counts(delta);
-    this->_blockmatrix->clearrow(from);
-    this->_blockmatrix->clearcol(from);
-    this->_forward_translator[from] = to;
-    this->_backward_translator[to] = from;  // TODO: get rid of backward translator? Change to map of lists?
-    this->_block_degrees_in[from] = 0;
-    this->_block_degrees_out[from] = 0;
-    this->_block_degrees[from] = 0;
-    this->_block_degrees_in[to] += this->_block_degrees_in[from];
-    this->_block_degrees_out[to] += this->_block_degrees_out[from];
-    this->_block_degrees[to] = this->_block_degrees_in[to] + this->_block_degrees_out[to]
-            - this->_blockmatrix->get(to, to);
+    to = this->translate(to);
+//    this->_blockmatrix->update_edge_counts(delta);
+//    this->_blockmatrix->clearrow(from);
+//    this->_blockmatrix->clearcol(from);
+//    this->_forward_translator[from] = to;
+//    this->_backward_translator[to] = from;  // TODO: get rid of backward translator? Change to map of lists?
+//    this->_block_degrees_in[from] = 0;
+//    this->_block_degrees_out[from] = 0;
+//    this->_block_degrees[from] = 0;
+//    this->_block_degrees_in[to] += this->_block_degrees_in[from];
+//    this->_block_degrees_out[to] += this->_block_degrees_out[from];
+//    this->_block_degrees[to] = this->_block_degrees_in[to] + this->_block_degrees_out[to]
+//            - this->_blockmatrix->get(to, to);
+//    this->update_block_assignment(from, to);
+//    this->num_blocks--;
+    // Calculate the delta entropy given the current block assignment
+    int proposed_block_self_edges = this->blockmatrix()->get(to, to) + delta.get(to, to);
+    // Perform the merge
+    // 1. Update the assignment
+    for (int & i : this->_forward_translator) {
+        int block = i;
+        if (block == from) {
+            i = to;
+        }
+    }
     this->update_block_assignment(from, to);
-    this->num_blocks--;
+    // 2. Update the matrix
+    this->blockmatrix()->update_edge_counts(delta);
+    std::cout << "degrees_out (" << to << ") = " << this->degrees_out(from) << " + " << this->degrees_out(from) << std::endl;
+    this->degrees_out(to, this->degrees_out(to) + this->degrees_out(from));
+    std::cout << "degrees_out (" << from << ") = 0" << std::endl;
+    this->degrees_out(from, 0);
+    this->degrees_in(to, this->degrees_in(to) + this->degrees_in(from));
+    this->degrees_in(from, 0);
+    this->degrees(to, this->degrees_out(to) + this->degrees_in(to) - proposed_block_self_edges);
+    this->degrees(from, 0);
 }
 
 void Blockmodel::update_block_assignment(int from_block, int to_block) {

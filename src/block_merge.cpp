@@ -14,8 +14,9 @@ double BlockMerge_time = 0.0;
 double BlockMerge_loop_time = 0.0;
 
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel) {
+    proposed_block = blockmodel.translate(proposed_block);
     Delta delta(current_block, proposed_block, blockmodel.degrees(current_block));
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+    for (const std::pair<int, int> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         int col = entry.first;  // row = current_block
         int value = entry.second;
         if (col == current_block || col == proposed_block) {  // entry = current_block, current_block
@@ -25,7 +26,7 @@ Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &
         }
         delta.sub(current_block, col, value);
     }
-    for (const std::pair<const int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+    for (const std::pair<int, int> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         int row = entry.first;  // col = current_block
         if (row == current_block) continue;  // already handled above
         int value = entry.second;

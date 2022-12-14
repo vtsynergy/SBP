@@ -141,6 +141,8 @@ class Blockmodel {
     void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
     bool stores(int block) const { return true; }
+    /// Translates `block` to the correct index
+    int translate(int block) const { return this->_forward_translator[block]; }
     /// TODO
     void update_block_assignment(int from_block, int to_block);
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
