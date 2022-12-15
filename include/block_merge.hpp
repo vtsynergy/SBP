@@ -37,7 +37,7 @@ typedef struct proposal_evaluation_t {
 /// Performs the block merges with the highest change in entropy/MDL, recalculating change in entropy before each
 /// merge to account for dependencies between merges. This function modified the blockmodel.
 void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<double> &delta_entropy_for_each_block,
-                                    const std::vector<int> &best_merge_for_each_block, int num_edges);
+                                    const std::vector<int> &best_merge_for_each_block, const Graph &graph);
 
 /// Returns the potential changes to the blockmodel if `current_block` was merged into `proposed_block`.
 Delta blockmodel_delta(int current_block, int proposed_block, const Blockmodel &blockmodel);

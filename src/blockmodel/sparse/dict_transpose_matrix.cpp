@@ -397,41 +397,9 @@ void DictTransposeMatrix::update_edge_counts(int current_block, int proposed_blo
             this->matrix_transpose[proposed_block][row] = proposed_val;
         }
     }
-//    this->matrix[current_block] = MapVector<int>(current_row);
-//    this->matrix[proposed_block] = MapVector<int>(proposed_row);
-//    this->matrix_transpose[current_block] = MapVector<int>(current_col);
-//    this->matrix_transpose[proposed_block] = MapVector<int>(proposed_col);
-//    for (int block = 0; block < nrows; ++block) {
-//        // TODO: try using get function (retrieve without modifying)
-//        int current_val = current_col[block];  // matrix(block, current_block)
-//        if (current_val == 0)
-//            this->matrix[block].erase(current_block);
-//        else
-//            this->matrix[block][current_block] = current_val;
-//        int proposed_val = proposed_col[block];  // matrix(block, proposed_block)
-//        if (proposed_val == 0)
-//            this->matrix[block].erase(proposed_block);
-//        else
-//            this->matrix[block][proposed_block] = proposed_val;
-//        current_val = current_row[block];  // matrix(current_block, block)
-//        if (current_val == 0)
-//            this->matrix_transpose[block].erase(current_block);
-//        else
-//            this->matrix_transpose[block][current_block] = current_val;
-//        proposed_val = proposed_row[block];  // matrix(proposed_block, block)
-//        if (proposed_val == 0)
-//            this->matrix_transpose[block].erase(proposed_block);
-//        else
-//            this->matrix_transpose[block][proposed_block] = current_val;
-//    }
-
 }
 
 void DictTransposeMatrix::update_edge_counts(const Delta &delta) {
-//    for (const std::pair<const std::pair<int, int>, int> &entry : delta) {
-//        int row = entry.first.first;
-//        int col = entry.first.second;
-//        int change = entry.second;
     for (const std::tuple<int, int, int> &entry : delta.entries()) {
         int row = std::get<0>(entry);
         int col = std::get<1>(entry);
@@ -461,7 +429,7 @@ std::vector<int> DictTransposeMatrix::values() const {
     std::vector<int> values;
     for (int row = 0; row < nrows; ++row) {
         const MapVector<int> &matrix_row = this->matrix[row];
-        for (const std::pair<const int, int> &element : matrix_row) {
+        for (const std::pair<int, int> &element : matrix_row) {
             values.push_back(element.second);
         }
     }

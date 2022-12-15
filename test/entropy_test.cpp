@@ -228,7 +228,7 @@ TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithSparseUpda
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
-TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithBlockmodelDeltas) {
+TEST_F(BlockMergeEntropyTest, BlockMergeDeltaMDLIsCorrectlyComputeWithBlockmodelDeltas) {
     double E_before = entropy::mdl(B, 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, B, Deltas, new_block_degrees);
     double E_after = entropy::mdl(B2, 11, 23);

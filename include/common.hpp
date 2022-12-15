@@ -38,7 +38,7 @@ inline float cell_entropy(size_t value, size_t degree_in, size_t degree_out) {
 //    float entropy = value * logf(value / (degree_in * degree_out));
     if (std::isnan(entropy) || std::isinf(entropy)) {
         std::cerr << "value: " << value << " dIn: " << degree_in << " dOut: " << degree_out << std::endl;
-        throw std::invalid_argument("something is wrong");
+        throw std::invalid_argument("cell_entropy is NaN or inf: something is wrong");
     }
     return entropy;
     // return value * std::log(value / degree_in / degree_out);

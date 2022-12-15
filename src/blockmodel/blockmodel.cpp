@@ -331,9 +331,9 @@ void Blockmodel::merge_block(int from, int to, const Delta &delta) {
     this->update_block_assignment(from, to);
     // 2. Update the matrix
     this->blockmatrix()->update_edge_counts(delta);
-    std::cout << "degrees_out (" << to << ") = " << this->degrees_out(from) << " + " << this->degrees_out(from) << std::endl;
+//    std::cout << "degrees_out (" << to << ") = " << this->degrees_out(from) << " + " << this->degrees_out(from) << std::endl;
     this->degrees_out(to, this->degrees_out(to) + this->degrees_out(from));
-    std::cout << "degrees_out (" << from << ") = 0" << std::endl;
+//    std::cout << "degrees_out (" << from << ") = 0" << std::endl;
     this->degrees_out(from, 0);
     this->degrees_in(to, this->degrees_in(to) + this->degrees_in(from));
     this->degrees_in(from, 0);
@@ -476,6 +476,7 @@ bool Blockmodel::validate(const Graph &graph) const {
     std::vector<int> assignment(this->_block_assignment);
     Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);
     for (int row = 0; row < this->num_blocks; ++row) {
+        std::cout << "validating row: " << row << std::endl;
         for (int col = 0; col < this->num_blocks; ++col) {
 //            int this_val = this->blockmatrix()->get(row, col);
             int correct_val = correct.blockmatrix()->get(row, col);
