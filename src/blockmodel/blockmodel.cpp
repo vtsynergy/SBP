@@ -1,6 +1,7 @@
 #include "blockmodel.hpp"
 
 #include "assert.h"
+#include <queue>
 
 #include "../args.hpp"
 #include "typedefs.hpp"
@@ -50,13 +51,27 @@ double Blockmodel::difficulty_score() const {
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                        const std::vector<int> &best_merge_for_each_block) {
 //    std::cout << "Performing best merges..." << std::endl;
-    std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
+    typedef std::tuple<int, int, double> merge_t;
+    auto cmp_fxn = [](merge_t left, merge_t right) { return std::get<2>(left) > std::get<2>(right); };
+    std::cout << "building priority queue" << std::endl;
+    std::priority_queue<merge_t, std::vector<merge_t>, decltype(cmp_fxn)> queue(cmp_fxn);
+    for (int i = 0; i < (int) delta_entropy_for_each_block.size(); ++i) {
+        queue.push(std::make_tuple(i, best_merge_for_each_block[i], delta_entropy_for_each_block[i]));
+    }
+    std::cout << "done building priority queue" << std::endl;
+    // std::vector<int> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
+    //                                                            this->num_blocks_to_merge + 1);
+    // std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
     int num_merged = 0;
     int counter = 0;
     while (num_merged < this->num_blocks_to_merge) {
-        int merge_from = best_merges[counter];
-        int merge_to = block_map[best_merge_for_each_block[merge_from]];
+        merge_t best_merge = queue.top();
+        queue.pop();
+        int merge_from = std::get<0>(best_merge);
+        int merge_to = block_map[std::get<1>(best_merge)];
+        // int merge_from = best_merges[counter];
+        // int merge_to = block_map[best_merge_for_each_block[merge_from]];
         counter++;
         if (merge_to != merge_from) {
             for (size_t i = 0; i < block_map.size(); ++i) {

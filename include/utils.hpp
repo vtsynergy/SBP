@@ -82,6 +82,16 @@ template <typename T> inline std::vector<T> range(int start, int size) {
     return result;
 }
 
+/// Partially sorts the indices of an array in descending order according to the values of the array.
+inline std::vector<int> partial_sort_indices(const std::vector<double> &unsorted, int pivot) {
+    // initialize original index locations
+    std::vector<int> indices = utils::range<int>(0, unsorted.size());
+    // partially sort indices based on comparing values in unsorted
+    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + pivot, indices.data() + indices.size(),
+              [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
+    return indices;
+}
+
 /// Returns the sum of the elements in a vector.
 template <typename T> inline T sum(const std::vector<T> &vector) {
     T result = 0;
