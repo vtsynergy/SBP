@@ -27,6 +27,9 @@ extern double BlockMerge_time;
 /// updated during execution.
 extern double BlockMerge_loop_time;
 
+/// The time taken to sort potential block merges.
+extern double BlockMerge_sort_time;
+
 static const int NUM_AGG_PROPOSALS_PER_BLOCK = 10;  // Proposals per block
 
 typedef struct proposal_evaluation_t {

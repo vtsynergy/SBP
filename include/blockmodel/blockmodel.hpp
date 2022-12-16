@@ -25,6 +25,12 @@
 
 static const double BLOCK_REDUCTION_RATE = 0.5;
 
+// The time taken to build the blockmodel
+extern double BLOCKMODEL_BUILD_TIME;
+extern double Blockmodel_sort_time;
+extern double Blockmodel_access_time;
+extern double Blockmodel_update_assignment;
+
 // typedef py::EigenDRef<Eigen::Matrix<int, Eigen::Dynamic, 2>> Matrix2Column;
 
 typedef struct edge_count_updates_t {

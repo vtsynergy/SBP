@@ -25,6 +25,7 @@ public:  // Everything in here is public, because why not?
     std::string distribute;
     std::string directory;
     bool greedy;
+    bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     int numvertices;
     std::string overlap;
@@ -85,6 +86,8 @@ public:  // Everything in here is public, because why not?
                                                    false, "./data", "path", parser);
             TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
                                      parser, true);
+            TCLAP::SwitchArg _modularity("", "modularity", "If set, will compute modularity at the end of execution.",
+                                         parser, false);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
                                       "entropy calculations.", parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
@@ -122,6 +125,7 @@ public:  // Everything in here is public, because why not?
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
             this->greedy = _greedy.getValue();
+            this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->numvertices = _numvertices.getValue();
             this->overlap = _overlap.getValue();

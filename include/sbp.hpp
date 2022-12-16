@@ -30,6 +30,11 @@ struct Intermediate {
     uint mcmc_moves;
     double block_merge_time;
     double block_merge_loop_time;
+    double blockmodel_build_time;
+    double blockmodel_first_build_time;
+    double sort_time;
+    double access_time;
+    double update_assignment;
     double total_time;
 };
 

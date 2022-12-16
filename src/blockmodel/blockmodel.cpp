@@ -1,11 +1,17 @@
 #include "blockmodel.hpp"
 
 #include "assert.h"
+#include "mpi.h"
 #include <queue>
 
 #include "../args.hpp"
 #include "typedefs.hpp"
 #include "utils.hpp"
+
+double BLOCKMODEL_BUILD_TIME = 0.0;
+double Blockmodel_sort_time = 0.0;
+double Blockmodel_access_time = 0.0;
+double Blockmodel_update_assignment = 0.0;
 
 double Blockmodel::block_size_variation() const {
     // Normalized using variance / max_variance, where max_variance = range^2 / 4
@@ -50,40 +56,66 @@ double Blockmodel::difficulty_score() const {
 // TODO: move to block_merge.cpp
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                        const std::vector<int> &best_merge_for_each_block) {
-//    std::cout << "Performing best merges..." << std::endl;
-    typedef std::tuple<int, int, double> merge_t;
+    std::cout << "Performing best merges..." << std::endl;
+    double sort_start_t = MPI_Wtime();
+    /* typedef std::tuple<int, int, double> merge_t;
     auto cmp_fxn = [](merge_t left, merge_t right) { return std::get<2>(left) > std::get<2>(right); };
     std::cout << "building priority queue" << std::endl;
     std::priority_queue<merge_t, std::vector<merge_t>, decltype(cmp_fxn)> queue(cmp_fxn);
     for (int i = 0; i < (int) delta_entropy_for_each_block.size(); ++i) {
         queue.push(std::make_tuple(i, best_merge_for_each_block[i], delta_entropy_for_each_block[i]));
     }
-    std::cout << "done building priority queue" << std::endl;
-    // std::vector<int> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
-    //                                                            this->num_blocks_to_merge + 1);
+    std::cout << "done building priority queue" << std::endl;*/
+    std::vector<int> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
+                                                               this->num_blocks_to_merge + 1);
+    double sort_end_t = MPI_Wtime();
+    std::cout << "done sorting indices..." << std::endl;
+    Blockmodel_sort_time += sort_end_t - sort_start_t;
     // std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
+    std::cout << "block map size: " << block_map.size() << std::endl;
+    auto translate = [&block_map](int block) -> int {
+        int b = block;
+        do {
+            if (b >= block_map.size())
+                std::cout << "bm[" << b << "] = " << block_map[b] << std::endl;
+            b = block_map[b];
+        } while (block_map[b] != b);
+        if (b >= block_map.size())
+            std::cout << "final bm[" << block << "] = " << block_map[b] << std::endl;
+        return b;
+    };
     int num_merged = 0;
     int counter = 0;
     while (num_merged < this->num_blocks_to_merge) {
-        merge_t best_merge = queue.top();
+        /*merge_t best_merge = queue.top();
         queue.pop();
         int merge_from = std::get<0>(best_merge);
-        int merge_to = block_map[std::get<1>(best_merge)];
-        // int merge_from = best_merges[counter];
+        int merge_to = block_map[std::get<1>(best_merge)];*/
+        int merge_from = best_merges[counter];
+        int merge_to = translate(best_merge_for_each_block[merge_from]);
         // int merge_to = block_map[best_merge_for_each_block[merge_from]];
         counter++;
         if (merge_to != merge_from) {
-            for (size_t i = 0; i < block_map.size(); ++i) {
+            block_map[merge_from] = merge_to;
+            /*for (size_t i = 0; i < block_map.size(); ++i) {
                 int block = block_map[i];
                 if (block == merge_from) {
                     block_map[i] = merge_to;
                 }
             }
-            this->update_block_assignment(merge_from, merge_to);
+            this->update_block_assignment(merge_from, merge_to);*/
             num_merged++;
         }
     }
+    double update_start_t = MPI_Wtime();
+    std::cout << "done updating block map" << std::endl;
+    Blockmodel_access_time += update_start_t - sort_end_t;
+    for (int i = 0; i < this->_block_assignment.size(); ++i) {
+        this->_block_assignment[i] = translate(this->_block_assignment[i]);
+    }
+    Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
+    std::cout << "done updating block assignment" << std::endl;
     std::vector<int> mapping = build_mapping(this->_block_assignment);
     for (size_t i = 0; i < this->_block_assignment.size(); ++i) {
         int block = this->_block_assignment[i];
@@ -91,6 +123,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         this->_block_assignment[i] = new_block;
     }
     this->num_blocks -= this->num_blocks_to_merge;
+    std::cout << "done carrying out best merges" << std::endl;
 }
 
 Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std::vector<int> &true_block_membership) {
@@ -201,6 +234,7 @@ Blockmodel Blockmodel::from_sample(int num_blocks, const Graph &graph, std::vect
 //}
 
 void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
+    double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
     int num_buckets = graph.num_edges() / graph.num_vertices();
@@ -266,6 +300,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     this->_block_degrees = std::move(block_degrees);
 //    double end = omp_get_wtime();
 //    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
+    BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
 }
 
 double Blockmodel::interblock_edges() const {
@@ -318,11 +353,13 @@ double Blockmodel::log_posterior_probability(int num_edges) const {
 }
 
 void Blockmodel::update_block_assignment(int from_block, int to_block) {
+    double start_t = MPI_Wtime();
     for (size_t index = 0; index < this->_block_assignment.size(); ++index) {
         if (this->_block_assignment[index] == from_block) {
             this->_block_assignment[index] = to_block;
         }
     }
+    Blockmodel_update_assignment += MPI_Wtime() - start_t;
 }
 
 void Blockmodel::move_vertex(int vertex, int current_block, int new_block, EdgeCountUpdates &updates,

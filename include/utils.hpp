@@ -87,8 +87,10 @@ inline std::vector<int> partial_sort_indices(const std::vector<double> &unsorted
     // initialize original index locations
     std::vector<int> indices = utils::range<int>(0, unsorted.size());
     // partially sort indices based on comparing values in unsorted
-    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + pivot, indices.data() + indices.size(),
+    std::nth_element(indices.data(), indices.data() + pivot, indices.data() + indices.size(),
               [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
+    // std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + pivot, indices.data() + indices.size(),
+    //           [unsorted](size_t i1, size_t i2) { return unsorted[i1] < unsorted[i2]; });
     return indices;
 }
 

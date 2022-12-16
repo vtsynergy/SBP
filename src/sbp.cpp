@@ -14,13 +14,15 @@ namespace sbp {
 
 double total_time = 0.0;
 
+double Blockmodel_first_build_time = 0.0;
+
 std::vector<Intermediate> intermediate_results;
 
 std::vector<Intermediate> get_intermediates() {
     return intermediate_results;
 }
 
-void write_results(float iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
+/*void write_results(float iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     file << args.tag << "," << graph.num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
@@ -29,7 +31,7 @@ void write_results(float iteration, std::ofstream &file, const Graph &graph, con
     file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
     // feenableexcept(FE_INVALID | FE_OVERFLOW);
-}
+}*/
 
 void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl) {
     double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
@@ -49,7 +51,12 @@ void add_intermediate(float iteration, const Graph &graph, double modularity, do
     intermediate.mcmc_moves = finetune::MCMC_moves;
     intermediate.block_merge_time = block_merge::BlockMerge_time;
     intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
+    intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
+    intermediate.blockmodel_first_build_time = Blockmodel_first_build_time;
+    intermediate.sort_time = Blockmodel_sort_time;
+    intermediate.access_time = Blockmodel_access_time;
     intermediate.total_time = total_time;
+    intermediate.update_assignment = Blockmodel_update_assignment;
     intermediate_results.push_back(intermediate);
     std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
               << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
@@ -64,6 +71,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
+    Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
+    BLOCKMODEL_BUILD_TIME = 0.0;
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     add_intermediate(0, graph, -1, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
@@ -99,7 +108,11 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     }
     // only last iteration result will calculate expensive modularity
-    add_intermediate(-1, graph, graph.modularity(blockmodel.block_assignment()), blockmodel.getOverall_entropy());
+    double modularity = -1;
+    if (args.modularity)
+        modularity = graph.modularity(blockmodel.block_assignment());
+    add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+    std::cout << "Initial blockmodel init time = " << Blockmodel_first_build_time << std::endl;
     return blockmodel;
 }
 
