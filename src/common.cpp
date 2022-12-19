@@ -155,7 +155,7 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     }
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    if (std::rand() <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
+    if (rng_distribution(generator) <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
         int proposal = propose_random_block(current_block, num_blocks);
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
