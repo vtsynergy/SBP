@@ -59,10 +59,11 @@ add_library(SBP STATIC
         src/distributed/dist_sbp.cpp
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
-        src/fastlog.cpp)
+        src/fastlog.cpp
+        src/rng.cpp)
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DistributedSBP src/main.cpp include/fastlog.hpp)
+add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(Influence src/influence.cpp)
@@ -101,7 +102,8 @@ add_executable(Test
         test/evaluate_test.cpp
         test/finetune_test.cpp
         test/sample_test.cpp
-        test/toy_example.hpp)
+        test/toy_example.hpp
+        src/rng.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
