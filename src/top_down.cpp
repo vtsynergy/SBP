@@ -13,6 +13,7 @@
 #include "common.hpp"
 #include "entropy.hpp"
 #include "graph.hpp"
+#include "rng.hpp"
 #include "utils.hpp"
 
 namespace top_down {
@@ -69,7 +70,7 @@ Split propose_split(int community, const Graph &graph, const Blockmodel &blockmo
     std::uniform_int_distribution<int> distribution(0, 1);
     // TODO: implement translator for vertex IDs, and store it in Split
     for (int vertex = 0; vertex < split.num_vertices; ++vertex) {
-        split_assignment[vertex] = distribution(common::generator);
+        split_assignment[vertex] = distribution(rng::generator());
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
     split.num_edges = subgraph.num_edges();

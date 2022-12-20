@@ -10,7 +10,7 @@ namespace common {
 
 int choose_neighbor(std::vector<int> &neighbor_indices, std::vector<int> &neighbor_weights) {
     std::discrete_distribution<int> distribution(neighbor_weights.begin(), neighbor_weights.end());
-    int index = distribution(generator);
+    int index = distribution(rng::generator());
     return neighbor_indices[index];
 }
 
@@ -23,7 +23,7 @@ int choose_neighbor(const SparseVector<double> &multinomial_distribution) {
     // std::cout << multinomial_distribution.idx.size() << std::endl;
     std::discrete_distribution<int> distribution(
         multinomial_distribution.data.begin(), multinomial_distribution.data.end());
-    int index = distribution(generator);
+    int index = distribution(rng::generator());
     if (index >= multinomial_distribution.idx.size()) { std::cout << "ERROR: index " << index << " dist size = " << multinomial_distribution.idx.size() << std::endl; }
 //     std::cout << "index = " << index << " out of " << multinomial_distribution.idx.size() << " | " << multinomial_distribution.data.size() << std::endl;
     return multinomial_distribution.idx[index];
@@ -155,7 +155,7 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     }
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    if (rng_distribution(generator) <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
+    if (rng::generate() <= (num_blocks / ((float) blockmodel.degrees(neighbor_block) + num_blocks))) {
         int proposal = propose_random_block(current_block, num_blocks);
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
@@ -189,7 +189,7 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
 int propose_random_block(int current_block, int num_blocks) {
     // Generate numbers 0..num_blocks-2 in order to exclude the current block
     std::uniform_int_distribution<int> distribution(0, num_blocks - 2);
-    int proposed = distribution(generator);
+    int proposed = distribution(rng::generator());
     if (proposed >= current_block) {
         proposed++;
     }
@@ -198,7 +198,7 @@ int propose_random_block(int current_block, int num_blocks) {
 
 int random_integer(int low, int high) {
     std::uniform_int_distribution<int> distribution(low, high);
-    return distribution(generator);
+    return distribution(rng::generator());
 }
 
 namespace directed {

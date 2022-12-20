@@ -3,6 +3,7 @@
 #include "args.hpp"
 #include "entropy.hpp"
 #include "mpi_data.hpp"
+#include "rng.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -28,7 +29,7 @@ bool accept(double delta_entropy, double hastings_correction) {
     }
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    double random_probability = distribution(common::generator);
+    double random_probability = distribution(rng::generator());
     // std::cout << "dE: " << delta_entropy << " hastings correction: " << hastings_correction << std::endl;
     // TODO: if delta_entropy > X (or less than?) return true (accept the move)
     double accept_probability = exp(-3.0 * delta_entropy) * hastings_correction;

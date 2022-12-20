@@ -14,6 +14,7 @@
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
 #include "fastlog.hpp"
+#include "rng.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -22,9 +23,9 @@
 namespace common {
 
 // TODO: explore making these static thread_local variables? Or create an array of these, with one per thread
-static thread_local std::random_device seeder;
-static thread_local std::mt19937 generator(seeder());
-static thread_local std::uniform_real_distribution<float> rng_distribution(0.0, 1.0);
+//static std::random_device seeder;
+//static std::mt19937 generator(seeder());
+//static std::uniform_real_distribution<float> rng_distribution(0.0, 1.0);
 
 typedef struct new_block_degrees_t {
     std::vector<int> block_degrees_out;

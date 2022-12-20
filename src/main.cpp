@@ -16,6 +16,7 @@
 #include "graph.hpp"
 #include "mpi_data.hpp"
 #include "partition.hpp"
+#include "rng.hpp"
 #include "sample.hpp"
 #include "sbp.hpp"
 
@@ -102,6 +103,7 @@ int main(int argc, char* argv[]) {
     // std::cout << "rank: " << mpi.rank << " np: " << mpi.num_processes << std::endl;
 
     args = Args(argc, argv);
+    rng::init_generators();
 
     if (mpi.rank == 0) {
         std::cout << "Number of processes = " << mpi.num_processes << std::endl;
