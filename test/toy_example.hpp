@@ -10,6 +10,7 @@
 #include "finetune.hpp"
 #include "graph.hpp"
 #include "mpi_data.hpp"
+#include "rng.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -35,6 +36,7 @@ protected:
     }
 
     void ToySetUp(bool transpose) {
+        rng::init_generators();
         args.transpose = transpose;
         std::vector<std::vector<int>> edges {
                 {0, 0},
