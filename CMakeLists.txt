@@ -29,6 +29,7 @@ set(INCLUDE_DIRS
         include/blockmodel/sparse
         include/distributed
         extern/tclap-1.2.2/include
+        extern/pcg-cpp/include
         patches
         extern/hungarian
         extern/abseil-cpp

@@ -7,15 +7,19 @@
 
 #include "omp.h"
 #include <random>
+#include "pcg_random.hpp"
 
 namespace rng {
 
-extern std::vector<std::mt19937> generators;
+typedef pcg32 Gen;
+//typedef std::mt19937 Gen;
+
+extern std::vector<Gen> generators;
 extern std::vector<std::uniform_real_distribution<float>> distributions;
 
 float generate();
 
-std::mt19937 &generator();
+Gen &generator();
 
 void init_generators();
 
