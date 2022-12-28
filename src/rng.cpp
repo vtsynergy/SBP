@@ -16,7 +16,8 @@ float generate() {
 //        init_generators();
 //    }
     int thread_id = omp_get_thread_num();
-    return distributions[thread_id](generators[thread_id]);
+    uint generated_int = generators[thread_id]();
+    return float(generated_int) / float(generators[thread_id].max());
 }
 
 Gen &generator() {
