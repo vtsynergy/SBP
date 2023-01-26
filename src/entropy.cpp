@@ -516,15 +516,17 @@ double hastings_correction(int vertex, const Graph &graph, const Blockmodel &blo
     std::vector<double> block_degrees(num_unique_blocks, 0);
     std::vector<double> proposal_degrees(num_unique_blocks, 0);
     // Indexing
-    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
-    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
+//    std::vector<int> proposal_row = blockmodel.blockmatrix()->getrow(proposal.proposal);
+//    std::vector<int> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
+    const MapVector<int> &proposal_row = blockmodel.blockmatrix()->getrow_sparseref(proposal.proposal);
+    const MapVector<int> &proposal_col = blockmodel.blockmatrix()->getcol_sparseref(proposal.proposal);
     // Fill Arrays
     int index = 0;
     int num_blocks = blockmodel.getNum_blocks();
     const std::vector<int> &current_block_degrees = blockmodel.degrees();
     for (auto const &entry: block_counts) {
         counts[index] = entry.second;
-        proposal_weights[index] = proposal_row[entry.first] + proposal_col[entry.first] + 1.0;
+        proposal_weights[index] = map_vector::get(proposal_row, entry.first) + map_vector::get(proposal_col, entry.first) + 1.0;
         block_degrees[index] = current_block_degrees[entry.first] + num_blocks;
         block_weights[index] = blockmodel.blockmatrix()->get(current_block, entry.first) +
                                delta.get(current_block, entry.first) +
