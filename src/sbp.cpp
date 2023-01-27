@@ -71,6 +71,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
+    common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
     Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
     BLOCKMODEL_BUILD_TIME = 0.0;
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
@@ -94,6 +95,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
 //        if (args.algorithm == "async_gibbs_old" && iteration < float(args.asynciterations))
 //            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
 //        else
+        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else if (args.algorithm == "hybrid_mcmc")

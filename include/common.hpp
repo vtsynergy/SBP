@@ -22,6 +22,8 @@
 
 namespace common {
 
+extern std::uniform_int_distribution<int> candidates;
+
 // TODO: explore making these static thread_local variables? Or create an array of these, with one per thread
 //static std::random_device seeder;
 //static std::mt19937 generator(seeder());
