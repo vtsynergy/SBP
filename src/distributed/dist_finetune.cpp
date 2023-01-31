@@ -239,17 +239,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         std::vector<int> block_assignment(blockmodel.block_assignment());
-        std::vector<Membership> membership_updates;
-        int vertex_moves = 0;
-        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            if (!blockmodel.owns_vertex(vertex)) continue;
-            VertexMove proposal = dist::propose_mh_move(blockmodel, vertex, graph);
-            if (proposal.did_move) {
-                vertex_moves++;
-                assert(blockmodel.stores(proposal.proposed_block));
-                membership_updates.push_back(Membership{vertex, proposal.proposed_block});
-            }
-        }
+        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
+        int vertex_moves = membership_updates.size();
+        // TODO: [OPTIONAL] add option to skip this communication step
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         for (const Membership &membership: collected_membership_updates) {
             if (membership.block == block_assignment[membership.vertex]) continue;
@@ -276,6 +268,25 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     MPI_Type_free(&Membership_t);
     my_file.close();
     return blockmodel;
+}
+
+std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
+                                                      const std::vector<int> &active_set) {
+    std::vector<Membership> membership_updates;
+    std::vector<int> vertices;
+    if (active_set.empty())
+        vertices = utils::range<int>(0, graph.num_vertices());
+    else
+        vertices = active_set;
+    for (int vertex : vertices) {
+        if (!blockmodel.owns_vertex(vertex)) continue;
+        VertexMove proposal = dist::propose_mh_move(blockmodel, vertex, graph);
+        if (proposal.did_move) {
+            assert(blockmodel.stores(proposal.proposed_block));
+            membership_updates.push_back(Membership{vertex, proposal.proposed_block});
+        }
+    }
+    return membership_updates;
 }
 
 bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,

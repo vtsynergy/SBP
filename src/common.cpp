@@ -1,6 +1,7 @@
 #include "common.hpp"
 
 #include "args.hpp"
+#include "mpi_data.hpp"
 
 #include <cassert>
 #include "utils.hpp"

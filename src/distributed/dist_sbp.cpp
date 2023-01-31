@@ -17,6 +17,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     // DistBlockmodel blockmodel(graph, args, mpi);
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
+    common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
     // Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
     if (mpi.rank == 0)
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
@@ -29,6 +30,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
+        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
         if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
             blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);

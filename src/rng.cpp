@@ -24,7 +24,8 @@ Gen &generator() {
 //    if (generators.size() < omp_get_max_threads()) {
 //        init_generators();
 //    }
-    return generators[omp_get_thread_num()];
+    Gen &generator = generators[omp_get_thread_num()];
+    return generator;
 }
 
 void init_generators() {
