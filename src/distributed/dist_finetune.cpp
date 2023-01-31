@@ -72,47 +72,24 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 //    double t1;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
 //        blockmodel.validate(graph);
-        int vertex_moves = 0;
         double num_batches = args.batches;
-        int batch_size = int(ceil(graph.num_vertices() / num_batches));
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         std::vector<int> block_assignment(blockmodel.block_assignment());
-//        int my_vertices = 0;
-        for (int batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
-//            t0 = MPI_Wtime();
-            int start = batch * batch_size;
-            int end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
-            std::vector<Membership> membership_updates;
-            #pragma omp parallel for schedule(dynamic) default(none) \
-            shared(start, end, blockmodel, graph, vertex_moves, membership_updates, block_assignment)
-            for (int vertex = start; vertex < end; ++vertex) {
-                // TODO: separate "new" code so can be switched on/off
-                // TODO: batch by % of my vertices? Can be calculated same time as load balancing
-                if (!blockmodel.owns_vertex(vertex)) continue;
-                VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
-                if (proposal.did_move) {
-//                    assert(blockmodel.stores(proposal.proposed_block));  // assert no work with default(none) until gcc 9.3.0
-                    #pragma omp critical (updates)
-                    {
-                        membership_updates.push_back(Membership{vertex, proposal.proposed_block});
-                    }
-                }
-            }
-            std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
-            // END MPI COMMUNICATION
-            int batch_vertex_moves = 0;
-            for (const Membership &membership: collected_membership_updates) {
-                if (block_assignment[membership.vertex] == membership.block) continue;
-                batch_vertex_moves++;
-                async_move(membership, graph, blockmodel);
-            }
+        std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph);
+        // START MPI COMMUNICATION
+        std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
+        // END MPI COMMUNICATION
+        int vertex_moves = 0;
+        for (const Membership &membership: collected_membership_updates) {
+            if (block_assignment[membership.vertex] == membership.block) continue;
+            vertex_moves++;
+            async_move(membership, graph, blockmodel);
+        }
 //            blockmodel.validate(graph);
 //            blockmodel.set_block_assignment(block_assignment);
 //            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
 //            blockmodel.initialize_edge_counts(graph);
-            vertex_moves += batch_vertex_moves;
-        }
         new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
@@ -135,6 +112,28 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     my_file.close();
     // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
     return blockmodel;
+}
+
+std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
+                                                     const std::vector<int> &active_set) {
+    std::vector<Membership> membership_updates;
+    std::vector<int> vertices;
+    if (active_set.empty())
+        vertices = utils::range<int>(0, graph.num_vertices());
+    else
+        vertices = active_set;
+    #pragma omp parallel for schedule(dynamic) default(none) shared(vertices, blockmodel, graph, membership_updates)
+    for (const int &vertex : vertices) {
+        if (!blockmodel.owns_vertex(vertex)) continue;
+        VertexMove proposal = dist::propose_gibbs_move(blockmodel, vertex, graph);
+        if (proposal.did_move) {
+            #pragma omp critical (updates)
+            {
+                membership_updates.push_back(Membership{vertex, proposal.proposed_block});
+            }
+        }
+    }
+    return membership_updates;
 }
 
 // TODO: implement this!

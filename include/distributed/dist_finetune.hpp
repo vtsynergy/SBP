@@ -9,6 +9,10 @@ void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmod
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
 TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
 
+/// Runs one iteration of the asynchronous Gibbs algorithm in a distributed fashion using MPI.
+std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
+                                                     const std::vector<int> &active_set = std::vector<int>());
+
 /// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
 bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
