@@ -45,6 +45,12 @@ inline void div(const MapVector<int> &lhs, const double &rhs, SparseVector<doubl
     }
 }
 
+/// Extends vector a with vector b, similar to python a.extend(b)
+template <typename T> inline void extend(std::vector<T> &a, std::vector<T> &b) {
+    a.reserve(a.size() + b.size());
+    a.insert(a.end(), b.begin(), b.end());
+}
+
 /// Assumes filepath corresponds to the path of a CSV file, and reads it as such.
 /// All data stored as strings.
 /// Note: does NOT differentiate between header row and data rows, and does NOT do data type conversion.
