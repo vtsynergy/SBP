@@ -6,7 +6,58 @@
 #include "finetune.hpp"
 #include "distributed/two_hop_blockmodel.hpp"
 
+#include <sstream>
+
 namespace sbp::dist {
+
+void record_runtime_imbalance() {
+    int recvcount = (int) finetune::dist::MCMC_RUNTIMES.size();
+    std::cout << mpi.rank << " : recvcount = " << recvcount << " np = " << mpi.num_processes << std::endl;
+    std::cout << mpi.rank << " : runtime[5] = " << finetune::dist::MCMC_RUNTIMES[5] << std::endl;
+    std::cout << mpi.rank << " : runtimes size = " << finetune::dist::MCMC_RUNTIMES.size() << std::endl;
+//    std::vector<double> all_mcmc_runtimes = utils::constant<double>(recvcount, 0);
+    std::vector<double> all_mcmc_runtimes(recvcount * mpi.num_processes, 0.0);
+    std::cout << mpi.rank << " : allocated vector size = " << all_mcmc_runtimes.size() << std::endl;
+    MPI_Gather(finetune::dist::MCMC_RUNTIMES.data(), recvcount, MPI_DOUBLE,
+               all_mcmc_runtimes.data(), recvcount, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (mpi.rank != 0) return;  // Only rank 0 should actually save a CSV file
+    std::ostringstream filepath_stream;
+    filepath_stream << args.csv << args.numvertices;
+    std::string filepath_dir = filepath_stream.str();
+    std::ostringstream filename_stream;
+    filename_stream << args.csv << args.numvertices << "/" << args.type << "_imbalance.csv";
+    std::string filepath = filename_stream.str();
+    int attempt = 0;
+    while (fs::exists(filepath)) {
+        filename_stream = std::ostringstream();
+        filename_stream << args.csv << args.numvertices << "/" << args.type << "_imbalance_" << attempt << ".csv";
+        filepath = filename_stream.str();
+        attempt++;
+    }
+    std::cout << std::boolalpha <<  "writing imbalance #s to " << filepath << std::endl;
+    fs::create_directories(fs::path(filepath_dir));
+    std::ofstream file;
+    file.open(filepath, std::ios_base::app);
+    file << "iteration, ";
+    for (int i = 0; i < mpi.num_processes; ++i) {
+        file << i;
+        if (i == mpi.num_processes - 1) {
+            file << std::endl;
+        } else {
+            file << ", ";
+        }
+    }
+    for (int iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
+        file << iteration << ", ";
+        for (int rank = 0; rank < mpi.num_processes; ++rank) {
+            size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
+            file << all_mcmc_runtimes[position];
+            if (rank < mpi.num_processes - 1) file << ", ";
+        }
+        file << std::endl;
+    }
+    file.close();
+}
 
 // Blockmodel stochastic_block_partition(Graph &graph, MPI &mpi, Args &args) {
 Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
@@ -42,7 +93,11 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         iteration++;
     }
     std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
-    add_intermediate(-1, graph, graph.modularity(blockmodel.block_assignment()), blockmodel.getOverall_entropy());
+    double modularity = -1;
+    if (args.modularity)
+        modularity = graph.modularity(blockmodel.block_assignment());
+    add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+    record_runtime_imbalance();
     return blockmodel;
 }
 

@@ -12,6 +12,8 @@
 
 namespace finetune::dist {
 
+std::vector<double> MCMC_RUNTIMES;
+
 const int MEMBERSHIP_T_BLOCK_LENGTHS[2] = {1, 1};
 const MPI_Aint MEMBERSHIP_T_DISPLACEMENTS[2] = {0, sizeof(int)};
 const MPI_Datatype MEMBERSHIP_T_TYPES[2] = {MPI_INT, MPI_INT};
@@ -67,11 +69,13 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        double start_t = MPI_Wtime();
 //        blockmodel.validate(graph);
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph);
+        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
         // START MPI COMMUNICATION
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         // END MPI COMMUNICATION
@@ -144,6 +148,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        double start_t = MPI_Wtime();
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph.high_degree_vertices());
 //        // TODO: [OPTIONAL] add option to skip this communication step
@@ -156,6 +161,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
         std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices());
         utils::extend<Membership>(membership_updates, async_updates);
         assert(membership_updates.size() >= async_updates.size());
+        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         for (const Membership &membership: collected_membership_updates) {
             if (membership.block == block_assignment[membership.vertex]) continue;
@@ -196,8 +202,10 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        double start_t = MPI_Wtime();
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
+        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
         // TODO: [OPTIONAL] add option to skip this communication step
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         for (const Membership &membership: collected_membership_updates) {

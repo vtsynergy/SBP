@@ -3,6 +3,9 @@
 
 namespace finetune::dist {
 
+/// Stores individual MCMC runtimes per MCMC iteration for checking runtime imbalance
+extern std::vector<double> MCMC_RUNTIMES;
+
 /// Updates `blockmodel` for one membership update contained in `membership`.
 void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel);
 
