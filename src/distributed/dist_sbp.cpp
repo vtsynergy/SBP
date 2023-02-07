@@ -11,26 +11,41 @@
 namespace sbp::dist {
 
 void record_runtime_imbalance() {
+    std::cout << "Recording runtime imbalance statistics" << std::endl;
     int recvcount = (int) finetune::dist::MCMC_RUNTIMES.size();
     std::cout << mpi.rank << " : recvcount = " << recvcount << " np = " << mpi.num_processes << std::endl;
     std::cout << mpi.rank << " : runtime[5] = " << finetune::dist::MCMC_RUNTIMES[5] << std::endl;
     std::cout << mpi.rank << " : runtimes size = " << finetune::dist::MCMC_RUNTIMES.size() << std::endl;
 //    std::vector<double> all_mcmc_runtimes = utils::constant<double>(recvcount, 0);
     std::vector<double> all_mcmc_runtimes(recvcount * mpi.num_processes, 0.0);
+    std::vector<int> all_mcmc_vertex_edges(recvcount * mpi.num_processes, 0);
+    std::vector<int> all_mcmc_num_blocks(recvcount * mpi.num_processes, 0);
+    std::vector<unsigned long> all_mcmc_block_degrees(recvcount * mpi.num_processes, 0);
+    std::vector<unsigned long> all_mcmc_aggregate_block_degrees(recvcount * mpi.num_processes, 0);
     std::cout << mpi.rank << " : allocated vector size = " << all_mcmc_runtimes.size() << std::endl;
     MPI_Gather(finetune::dist::MCMC_RUNTIMES.data(), recvcount, MPI_DOUBLE,
                all_mcmc_runtimes.data(), recvcount, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_VERTEX_EDGES.data(), recvcount, MPI_INT,
+               all_mcmc_vertex_edges.data(), recvcount, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_NUM_BLOCKS.data(), recvcount, MPI_INT,
+               all_mcmc_num_blocks.data(), recvcount, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG,
+               all_mcmc_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_AGGREGATE_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG,
+               all_mcmc_aggregate_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
     if (mpi.rank != 0) return;  // Only rank 0 should actually save a CSV file
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
     std::ostringstream filename_stream;
-    filename_stream << args.csv << args.numvertices << "/" << args.type << "_imbalance.csv";
+    filename_stream << args.csv << args.numvertices << "/" << args.type << "_" << mpi.num_processes
+                    << "_ranks_imbalance.csv";
     std::string filepath = filename_stream.str();
     int attempt = 0;
     while (fs::exists(filepath)) {
         filename_stream = std::ostringstream();
-        filename_stream << args.csv << args.numvertices << "/" << args.type << "_imbalance_" << attempt << ".csv";
+        filename_stream << args.csv << args.numvertices << "/" << args.type << "_" << mpi.num_processes
+                        << "_ranks_imbalance_" << attempt << ".csv";
         filepath = filename_stream.str();
         attempt++;
     }
@@ -39,19 +54,41 @@ void record_runtime_imbalance() {
     std::ofstream file;
     file.open(filepath, std::ios_base::app);
     file << "iteration, ";
-    for (int i = 0; i < mpi.num_processes; ++i) {
-        file << i;
-        if (i == mpi.num_processes - 1) {
-            file << std::endl;
-        } else {
-            file << ", ";
+    for (int j = 0; j < 5; ++j) {
+        for (int i = 0; i < mpi.num_processes; ++i) {
+            file << i;
+            if (j == 4 && i == mpi.num_processes - 1) {
+                file << std::endl;
+            } else {
+                file << ", ";
+            }
         }
     }
     for (int iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
         file << iteration << ", ";
         for (int rank = 0; rank < mpi.num_processes; ++rank) {
             size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
-            file << all_mcmc_runtimes[position];
+            file << all_mcmc_runtimes[position] << ", ";
+//            if (rank < mpi.num_processes - 1) file << ", ";
+        }
+        for (int rank = 0; rank < mpi.num_processes; ++rank) {
+            size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
+            file << all_mcmc_vertex_edges[position] << ", ";
+//            if (rank < mpi.num_processes - 1) file << ", ";
+        }
+        for (int rank = 0; rank < mpi.num_processes; ++rank) {
+            size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
+            file << all_mcmc_num_blocks[position] << ", ";
+//            if (rank < mpi.num_processes - 1) file << ", ";
+        }
+        for (int rank = 0; rank < mpi.num_processes; ++rank) {
+            size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
+            file << all_mcmc_block_degrees[position] << ", ";
+//            if (rank < mpi.num_processes - 1) file << ", ";
+        }
+        for (int rank = 0; rank < mpi.num_processes; ++rank) {
+            size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
+            file << all_mcmc_aggregate_block_degrees[position];
             if (rank < mpi.num_processes - 1) file << ", ";
         }
         file << std::endl;

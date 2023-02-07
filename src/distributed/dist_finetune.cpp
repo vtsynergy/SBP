@@ -13,6 +13,10 @@
 namespace finetune::dist {
 
 std::vector<double> MCMC_RUNTIMES;
+std::vector<int> MCMC_VERTEX_EDGES;
+std::vector<int> MCMC_NUM_BLOCKS;
+std::vector<unsigned long> MCMC_BLOCK_DEGREES;
+std::vector<unsigned long> MCMC_AGGREGATE_BLOCK_DEGREES;
 
 const int MEMBERSHIP_T_BLOCK_LENGTHS[2] = {1, 1};
 const MPI_Aint MEMBERSHIP_T_DISPLACEMENTS[2] = {0, sizeof(int)};
@@ -69,6 +73,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
 //        blockmodel.validate(graph);
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
@@ -148,6 +153,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph.high_degree_vertices());
@@ -189,6 +195,29 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     return blockmodel;
 }
 
+void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph) {
+    std::vector<int> degrees = graph.degrees();
+    MapVector<bool> block_count;
+    int num_degrees = 0;
+    int num_aggregate_block_degrees;
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        if (!blockmodel.owns_vertex(vertex)) continue;
+        num_degrees += degrees[vertex];
+        int block = blockmodel.block_assignment(vertex);
+        block_count[block] = true;
+        num_aggregate_block_degrees += blockmodel.degrees(block);
+    }
+    MCMC_VERTEX_EDGES.push_back(num_degrees);
+    MCMC_NUM_BLOCKS.push_back(block_count.size());
+    unsigned long block_degrees = 0;
+    for (const std::pair<int, bool> &entry : block_count) {
+        int block = entry.first;
+        block_degrees += blockmodel.degrees(block);
+    }
+    MCMC_BLOCK_DEGREES.push_back(block_degrees);
+    MCMC_AGGREGATE_BLOCK_DEGREES.push_back(num_aggregate_block_degrees);
+}
+
 TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
@@ -202,6 +231,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
         std::vector<int> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);

@@ -5,6 +5,10 @@ namespace finetune::dist {
 
 /// Stores individual MCMC runtimes per MCMC iteration for checking runtime imbalance
 extern std::vector<double> MCMC_RUNTIMES;
+extern std::vector<int> MCMC_VERTEX_EDGES;
+extern std::vector<int> MCMC_NUM_BLOCKS;
+extern std::vector<unsigned long> MCMC_BLOCK_DEGREES;
+extern std::vector<unsigned long> MCMC_AGGREGATE_BLOCK_DEGREES;
 
 /// Updates `blockmodel` for one membership update contained in `membership`.
 void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel);
@@ -22,6 +26,9 @@ bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initia
 
 /// Runs the hybrid MCMC algorithm in a distributed fashion using MPI.
 TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+
+/// Records metrics that may be causing imbalance.
+void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph);
 
 /// Runs the Metropolis Hastings algorithm in a distributed fashion using MPI.
 TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
