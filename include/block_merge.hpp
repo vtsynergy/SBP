@@ -62,8 +62,7 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
                                  std::vector<int> &block_assignment);
 
 /// Proposes a merge for current_block based on the current blockmodel state, using sparse intermediate structures
-ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
-                                        std::vector<int> &block_assignment,
+ProposalEvaluation propose_merge_sparse(int current_block, int num_edges, const Blockmodel &blockmodel,
                                         std::unordered_map<int, bool> &past_proposals);
 
 } // namespace block_merge

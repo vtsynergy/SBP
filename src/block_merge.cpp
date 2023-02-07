@@ -209,8 +209,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, int num_edg
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         std::unordered_map<int, bool> past_proposals;
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel,
-                                                               block_assignment, past_proposals);
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, past_proposals);
             if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
                 best_merge_for_each_block[current_block] = proposal.proposed_block;
@@ -253,13 +252,12 @@ ProposalEvaluation propose_merge(int current_block, int num_edges, Blockmodel &b
 
 // TODO: get rid of block_assignment (block_assignment), just use blockmodel
 ProposalEvaluation
-propose_merge_sparse(int current_block, int num_edges, Blockmodel &blockmodel,
-                                        std::vector<int> &block_assignment,
+propose_merge_sparse(int current_block, int num_edges, const Blockmodel &blockmodel,
                                         std::unordered_map<int, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     utils::ProposalAndEdgeCounts proposal =
-            common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
+            common::propose_new_block(current_block, out_blocks, in_blocks, blockmodel.block_assignment(), blockmodel, true);
     if (past_proposals[proposal.proposal])
         return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};
     Delta delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
