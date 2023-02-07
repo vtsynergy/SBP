@@ -4,6 +4,8 @@
 
 #include "rng.hpp"
 
+#include "args.hpp"
+
 #include <iostream>
 
 namespace rng {
@@ -30,10 +32,10 @@ Gen &generator() {
 
 void init_generators() {
     std::cout << "initializing generators!" << std::endl;
-    std::cout << "size = " << generators.size() << " and nthreads = " << omp_get_max_threads() << std::endl;
+    std::cout << "size = " << generators.size() << " and nthreads = " << args.threads << std::endl;
     pcg_extras::seed_seq_from<std::random_device> seed_source;
 //    std::random_device seeder;
-    int num_threads = omp_get_max_threads();
+    int num_threads = args.threads;
     for (int i = 0; i < num_threads; ++i) {
 //        Gen generator(seeder());
         Gen generator(seed_source);
