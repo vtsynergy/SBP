@@ -3,7 +3,8 @@
 #include <unordered_set>
 
 void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
-    if (args.distribute == "none" || args.distribute == "none-edge-balanced") {
+    if (args.distribute == "none" || args.distribute == "none-edge-balanced" ||
+        args.distribute == "none-agg-block-degree-balanced") {
         this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
         return;
     }
@@ -67,10 +68,15 @@ void TwoHopBlockmodel::distribute(const Graph &graph) {
         distribute_2hop_snowball(graph.out_neighbors());
     else if (args.distribute == "none-edge-balanced")
         distribute_none_edge_balanced(graph);
+    else if (args.distribute == "none-agg-block-degree-balanced")
+        distribute_none_agg_block_degree_balanced(graph);
     else
         distribute_none();
-    if (args.distribute != "none" && args.distribute != "none-edge-balanced")
-        std::cout << "WARNING: data distribution is NOT fully supported yet. We STRONGLY recommend running this software with --distribute none instead" << std::endl;
+    if (args.distribute != "none" && args.distribute != "none-edge-balanced" &&
+        args.distribute != "none-agg-block-degree-balanced") {
+        std::cout << "WARNING: data distribution is NOT fully supported yet. "
+                  << "We STRONGLY recommend running this software with --distribute none instead" << std::endl;
+    }
 }
 
 void TwoHopBlockmodel::distribute_none() {
@@ -85,6 +91,35 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     this->_my_vertices = utils::constant<int>(graph.num_vertices(), 0);
     std::vector<int> vertex_degrees = graph.degrees();
     std::vector<int> sorted_indices = utils::sort_indices<int>(vertex_degrees);
+    for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+        int vertex = sorted_indices[i];
+        this->_my_vertices[vertex] = 1;
+    }
+    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+        int vertex = sorted_indices[i];
+        this->_my_vertices[vertex] = 1;
+    }
+    std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
+    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = block_sizes[i].first;
+        this->_my_blocks[block] = true;
+    }
+    this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
+}
+
+void TwoHopBlockmodel::distribute_none_agg_block_degree_balanced(const Graph &graph) {
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    this->_my_vertices = utils::constant<int>(graph.num_vertices(), 0);
+    std::vector<int> block_degrees = utils::constant<int>(graph.num_vertices(), 0);
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        int block = this->_block_assignment[vertex];
+        block_degrees[vertex] = this->_block_degrees[block];
+    }
+    std::vector<int> sorted_indices = utils::sort_indices<int>(block_degrees);
     for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
         int vertex = sorted_indices[i];
         this->_my_vertices[vertex] = 1;
@@ -278,7 +313,8 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
 
 double TwoHopBlockmodel::log_posterior_probability() const {
     std::vector<int> my_blocks;
-    if (args.distribute == "2hop-snowball" || args.distribute == "none-edge-balanced") {
+    if (args.distribute == "2hop-snowball" || args.distribute == "none-edge-balanced" ||
+        args.distribute == "none-agg-block-degree-balanced") {
         my_blocks = utils::constant<int>(this->num_blocks, -1);
         for (int block = 0; block < this->num_blocks; ++block) {
             if (this->_my_blocks[block])
@@ -324,7 +360,8 @@ bool TwoHopBlockmodel::owns_block(int block) const {
 }
 
 bool TwoHopBlockmodel::owns_vertex(int vertex) const {
-    if (args.distribute == "2hop-snowball" || args.distribute == "none-edge-balanced") {
+    if (args.distribute == "2hop-snowball" || args.distribute == "none-edge-balanced" ||
+        args.distribute == "none-agg-block-degree-balanced") {
         return this->_my_vertices[vertex];
     }
     int block = this->_block_assignment[vertex];

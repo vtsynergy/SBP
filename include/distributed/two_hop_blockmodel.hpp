@@ -74,6 +74,10 @@ private:
     /// MPI ranks. Vertices and blocks are distributed separately, which is fine because the entire blockmodel is
     /// replicated on each rank.
     void distribute_none_edge_balanced(const Graph &graph);
+    /// No data distribution, work on vertices is mapped to try to distribute aggregate block degree amongst MPI ranks.
+    /// That is, it tries to distribute the vertices based on the block degree of the blocks they belong to. Vertices
+    /// and blocks are distributed separately, which is fine because the entire blockmodel is replicated on each rank.
+    void distribute_none_agg_block_degree_balanced(const Graph &graph);
     /// 2-Hop data distribution using round-robin assignment, each MPI rank responsible for the vertices in the blocks
     /// mapped to it.
     void distribute_2hop_round_robin(const NeighborList &neighbors);
