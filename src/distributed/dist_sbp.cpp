@@ -18,21 +18,21 @@ void record_runtime_imbalance() {
     std::cout << mpi.rank << " : runtimes size = " << finetune::dist::MCMC_RUNTIMES.size() << std::endl;
 //    std::vector<double> all_mcmc_runtimes = utils::constant<double>(recvcount, 0);
     std::vector<double> all_mcmc_runtimes(recvcount * mpi.num_processes, 0.0);
-    std::vector<int> all_mcmc_vertex_edges(recvcount * mpi.num_processes, 0);
+    std::vector<unsigned int> all_mcmc_vertex_edges(recvcount * mpi.num_processes, 0);
     std::vector<int> all_mcmc_num_blocks(recvcount * mpi.num_processes, 0);
     std::vector<unsigned long> all_mcmc_block_degrees(recvcount * mpi.num_processes, 0);
-    std::vector<unsigned long> all_mcmc_aggregate_block_degrees(recvcount * mpi.num_processes, 0);
+    std::vector<unsigned long long> all_mcmc_aggregate_block_degrees(recvcount * mpi.num_processes, 0);
     std::cout << mpi.rank << " : allocated vector size = " << all_mcmc_runtimes.size() << std::endl;
     MPI_Gather(finetune::dist::MCMC_RUNTIMES.data(), recvcount, MPI_DOUBLE,
                all_mcmc_runtimes.data(), recvcount, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Gather(finetune::dist::MCMC_VERTEX_EDGES.data(), recvcount, MPI_INT,
-               all_mcmc_vertex_edges.data(), recvcount, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_VERTEX_EDGES.data(), recvcount, MPI_UNSIGNED,
+               all_mcmc_vertex_edges.data(), recvcount, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Gather(finetune::dist::MCMC_NUM_BLOCKS.data(), recvcount, MPI_INT,
                all_mcmc_num_blocks.data(), recvcount, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Gather(finetune::dist::MCMC_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG,
                all_mcmc_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-    MPI_Gather(finetune::dist::MCMC_AGGREGATE_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG,
-               all_mcmc_aggregate_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+    MPI_Gather(finetune::dist::MCMC_AGGREGATE_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG_LONG,
+               all_mcmc_aggregate_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
     if (mpi.rank != 0) return;  // Only rank 0 should actually save a CSV file
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;

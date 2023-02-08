@@ -13,10 +13,10 @@
 namespace finetune::dist {
 
 std::vector<double> MCMC_RUNTIMES;
-std::vector<int> MCMC_VERTEX_EDGES;
+std::vector<unsigned int> MCMC_VERTEX_EDGES;
 std::vector<int> MCMC_NUM_BLOCKS;
 std::vector<unsigned long> MCMC_BLOCK_DEGREES;
-std::vector<unsigned long> MCMC_AGGREGATE_BLOCK_DEGREES;
+std::vector<unsigned long long> MCMC_AGGREGATE_BLOCK_DEGREES;
 
 const int MEMBERSHIP_T_BLOCK_LENGTHS[2] = {1, 1};
 const MPI_Aint MEMBERSHIP_T_DISPLACEMENTS[2] = {0, sizeof(int)};
@@ -198,8 +198,8 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
 void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph) {
     std::vector<int> degrees = graph.degrees();
     MapVector<bool> block_count;
-    int num_degrees = 0;
-    int num_aggregate_block_degrees = 0;
+    unsigned int num_degrees = 0;
+    unsigned long long num_aggregate_block_degrees = 0;
     for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
         if (!blockmodel.owns_vertex(vertex)) continue;
         num_degrees += degrees[vertex];
