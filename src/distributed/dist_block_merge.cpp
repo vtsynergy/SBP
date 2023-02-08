@@ -81,7 +81,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     // else
     // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
-    blockmodel.distribute(graph.out_neighbors());
+    blockmodel.distribute(graph);
     blockmodel.initialize_edge_counts(graph);
     MPI_Type_free(&Merge_t);
     return blockmodel;

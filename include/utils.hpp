@@ -110,7 +110,7 @@ template <typename T> inline T sum(const std::vector<T> &vector) {
 }
 
 /// Sorts the indices of an array in descending order according to the values of the array
-inline std::vector<int> sort_indices(const std::vector<double> &unsorted) {
+template <typename T> inline std::vector<int> sort_indices(const std::vector<T> &unsorted) {
     // initialize original index locations
     std::vector<int> indices = utils::range<int>(0, unsorted.size());
     // sort indexes based on comparing values in unsorted

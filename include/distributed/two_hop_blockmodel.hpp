@@ -43,7 +43,7 @@ public:
                      std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
-        this->distribute(graph.out_neighbors());
+        this->distribute(graph);
         this->initialize_edge_counts(graph);
     }
     /// Sets the _in_two_hop_radius for a 2-hop blockmodel.
@@ -52,7 +52,7 @@ public:
     /// Distributes the blockmodel amongst MPI ranks. Needs to be called before the first call to
     /// initialize_edge_counts, since it sets the _in_two_hop_radius and _my_blocks vectors. After that, it only needs
     /// to be called to re-distribute the blockmodel (followed by initialize_edge_counts).
-    void distribute(const NeighborList &neighbors);
+    void distribute(const Graph &graph);
     /// Returns the _in_two_hop_radius vector.
     const std::vector<bool>& in_two_hop_radius() const { return this->_in_two_hop_radius; }
     void initialize_edge_counts(const Graph &graph);
@@ -68,8 +68,12 @@ private:
     // ===== Functions
     /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.
     std::vector<std::pair<int,int>> sorted_block_sizes() const;
-    /// No data distribution, work is mapped using round-robin strategy.
+    /// No data distribution, work on blocks is mapped using round-robin strategy.
     void distribute_none();
+    /// No data distribution, work on vertices is mapped to try to distribute an equal number of edges amongst
+    /// MPI ranks. Vertices and blocks are distributed separately, which is fine because the entire blockmodel is
+    /// replicated on each rank.
+    void distribute_none_edge_balanced(const Graph &graph);
     /// 2-Hop data distribution using round-robin assignment, each MPI rank responsible for the vertices in the blocks
     /// mapped to it.
     void distribute_2hop_round_robin(const NeighborList &neighbors);
