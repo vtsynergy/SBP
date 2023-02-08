@@ -199,7 +199,7 @@ void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &
     std::vector<int> degrees = graph.degrees();
     MapVector<bool> block_count;
     int num_degrees = 0;
-    int num_aggregate_block_degrees;
+    int num_aggregate_block_degrees = 0;
     for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
         if (!blockmodel.owns_vertex(vertex)) continue;
         num_degrees += degrees[vertex];
