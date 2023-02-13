@@ -68,11 +68,14 @@ void TwoHopBlockmodel::distribute(const Graph &graph) {
         distribute_2hop_snowball(graph.out_neighbors());
     else if (args.distribute == "none-edge-balanced")
         distribute_none_edge_balanced(graph);
+    else if (args.distribute == "none-block-degree-balanced")
+        distribute_none_block_degree_balanced(graph);
     else if (args.distribute == "none-agg-block-degree-balanced")
         distribute_none_agg_block_degree_balanced(graph);
     else
         distribute_none();
     if (args.distribute != "none" && args.distribute != "none-edge-balanced" &&
+        args.distribute != "none-block-degree-balanced" &&
         args.distribute != "none-agg-block-degree-balanced") {
         std::cout << "WARNING: data distribution is NOT fully supported yet. "
                   << "We STRONGLY recommend running this software with --distribute none instead" << std::endl;
@@ -108,6 +111,33 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
         int block = block_sizes[i].first;
         this->_my_blocks[block] = true;
     }
+    this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
+}
+
+void TwoHopBlockmodel::distribute_none_block_degree_balanced(const Graph &graph) {
+    this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
+    std::vector<int> approximate_block_degrees;
+    for (int i = 0; i < this->num_blocks; ++i) {
+        approximate_block_degrees.push_back(this->_block_degrees[i]);
+    }
+    std::vector<int> sorted_indices = utils::sort_indices<int>(approximate_block_degrees);
+    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = sorted_indices[i];
+        this->_my_blocks[block] = true;
+    }
+    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+        int block = sorted_indices[i];
+        this->_my_blocks[block] = true;
+    }
+//    std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
+//    for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+//        int block = block_sizes[i].first;
+//        this->_my_blocks[block] = true;
+//    }
+//    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
+//        int block = block_sizes[i].first;
+//        this->_my_blocks[block] = true;
+//    }
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
 }
 
