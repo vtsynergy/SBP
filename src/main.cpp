@@ -34,7 +34,12 @@ struct Partition {
 };
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
-    std::vector<sbp::Intermediate> intermediate_results = sbp::get_intermediates();
+    std::vector<sbp::Intermediate> intermediate_results;
+    if (mpi.num_processes > 1) {
+        intermediate_results = sbp::dist::get_intermediates();
+    } else {
+        intermediate_results = sbp::get_intermediates();
+    }
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
@@ -50,8 +55,8 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
              << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
              << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, block_merge_time, "
-             << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, access_time, "
-             << "update_assignmnet, total_time" << std::endl;
+             << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
+             << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
     }
     for (const sbp::Intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
@@ -64,8 +69,8 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
              << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << temp.block_merge_time << ", "
              << temp.block_merge_loop_time << ", " << temp.blockmodel_build_time << ", "
-             << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", " << temp.access_time << ", "
-             << temp.update_assignment << ", " << temp.total_time << std::endl;
+             << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", " << temp.load_balancing_time << ", "
+             << temp.access_time << ", " << temp.update_assignment << ", " << temp.total_time << std::endl;
     }
     file.close();
 }

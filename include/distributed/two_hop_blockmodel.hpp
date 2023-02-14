@@ -22,6 +22,7 @@
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 
+extern double Load_balancing_time;
 
 class TwoHopBlockmodel : public Blockmodel {
 public:

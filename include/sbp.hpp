@@ -32,6 +32,7 @@ struct Intermediate {
     double block_merge_loop_time;
     double blockmodel_build_time;
     double blockmodel_first_build_time;
+    double load_balancing_time = 0.0;
     double sort_time;
     double access_time;
     double update_assignment;

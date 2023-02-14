@@ -2,6 +2,8 @@
 
 #include <unordered_set>
 
+double Load_balancing_time = 0.0;
+
 void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     if (args.distribute == "none" || args.distribute == "none-edge-balanced" ||
         args.distribute == "none-agg-block-degree-balanced") {
@@ -58,6 +60,7 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
 }
 
 void TwoHopBlockmodel::distribute(const Graph &graph) {
+    double start = MPI_Wtime();
     if (args.distribute == "none")
         distribute_none();
     else if (args.distribute == "2hop-round-robin")
@@ -80,6 +83,7 @@ void TwoHopBlockmodel::distribute(const Graph &graph) {
         std::cout << "WARNING: data distribution is NOT fully supported yet. "
                   << "We STRONGLY recommend running this software with --distribute none instead" << std::endl;
     }
+    Load_balancing_time += MPI_Wtime() - start;
 }
 
 void TwoHopBlockmodel::distribute_none() {

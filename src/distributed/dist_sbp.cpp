@@ -3,12 +3,55 @@
 #include "distributed/dist_block_merge.hpp"
 #include "distributed/dist_blockmodel_triplet.hpp"
 #include "distributed/dist_finetune.hpp"
+#include "entropy.hpp"
 #include "finetune.hpp"
 #include "distributed/two_hop_blockmodel.hpp"
 
 #include <sstream>
 
 namespace sbp::dist {
+
+double total_time = 0.0;
+
+double Blockmodel_first_build_time = 0.0;
+
+std::vector<Intermediate> intermediate_results;
+
+std::vector<Intermediate> get_intermediates() {
+    return intermediate_results;
+}
+
+void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl) {
+    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
+//    double modularity = -1;
+//    if (iteration == -1)
+//        modularity = graph.modularity(blockmodel.block_assignment());
+    Intermediate intermediate {};
+    intermediate.iteration = iteration;
+    intermediate.mdl = mdl;
+    intermediate.normalized_mdl_v1 = normalized_mdl_v1;
+    intermediate.modularity = modularity;
+    intermediate.mcmc_iterations = finetune::MCMC_iterations;
+    intermediate.mcmc_time = finetune::MCMC_time;
+    intermediate.mcmc_sequential_time = finetune::MCMC_sequential_time;
+    intermediate.mcmc_parallel_time = finetune::MCMC_parallel_time;
+    intermediate.mcmc_vertex_move_time = finetune::MCMC_vertex_move_time;
+    intermediate.mcmc_moves = finetune::MCMC_moves;
+    intermediate.block_merge_time = block_merge::BlockMerge_time;
+    intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
+    intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
+    intermediate.blockmodel_first_build_time = Blockmodel_first_build_time;
+    intermediate.load_balancing_time = Load_balancing_time;
+    intermediate.sort_time = Blockmodel_sort_time;
+    intermediate.access_time = Blockmodel_access_time;
+    intermediate.total_time = total_time;
+    intermediate.update_assignment = Blockmodel_update_assignment;
+    intermediate_results.push_back(intermediate);
+    std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
+              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
+              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
+              << total_time << std::endl;
+}
 
 void record_runtime_imbalance() {
     std::cout << "Recording runtime imbalance statistics" << std::endl;
