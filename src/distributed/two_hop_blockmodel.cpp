@@ -4,6 +4,8 @@
 
 double Load_balancing_time = 0.0;
 
+std::vector<int> Rank_indices;
+
 void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
     if (args.distribute == "none" || args.distribute == "none-edge-balanced" ||
         args.distribute == "none-agg-block-degree-balanced") {
@@ -94,18 +96,21 @@ void TwoHopBlockmodel::distribute_none() {
 }
 
 void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
+    if (Rank_indices.empty()) {
+        Rank_indices = utils::constant<int>(graph.num_vertices(), 0);
+        std::vector<int> vertex_degrees = graph.degrees();
+        std::vector<int> sorted_indices = utils::sort_indices<int>(vertex_degrees);
+        for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+            int vertex = sorted_indices[i];
+            Rank_indices[vertex] = 1;
+        }
+        for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+            int vertex = sorted_indices[i];
+            Rank_indices[vertex] = 1;
+        }
+    }
+    this->_my_vertices = Rank_indices;
     this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-    this->_my_vertices = utils::constant<int>(graph.num_vertices(), 0);
-    std::vector<int> vertex_degrees = graph.degrees();
-    std::vector<int> sorted_indices = utils::sort_indices<int>(vertex_degrees);
-    for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-        int vertex = sorted_indices[i];
-        this->_my_vertices[vertex] = 1;
-    }
-    for (int i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-        int vertex = sorted_indices[i];
-        this->_my_vertices[vertex] = 1;
-    }
     std::vector<std::pair<int,int>> block_sizes = this->sorted_block_sizes();
     for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
         int block = block_sizes[i].first;

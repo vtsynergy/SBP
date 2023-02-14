@@ -24,6 +24,8 @@
 
 extern double Load_balancing_time;
 
+extern std::vector<int> Rank_indices;
+
 class TwoHopBlockmodel : public Blockmodel {
 public:
     // using Blockmodel::Blockmodel;
