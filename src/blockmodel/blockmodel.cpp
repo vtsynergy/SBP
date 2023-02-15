@@ -5,6 +5,7 @@
 #include <queue>
 
 #include "../args.hpp"
+#include "mpi_data.hpp"
 #include "typedefs.hpp"
 #include "utils.hpp"
 
@@ -56,7 +57,6 @@ double Blockmodel::difficulty_score() const {
 // TODO: move to block_merge.cpp
 void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                        const std::vector<int> &best_merge_for_each_block) {
-    std::cout << "Performing best merges..." << std::endl;
     double sort_start_t = MPI_Wtime();
     /* typedef std::tuple<int, int, double> merge_t;
     auto cmp_fxn = [](merge_t left, merge_t right) { return std::get<2>(left) > std::get<2>(right); };
@@ -69,11 +69,10 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
     std::vector<int> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
                                                                this->num_blocks_to_merge + 1);
     double sort_end_t = MPI_Wtime();
-    std::cout << "done sorting indices..." << std::endl;
     Blockmodel_sort_time += sort_end_t - sort_start_t;
     // std::vector<int> best_merges = utils::sort_indices(delta_entropy_for_each_block);
     std::vector<int> block_map = utils::range<int>(0, this->num_blocks);
-    std::cout << "block map size: " << block_map.size() << std::endl;
+    if (mpi.rank == 0) std::cout << "block map size: " << block_map.size() << std::endl;
     auto translate = [&block_map](int block) -> int {
         int b = block;
         do {
@@ -109,13 +108,11 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         }
     }
     double update_start_t = MPI_Wtime();
-    std::cout << "done updating block map" << std::endl;
     Blockmodel_access_time += update_start_t - sort_end_t;
     for (int i = 0; i < this->_block_assignment.size(); ++i) {
         this->_block_assignment[i] = translate(this->_block_assignment[i]);
     }
     Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
-    std::cout << "done updating block assignment" << std::endl;
     std::vector<int> mapping = build_mapping(this->_block_assignment);
     for (size_t i = 0; i < this->_block_assignment.size(); ++i) {
         int block = this->_block_assignment[i];
@@ -123,7 +120,6 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         this->_block_assignment[i] = new_block;
     }
     this->num_blocks -= this->num_blocks_to_merge;
-    std::cout << "done carrying out best merges" << std::endl;
 }
 
 Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std::vector<int> &true_block_membership) {
