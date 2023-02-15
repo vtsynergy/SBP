@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
-module load CMake/3.18.4-GCCcore-10.2.0
-module load gcc/8.2.0
-module load OpenMPI/4.1.1-GCC-10.3.0
+module load CMake/3.16.4-GCCcore-9.3.0
+module load tbb/2020.1-GCCcore-9.3.0
+module load OpenMPI/4.0.3-GCC-9.3.0
 
 cd ../build
 cmake ..
