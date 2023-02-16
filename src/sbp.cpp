@@ -108,6 +108,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         total_time += MPI_Wtime() - start_bm;
         add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
     }
     // only last iteration result will calculate expensive modularity
     double modularity = -1;

@@ -170,6 +170,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         else
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
         iteration++;
     }
     std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
