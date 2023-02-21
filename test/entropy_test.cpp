@@ -158,11 +158,15 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     finetune::edge_count_updates_sparse(B3, vertex, 3, 0, out_edges, in_edges, updates);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             3, B3, 1, 4, proposal);
+    std::cout << "before copies" << std::endl;
     Blockmodel B4 = B3.copy();
     Blockmodel B5 = B3.copy();
+    std::cout << "before move_vertex_nodelta" << std::endl;
     VertexMove result = finetune::move_vertex_nodelta(6, 3, proposal, B4, graph, out_edges, in_edges);
+    std::cout << "before move_vertex" << std::endl;
     B5.move_vertex(vertex, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
                    new_block_degrees.block_degrees);
+    std::cout << "before mdl" << std::endl;
     double E_before = entropy::mdl(B3, 11, 23);
     double dE = entropy::mdl(B5, 11, 23) - E_before;
     std::cout << "======== Before move ========" << std::endl;

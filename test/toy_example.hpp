@@ -36,6 +36,7 @@ protected:
     }
 
     void ToySetUp(bool transpose) {
+        args.threads = 1;
         rng::init_generators();
         args.transpose = transpose;
         std::vector<std::vector<int>> edges {
