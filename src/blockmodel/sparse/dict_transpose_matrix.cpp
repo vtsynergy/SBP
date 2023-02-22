@@ -180,7 +180,7 @@ MapVector<int> DictTransposeMatrix::neighbors_weights(int block) const {
 //        result.insert(entry.first);
     }
     for (const std::pair<int, int> &entry : this->matrix_transpose[block]) {
-        if (entry.second == block) continue;
+        if (entry.first == block) continue;
         result[entry.first] += entry.second;
 //        result.insert(entry.first);
     }
