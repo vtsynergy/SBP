@@ -67,8 +67,11 @@ target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(Influence src/influence.cpp)
-target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
+#add_executable(Influence src/influence.cpp)
+#target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
+
+add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp)
+target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 
 if (DEBUG)
     #    To check for heap overflows and such, use -fsanitize=address
@@ -76,7 +79,8 @@ if (DEBUG)
     target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
     target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address tbb)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
-    target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
+    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
+#    target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
     #    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
     #    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
     #    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
@@ -87,7 +91,8 @@ else (DEBUG)
     target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
     target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
     target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map tbb)
-    target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map tbb)
+    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb)
+#    target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map tbb)
 endif (DEBUG)
 
 # Google Test Suite

@@ -1,4 +1,5 @@
 #include "blockmodel_triplet.hpp"
+#include "mpi_data.hpp"
 
 Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     old_blockmodel.setNum_blocks_to_merge(0);
@@ -35,7 +36,9 @@ Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     return blockmodel;
 }
 
-bool BlockmodelTriplet::golden_ratio_not_reached() { return this->get(2).empty; }
+bool BlockmodelTriplet::golden_ratio_not_reached() {
+    return this->get(2).empty;
+}
 
 bool BlockmodelTriplet::is_done() {
     if ((!this->get(0).empty && this->get(0).getNum_blocks() - this->get(2).getNum_blocks() == 2) ||
@@ -65,12 +68,12 @@ void BlockmodelTriplet::status() {
             num_blocks[i] = this->blockmodels[i].getNum_blocks();
         }
     }
-    std::cout << "Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl;
-    std::cout << "Number of blocks: " << num_blocks[0] << " " << num_blocks[1] << " " << num_blocks[2] << std::endl;
+    std::cout << mpi.rank << " | Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl;
+    std::cout << mpi.rank << " | Number of blocks: " << num_blocks[0] << " " << num_blocks[1] << " " << num_blocks[2] << std::endl;
     if (this->optimal_num_blocks_found) {
-        std::cout << "Optimal blockmodel found with " << num_blocks[1] << " blocks" << std::endl;
+        std::cout << mpi.rank << " | Optimal blockmodel found with " << num_blocks[1] << " blocks" << std::endl;
     } else if (!(this->golden_ratio_not_reached())) {
-        std::cout << "Golden ratio has been reached" << std::endl;
+        std::cout << mpi.rank << " | Golden ratio has been reached" << std::endl;
     }
 }
 

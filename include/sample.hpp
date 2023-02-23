@@ -55,6 +55,9 @@ Sample max_degree(const Graph &graph);
 /// Samples random vertices.
 Sample random(const Graph &graph);
 
+/// Samples vertices in round robin fashion, using mpi.rank and mpi.num_processes as the round robin parameters.
+Sample round_robin(const Graph &graph);
+
 /// Creates a sample using args.samplingalg algorithm
 Sample sample(const Graph &graph);
 

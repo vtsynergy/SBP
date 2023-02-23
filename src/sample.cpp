@@ -4,6 +4,7 @@
 
 #include "args.hpp"
 #include "common.hpp"
+#include "mpi_data.hpp"
 
 namespace sample {
 
@@ -172,6 +173,18 @@ Sample random(const Graph &graph) {
         int vertex = indices[index];
         sampled.push_back(vertex);
         mapping[vertex] = index;  // from full graph ID to sample graph ID
+    }
+    return from_vertices(graph, sampled, mapping);
+}
+
+Sample round_robin(const Graph &graph) {
+    std::vector<int> sampled;
+    std::vector<int> mapping = utils::constant(graph.num_vertices(), -1);
+    int index = 0;
+    for (int vertex = mpi.rank; vertex < graph.num_vertices(); vertex += mpi.num_processes) {
+        sampled.push_back(vertex);
+	mapping[vertex] = index;
+	index++;
     }
     return from_vertices(graph, sampled, mapping);
 }

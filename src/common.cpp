@@ -182,6 +182,13 @@ utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &o
     } else {
         total_edges = utils::sum<double, int>(edges);
     }
+    if (edges.empty()) {
+        std::cerr << "ERROR: NO EDGES for neighbor_block = " << neighbor_block << "! k = " << blockmodel.degrees(neighbor_block) << " "
+                  << blockmodel.degrees_out(neighbor_block) << " " << blockmodel.degrees_in(neighbor_block)
+                  << std::endl;
+        utils::print<int>(blockmodel.blockmatrix()->getrow_sparse(neighbor_block));
+        utils::print<int>(blockmodel.blockmatrix()->getcol_sparse(neighbor_block));
+    }
     // Propose a block based on the multinomial distribution of block neighbor edges
     SparseVector<double> multinomial_distribution;
     utils::div(edges, total_edges, multinomial_distribution);

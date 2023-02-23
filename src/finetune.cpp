@@ -505,7 +505,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
     int batch_size = int(ceil(num_low_degree_vertices / num_batches));
 
     for (int iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-        std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+//        std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
         num_surrounded = 0;
         int _vertex_moves = 0;
         double start_t = MPI_Wtime();
@@ -822,7 +822,7 @@ std::vector<std::pair<int, int>> sort_blocks_by_neighbors(const Blockmodel &bloc
     }
     std::sort(block_neighbors.begin(), block_neighbors.end(),
               [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
-    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+//    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return block_neighbors;
 }
 
@@ -836,7 +836,7 @@ std::vector<std::pair<int, int>> sort_blocks_by_size(const Blockmodel &blockmode
     }
     std::sort(block_sizes.begin(), block_sizes.end(),
               [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
-    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+//    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return block_sizes;
 }
 
@@ -848,7 +848,7 @@ std::vector<std::pair<int,int>> sort_vertices_by_degree(const Graph &graph) {
     }
     std::sort(vertex_degrees.begin(), vertex_degrees.end(),
               [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
-    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
+//    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return vertex_degrees;
 }
 

@@ -64,7 +64,7 @@ void add_intermediate(float iteration, const Graph &graph, double modularity, do
               << total_time << std::endl;
 }
 
-Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
+Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
@@ -79,6 +79,15 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     float iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet)) {
+        if (divide_and_conquer) {
+            if (!blockmodel_triplet.golden_ratio_not_reached() ||
+                (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
+                MPI_Barrier(MPI_COMM_WORLD);
+                blockmodel_triplet.status();
+                blockmodel = blockmodel_triplet.get(0).copy();
+                break;
+            }
+        }
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to " 
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
@@ -92,9 +101,6 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-//        if (args.algorithm == "async_gibbs_old" && iteration < float(args.asynciterations))
-//            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
-//        else
         common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
