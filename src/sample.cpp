@@ -150,9 +150,10 @@ Sample from_vertices(const Graph &graph, const std::vector<int> &vertices, const
 
 Sample max_degree(const Graph &graph) {
     std::vector<int> vertex_degrees = graph.degrees();
-    std::vector<int> indices = utils::range<int>(0, graph.num_vertices());
-    std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
-              [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
+    std::vector<int> indices = utils::argsort(vertex_degrees);
+//    std::vector<int> indices = utils::range<int>(0, graph.num_vertices());
+//    std::sort(indices.data(), indices.data() + indices.size(),  // sort in descending order
+//              [vertex_degrees](size_t i1, size_t i2) { return vertex_degrees[i1] > vertex_degrees[i2]; });
     std::vector<int> sampled;
     std::vector<int> mapping = utils::constant(graph.num_vertices(), -1);
     for (int index = 0; index < int(args.samplesize * float(graph.num_vertices())); ++index) {

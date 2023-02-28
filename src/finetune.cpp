@@ -820,8 +820,9 @@ std::vector<std::pair<int, int>> sort_blocks_by_neighbors(const Blockmodel &bloc
     for (int i = 0; i < blockmodel.getNum_blocks(); ++i) {
         block_neighbors.emplace_back(std::make_pair(i, blockmodel.blockmatrix()->distinct_edges(i)));
     }
-    std::sort(block_neighbors.begin(), block_neighbors.end(),
-              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    utils::radix_sort(block_neighbors);
+//    std::sort(block_neighbors.begin(), block_neighbors.end(),
+//              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
 //    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return block_neighbors;
 }
@@ -834,8 +835,9 @@ std::vector<std::pair<int, int>> sort_blocks_by_size(const Blockmodel &blockmode
     for (const int &block : blockmodel.block_assignment()) {
         block_sizes[block].second++;
     }
-    std::sort(block_sizes.begin(), block_sizes.end(),
-              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    utils::radix_sort(block_sizes);
+//    std::sort(block_sizes.begin(), block_sizes.end(),
+//              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
 //    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return block_sizes;
 }
@@ -846,8 +848,9 @@ std::vector<std::pair<int,int>> sort_vertices_by_degree(const Graph &graph) {
         int degree = (int)(graph.out_neighbors(vertex).size() + graph.in_neighbors(vertex).size());
         vertex_degrees.emplace_back(std::make_pair(vertex, degree));
     }
-    std::sort(vertex_degrees.begin(), vertex_degrees.end(),
-              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    utils::radix_sort(vertex_degrees);
+//    std::sort(vertex_degrees.begin(), vertex_degrees.end(),
+//              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
 //    std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
     return vertex_degrees;
 }

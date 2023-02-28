@@ -99,7 +99,7 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     if (Rank_indices.empty()) {
         Rank_indices = utils::constant<int>(graph.num_vertices(), 0);
         std::vector<int> vertex_degrees = graph.degrees();
-        std::vector<int> sorted_indices = utils::sort_indices<int>(vertex_degrees);
+        std::vector<int> sorted_indices = utils::argsort(vertex_degrees);
         for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
             int vertex = sorted_indices[i];
             Rank_indices[vertex] = 1;
@@ -129,7 +129,7 @@ void TwoHopBlockmodel::distribute_none_block_degree_balanced(const Graph &graph)
     for (int i = 0; i < this->num_blocks; ++i) {
         approximate_block_degrees.push_back(this->_block_degrees[i]);
     }
-    std::vector<int> sorted_indices = utils::sort_indices<int>(approximate_block_degrees);
+    std::vector<int> sorted_indices = utils::argsort(approximate_block_degrees);
     for (int i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {
         int block = sorted_indices[i];
         this->_my_blocks[block] = true;
@@ -158,7 +158,7 @@ void TwoHopBlockmodel::distribute_none_agg_block_degree_balanced(const Graph &gr
         int block = this->_block_assignment[vertex];
         block_degrees[vertex] = this->_block_degrees[block];
     }
-    std::vector<int> sorted_indices = utils::sort_indices<int>(block_degrees);
+    std::vector<int> sorted_indices = utils::argsort(block_degrees);
     for (int i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
         int vertex = sorted_indices[i];
         this->_my_vertices[vertex] = 1;
@@ -410,14 +410,25 @@ bool TwoHopBlockmodel::owns_vertex(int vertex) const {
 std::vector<std::pair<int,int>> TwoHopBlockmodel::sorted_block_sizes() const {
     std::vector<std::pair<int,int>> block_sizes;
     for (int i = 0; i < this->num_blocks; ++i) {
-        block_sizes.push_back(std::make_pair(i, 0));
+        block_sizes.emplace_back(i, 0);
     }
     for (const int &block : this->_block_assignment) {
         block_sizes[block].second++;
     }
-    std::sort(block_sizes.begin(), block_sizes.end(),
-              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+    utils::radix_sort(block_sizes);
     return block_sizes;
+//    std::sort(block_sizes.begin(), block_sizes.end(),
+//              [](const std::pair<int, int> &a, const std::pair<int, int> &b) { return a.second > b.second; });
+//    std::vector<int> block_sizes = utils::constant<int>(this->num_blocks, 0);
+//    for (const int &block : this->_block_assignment) {
+//        block_sizes[block]++;
+//    }
+//    std::vector<int> indices = utils::argsort(block_sizes);
+//    std::vector<std::pair<int,int>> result;
+//    for (int i = 0; i < this->num_blocks; ++i) {
+//        result.emplace_back(indices[i], block_sizes[indices[i]]);
+//    }
+//    return result;
 }
 
 bool TwoHopBlockmodel::stores(int block) const {

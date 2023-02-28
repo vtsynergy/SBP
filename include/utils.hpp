@@ -37,6 +37,8 @@ typedef struct proposal_and_edge_counts_t {
 /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
 std::string build_filepath();
 
+std::vector<int> argsort(const std::vector<int>& v);
+
 /// Divides all elements in a MapVector<int> by a scalar, and stores the result in `result`
 inline void div(const MapVector<int> &lhs, const double &rhs, SparseVector<double> &result) {
     for (const std::pair<const int, int> &pair : lhs) {
@@ -80,6 +82,12 @@ template <typename T> inline std::vector<T> constant(int size, T value) {
     return result;
 }
 
+/// Radix sort in descending order (thanks ChatGPT!)
+void radix_sort(std::vector<int>& v);
+
+/// Radix sort in descending order for pairs (thanks ChatGPT!)
+void radix_sort(std::vector<std::pair<int, int>>& v);
+
 /// Returns a vector filled with values in the range[start, start+size).
 template <typename T> inline std::vector<T> range(int start, int size) {
     // TODO: may be faster using push_backs, instead of initializing and then modifying
@@ -118,6 +126,85 @@ template <typename T> inline std::vector<int> sort_indices(const std::vector<T> 
               [unsorted](size_t i1, size_t i2) { return unsorted[i1] > unsorted[i2]; });
     return indices;
 }
+
+/// A radix sort implementation
+//static void radix_sort(std::vector<int>& v) {
+//    if (v.empty()) {
+//        return;
+//    }
+//
+//    constexpr int num_bits = 8; // number of bits in a byte
+//    constexpr int num_buckets = 1 << num_bits; // number of possible byte values
+//    constexpr int mask = num_buckets - 1; // mask to extract the least significant byte
+//
+//    int max_element = *std::max_element(v.begin(), v.end());
+//    int num_passes = (sizeof(int) + num_bits - 1) / num_bits; // number of passes needed for all bytes
+//    std::vector<int> counts(num_buckets);
+//
+//    std::vector<int> sorted(v.size());
+//    for (int pass = 0; pass < num_passes; pass++) {
+//        std::memset(counts.data(), 0, num_buckets * sizeof(int)); // reset counts
+//
+//        for (int i = 0; i < v.size(); i++) {
+//            int byte = (v[i] >> (num_bits * pass)) & mask;
+//            counts[byte]++;
+//        }
+//
+//        for (int i = 1; i < num_buckets; i++) {
+//            counts[i] += counts[i - 1];
+//        }
+//
+//        for (int i = v.size() - 1; i >= 0; i--) {
+//            int byte = (v[i] >> (num_bits * pass)) & mask;
+//            sorted[--counts[byte]] = v[i];
+//        }
+//
+//        std::copy(sorted.begin(), sorted.end(), v.begin());
+//    }
+//}
+
+/// A radix sort-based argsort
+//static std::vector<int> argsort(const std::vector<int>& v) {
+//    if (v.empty()) {
+//        return std::vector<int>();
+//    }
+//
+//    constexpr int num_bits = 8; // number of bits in a byte
+//    constexpr int num_buckets = 1 << num_bits; // number of possible byte values
+//    constexpr int mask = num_buckets - 1; // mask to extract the least significant byte
+//
+//    int max_element = *std::max_element(v.begin(), v.end());
+//    int num_passes = (sizeof(int) + num_bits - 1) / num_bits; // number of passes needed for all bytes
+//    std::vector<int> counts(num_buckets);
+//
+//    std::vector<int> indices(v.size());
+//    std::vector<int> sorted_indices(v.size());
+//    for (int i = 0; i < v.size(); i++) {
+//        indices[i] = i;
+//    }
+//
+//    for (int pass = 0; pass < num_passes; pass++) {
+//        std::memset(counts.data(), 0, num_buckets * sizeof(int)); // reset counts
+//
+//        for (int i = 0; i < v.size(); i++) {
+//            int byte = (v[i] >> (num_bits * pass)) & mask;
+//            counts[byte]++;
+//        }
+//
+//        for (int i = 1; i < num_buckets; i++) {
+//            counts[i] += counts[i - 1];
+//        }
+//
+//        for (int i = v.size() - 1; i >= 0; i--) {
+//            int byte = (v[i] >> (num_bits * pass)) & mask;
+//            sorted_indices[--counts[byte]] = indices[i];
+//        }
+//
+//        std::swap(indices, sorted_indices);
+//    }
+//
+//    return indices;
+//}
 
 /// Returns the sum of the elements in a vector, where sum and vector types are different.
 template <typename T, typename Y> inline T sum(const MapVector<Y> &vector) {
