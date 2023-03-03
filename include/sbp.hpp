@@ -17,17 +17,17 @@ namespace sbp {
 extern double total_time;
 
 /// Stores intermediate information for later printing.
-struct Intermediate {
-    float iteration;
+struct intermediate {
+    double iteration;
     double mdl;
     double normalized_mdl_v1;
     double modularity;
-    int mcmc_iterations;
+    long mcmc_iterations;
     double mcmc_time;
     double mcmc_sequential_time;
     double mcmc_parallel_time;
     double mcmc_vertex_move_time;
-    uint mcmc_moves;
+    ulong mcmc_moves;
     double block_merge_time;
     double block_merge_loop_time;
     double blockmodel_build_time;
@@ -40,15 +40,15 @@ struct Intermediate {
 };
 
 /// Adds intermediate results to be later saved in a CSV file.
-void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl);
+void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl);
 
-std::vector<Intermediate> get_intermediates();
+std::vector<intermediate> get_intermediates();
 
 /// Performs community detection on the provided graph, using the stochastic block partitioning algorithm
 Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer = false);
 
 /// Returns true if the exit condition is reached based on the provided blockmodels
-bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks = 0);
+bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, long min_num_blocks = 0);
 
 } // namespace sbp
 

@@ -35,7 +35,7 @@ struct Partition {
 };
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
-    std::vector<sbp::Intermediate> intermediate_results;
+    std::vector<sbp::intermediate> intermediate_results;
     if (mpi.num_processes > 1) {
         intermediate_results = sbp::dist::get_intermediates();
     } else {
@@ -59,7 +59,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
              << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
     }
-    for (const sbp::Intermediate &temp : intermediate_results) {
+    for (const sbp::intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
@@ -102,7 +102,7 @@ void run(Partition &partition) {
 
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
-    // int rank, num_processes;
+    // long rank, num_processes;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
@@ -148,21 +148,21 @@ int main(int argc, char* argv[]) {
             int partner_num_vertices;
             MPI_Recv(&partner_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD, &status);
             std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner has " << partner_num_vertices << "vertices" << std::endl;
-            std::vector<int> partner_vertices = utils::constant<int>(partner_num_vertices, -1);
-            std::vector<int> partner_assignment = utils::constant<int>(partner_num_vertices, -1);
-            MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_INT, partner, VERTICES_TAG, MPI_COMM_WORLD, &status);
-            MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_INT, partner, BLOCKS_TAG, MPI_COMM_WORLD, &status);
+            std::vector<long> partner_vertices = utils::constant<long>(partner_num_vertices, -1);
+            std::vector<long> partner_assignment = utils::constant<long>(partner_num_vertices, -1);
+            MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD, &status);
             std::cout << "Level " << level << " | rank " << mpi.rank << " received info from partner" << std::endl;
             // Build combined graph
-            int index = subgraph.graph.num_vertices();
-            std::vector<int> combined_mapping = subgraph.mapping;
-            for (int vertex : partner_vertices) {
+            long index = subgraph.graph.num_vertices();
+            std::vector<long> combined_mapping = subgraph.mapping;
+            for (long vertex : partner_vertices) {
                 combined_mapping[vertex] = index;
                 index++;
             }
-            std::vector<int> combined_vertices = partner_vertices;
+            std::vector<long> combined_vertices = partner_vertices;
             std::cout << mpi.rank << " | combined_vertices starting size = " << combined_vertices.size() << std::endl;
-            for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
                 if (subgraph.mapping[vertex] >= 0) {
                     combined_vertices.push_back(vertex);
                 }
@@ -170,18 +170,18 @@ int main(int argc, char* argv[]) {
             subgraph = sample::from_vertices(graph, combined_vertices, combined_mapping);
             std::cout << mpi.rank << " build combined subgraph with V = " << subgraph.graph.num_vertices() << std::endl;
             // Build combined blockmodel
-            int my_num_blocks = partition.blockmodel.getNum_blocks();
-            int combined_num_blocks = partition.blockmodel.getNum_blocks();
-            std::vector<int> combined_block_assignment = utils::constant<int>(subgraph.graph.num_vertices(), -1);
-            for (int index = 0; index < partition.blockmodel.block_assignment().size(); ++index) {
-                int assignment = partition.blockmodel.block_assignment(index);
+            long my_num_blocks = partition.blockmodel.getNum_blocks();
+            long combined_num_blocks = partition.blockmodel.getNum_blocks();
+            std::vector<long> combined_block_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+            for (long index = 0; index < partition.blockmodel.block_assignment().size(); ++index) {
+                long assignment = partition.blockmodel.block_assignment(index);
                 combined_block_assignment[index] = assignment;
             }
-            for (int index = 0; index < partner_num_vertices; ++index) {
-                int partner_vertex = partner_vertices[index];
-                int partner_block = partner_assignment[index];
-                int combined_vertex = combined_mapping[partner_vertex];
-                int combined_block = partner_block + partition.blockmodel.getNum_blocks();
+            for (long index = 0; index < partner_num_vertices; ++index) {
+                long partner_vertex = partner_vertices[index];
+                long partner_block = partner_assignment[index];
+                long combined_vertex = combined_mapping[partner_vertex];
+                long combined_block = partner_block + partition.blockmodel.getNum_blocks();
                 combined_num_blocks = std::max(combined_block + 1, combined_num_blocks);
                 combined_block_assignment[combined_vertex] = combined_block;
             }
@@ -191,29 +191,29 @@ int main(int argc, char* argv[]) {
             partition.blockmodel = Blockmodel(combined_num_blocks, subgraph.graph, 0.5, combined_block_assignment);
             std::cout << mpi.rank << " build combined blockmodel with B = " << partition.blockmodel.getNum_blocks() << std::endl;
             // Merge blockmodels
-            int partner_num_blocks = combined_num_blocks - my_num_blocks;
-            std::vector<int> merge_from_blocks, merge_to_blocks;
-            MapVector<std::pair<int, double>> best_merges;
+            long partner_num_blocks = combined_num_blocks - my_num_blocks;
+            std::vector<long> merge_from_blocks, merge_to_blocks;
+            MapVector<std::pair<long, double>> best_merges;
             if (my_num_blocks < partner_num_blocks) {
-                merge_from_blocks = utils::range<int>(0, my_num_blocks);
-                merge_to_blocks = utils::range<int>(my_num_blocks, partner_num_blocks);
+                merge_from_blocks = utils::range<long>(0, my_num_blocks);
+                merge_to_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
             } else {
-                merge_from_blocks = utils::range<int>(my_num_blocks, partner_num_blocks);
-                merge_to_blocks = utils::range<int>(0, my_num_blocks);
+                merge_from_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
+                merge_to_blocks = utils::range<long>(0, my_num_blocks);
             }
-            std::vector<int> block_map = utils::range<int>(0, partition.blockmodel.getNum_blocks());
-            for (int merge_from : merge_from_blocks) {
-                best_merges[merge_from] = std::make_pair<int, double>(-1, std::numeric_limits<double>::max());
-                for (int merge_to : merge_to_blocks) {
+            std::vector<long> block_map = utils::range<long>(0, partition.blockmodel.getNum_blocks());
+            for (long merge_from : merge_from_blocks) {
+                best_merges[merge_from] = std::make_pair<long, double>(-1, std::numeric_limits<double>::max());
+                for (long merge_to : merge_to_blocks) {
                     // Calculate the delta entropy given the current block assignment
                     EdgeWeights out_blocks = partition.blockmodel.blockmatrix()->outgoing_edges(merge_from);
                     EdgeWeights in_blocks = partition.blockmodel.blockmatrix()->incoming_edges(merge_from);
-                    int k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-                    int k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
-                    int k = k_out + k_in;
+                    long k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
+                    long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
+                    long k = k_out + k_in;
                     utils::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
                     Delta delta = block_merge::blockmodel_delta(merge_from, proposal.proposal, partition.blockmodel);
-                    int proposed_block_self_edges = partition.blockmodel.blockmatrix()->get(merge_to, merge_to)
+                    long proposed_block_self_edges = partition.blockmodel.blockmatrix()->get(merge_to, merge_to)
                                                     + delta.get(merge_to, merge_to);
                     double dE = entropy::block_merge_delta_mdl(merge_from, proposal, partition.blockmodel, delta);
                     if (dE < best_merges[merge_from].second) {
@@ -222,37 +222,37 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            std::vector<int> assignment = partition.blockmodel.block_assignment();
-            for (int i = 0; i < subgraph.graph.num_vertices(); ++i) {
+            std::vector<long> assignment = partition.blockmodel.block_assignment();
+            for (long i = 0; i < subgraph.graph.num_vertices(); ++i) {
                 assignment[i] = block_map[assignment[i]];
             }
-            std::vector<int> mapping = Blockmodel::build_mapping(assignment);
+            std::vector<long> mapping = Blockmodel::build_mapping(assignment);
             for (size_t i = 0; i < assignment.size(); ++i) {
-                int block = assignment[i];
-                int new_block = mapping[block];
+                long block = assignment[i];
+                long new_block = mapping[block];
                 assignment[i] = new_block;
             }
-            partition.blockmodel = Blockmodel((int) merge_to_blocks.size(), subgraph.graph, 0.5, assignment);
+            partition.blockmodel = Blockmodel((long) merge_to_blocks.size(), subgraph.graph, 0.5, assignment);
             std::cout << mpi.rank << " | merged Blockmodel to one with B = " << partition.blockmodel.getNum_blocks() << std::endl;
             bitmask <<= 1;
         } else {
             // The sender
             // Send number of vertices
             int local_num_vertices = subgraph.graph.num_vertices();
-            std::vector<int> local_vertices = utils::constant<int>(subgraph.graph.num_vertices(), -1);
-            std::vector<int> local_assignment = utils::constant<int>(subgraph.graph.num_vertices(), -1);
+            std::vector<long> local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+            std::vector<long> local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(graph, subgraph, partition, local_vertices, local_assignment)
-            for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-                int subgraph_index = subgraph.mapping[vertex];
+            for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+                long subgraph_index = subgraph.mapping[vertex];
                 if (subgraph_index < 0) continue;  // vertex not present
-                int assignment = partition.blockmodel.block_assignment(subgraph_index);
+                long assignment = partition.blockmodel.block_assignment(subgraph_index);
                 local_vertices[subgraph_index] = vertex;
                 local_assignment[subgraph_index] = assignment;
             }
             MPI_Send(&local_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD);
-            MPI_Send(local_vertices.data(), local_num_vertices, MPI_INT, partner, VERTICES_TAG, MPI_COMM_WORLD);
-            MPI_Send(local_assignment.data(), local_num_vertices, MPI_INT, partner, BLOCKS_TAG, MPI_COMM_WORLD);
+            MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD);
+            MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD);
             done = true;
         }
         level++;
@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
         blockmodel.setOverall_entropy(entropy::mdl(blockmodel, subgraph.graph.num_vertices(), subgraph.graph.num_edges()));
         BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        float iteration = sbp::get_intermediates().size();
+        double iteration = sbp::get_intermediates().size();
         while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
             if (blockmodel.getNum_blocks_to_merge() != 0) {
                 std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
@@ -274,11 +274,11 @@ int main(int argc, char* argv[]) {
             block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
             std::cout << "Starting MCMC vertex moves" << std::endl;
             double start_mcmc = MPI_Wtime();
-//        if (args.algorithm == "async_gibbs_old" && iteration < float(args.asynciterations))
+//        if (args.algorithm == "async_gibbs_old" && iteration < double(args.asynciterations))
 //            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
 //        else
-            common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
-            if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
+            common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+            if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
                 blockmodel = finetune::asynchronous_gibbs(blockmodel, subgraph.graph, blockmodel_triplet);
             else if (args.algorithm == "hybrid_mcmc")
                 blockmodel = finetune::hybrid_mcmc(blockmodel, subgraph.graph, blockmodel_triplet);
@@ -288,7 +288,7 @@ int main(int argc, char* argv[]) {
             sbp::total_time += MPI_Wtime() - start_bm;
             sbp::add_intermediate(++iteration, subgraph.graph, -1, blockmodel.getOverall_entropy());
             blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-            common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
+            common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         }
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
@@ -297,10 +297,10 @@ int main(int argc, char* argv[]) {
         sbp::add_intermediate(-1, subgraph.graph, modularity, blockmodel.getOverall_entropy());
         // Evaluate finetuned assignment
         // Reorder truth labels to match the reordered graph vertices
-        std::vector<int> reordered_truth = utils::constant<int>(graph.num_vertices(), -1);
-        for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            int mapped_index = subgraph.mapping[vertex];
-            int truth_community = graph.assignment(vertex);
+        std::vector<long> reordered_truth = utils::constant<long>(graph.num_vertices(), -1);
+        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            long mapped_index = subgraph.mapping[vertex];
+            long truth_community = graph.assignment(vertex);
             reordered_truth[mapped_index] = truth_community;
         }
         double end = MPI_Wtime();
@@ -320,7 +320,7 @@ int main(int argc, char* argv[]) {
         partition.graph = std::move(graph);
     }
     if (args.samplesize <= 0.0) {
-        std::cerr << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
+        std::cerr << "ERROR " << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
         exit(-5);
     } else if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();

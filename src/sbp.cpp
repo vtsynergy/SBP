@@ -16,29 +16,29 @@ double total_time = 0.0;
 
 double Blockmodel_first_build_time = 0.0;
 
-std::vector<Intermediate> intermediate_results;
+std::vector<intermediate> intermediate_results;
 
-std::vector<Intermediate> get_intermediates() {
+std::vector<intermediate> get_intermediates() {
     return intermediate_results;
 }
 
-/*void write_results(float iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
+/*void write_results(double iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
     file << args.tag << "," << graph.num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
     file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
     file << entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges()) << ",";
-    file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
+    file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.longerblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
     // feenableexcept(FE_INVALID | FE_OVERFLOW);
 }*/
 
-void add_intermediate(float iteration, const Graph &graph, double modularity, double mdl) {
+void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
     double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
 //    double modularity = -1;
 //    if (iteration == -1)
 //        modularity = graph.modularity(blockmodel.block_assignment());
-    Intermediate intermediate {};
+    intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
     intermediate.normalized_mdl_v1 = normalized_mdl_v1;
@@ -70,14 +70,14 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
-    common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
+    Blockmodel blockmodel(graph.num_vertices(), graph, double(BLOCK_REDUCTION_RATE));
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
     BLOCKMODEL_BUILD_TIME = 0.0;
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     add_intermediate(0, graph, -1, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
-    float iteration = 0;
+    double iteration = 0;
     while (!done_blockmodeling(blockmodel, blockmodel_triplet)) {
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
@@ -101,8 +101,8 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
-        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
         else if (args.algorithm == "hybrid_mcmc")
             blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet);
@@ -114,7 +114,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         total_time += MPI_Wtime() - start_bm;
         add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<int>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     }
     // only last iteration result will calculate expensive modularity
     double modularity = -1;
@@ -125,7 +125,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     return blockmodel;
 }
 
-bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, int min_num_blocks) {
+bool done_blockmodeling(Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet, long min_num_blocks) {
     if (min_num_blocks > 0) {
         if ((blockmodel.getNum_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
             return true;

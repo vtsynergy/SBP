@@ -107,9 +107,10 @@ add_executable(Test
         test/entropy_test.cpp
         test/evaluate_test.cpp
         test/finetune_test.cpp
+        src/rng.cpp
         test/sample_test.cpp
         test/toy_example.hpp
-        src/rng.cpp)
+        test/utils_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)

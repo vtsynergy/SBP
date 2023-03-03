@@ -19,10 +19,10 @@ public:
     /// Updates the blockmodel triplet with the provided blockmodel (inserts it into the correct spot, moves/deletes
     /// the remaining blockmodels as needed).
     void update(Blockmodel &blockmodel);
-    /// Prints the number of blocks and overall entropy of every blockmodel in the blockmodel triplet.
+    /// prints the number of blocks and overall entropy of every blockmodel in the blockmodel triplet.
     void status();
     /// Returns the blockmodel at index `i`. IndexOutOfBoundError if i >= 3.
-    Blockmodel &get(int i) { return blockmodels[i]; }
+    Blockmodel &get(long i) { return blockmodels[i]; }
     /// Returns true if the golden ratio has not been reached, false otherwise. In practice, returns true if
     /// blockmodels[2] == 0.
     bool golden_ratio_not_reached();
@@ -36,9 +36,9 @@ protected:
     /// If the first blockmodel is empty, then the golden ratio bracket has not yet been established.
     Blockmodel blockmodels[3];
     /// TODO
-    int lower_difference();
+    long lower_difference();
     /// TODO
-    int upper_difference();
+    long upper_difference();
 };
 
 #endif // CPPSBP_PARTITION_PARTITION_TRIPLET_HPP

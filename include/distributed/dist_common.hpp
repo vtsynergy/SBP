@@ -13,8 +13,8 @@
 namespace common::dist {
 
 // TODO: get rid of block_assignment, just use blockmodel?
-utils::ProposalAndEdgeCounts propose_new_block(int current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
-                                               const std::vector<int> &block_assignment,
+utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
+                                               const std::vector<long> &block_assignment,
                                                const TwoHopBlockmodel &blockmodel, bool block_merge);
 
 } // namespace common::dist

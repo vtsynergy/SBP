@@ -19,7 +19,7 @@ const double ENTROPY = 92.58797747;
 class ToyExample : public ::testing::Test {
 protected:
     // My variables
-    std::vector<int> assignment;
+    std::vector<long> assignment;
     std::vector<bool> self_edges;
     Blockmodel B, B2, B3;
     utils::ProposalAndEdgeCounts Proposal;
@@ -39,7 +39,7 @@ protected:
         args.threads = 1;
         rng::init_generators();
         args.transpose = transpose;
-        std::vector<std::vector<int>> edges {
+        std::vector<std::vector<long>> edges {
                 {0, 0},
                 {0, 1},
                 {0, 2},
@@ -64,15 +64,15 @@ protected:
                 {10, 8},
                 {10, 10}
         };
-        int num_vertices = 11;
-        int num_edges = (int) edges.size();
+        long num_vertices = 11;
+        long num_edges = (long) edges.size();
         assignment = { 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2 };
         self_edges = { true, false, false, false, false, true, false, false, false, false, true };
         NeighborList out_neighbors;
         NeighborList in_neighbors;
-        for (const std::vector<int> &edge : edges) {
-            int from = edge[0];
-            int to = edge[1];
+        for (const std::vector<long> &edge : edges) {
+            long from = edge[0];
+            long to = edge[1];
             utils::insert_nodup(out_neighbors, from , to);
             utils::insert_nodup(in_neighbors, to, from);
         }
@@ -104,7 +104,7 @@ protected:
         Deltas.add(2, 0, 1);
         Deltas.add(2, 2, -3);
         Proposal = {0, 2, 3, 5};
-        std::vector<int> assignment2(assignment);
+        std::vector<long> assignment2(assignment);
         assignment2[7] = Proposal.proposal;
         B2 = Blockmodel(3, graph, 0.5, assignment2);
         Move = {
@@ -123,7 +123,7 @@ protected:
                 EdgeWeights { { 4, 5, 6, 7 }, { 1, 1, 1, 1 } },
                 EdgeWeights { { 3, 8 }, { 1, 1 }}
         };
-        std::vector<int> assignment3(assignment);
+        std::vector<long> assignment3(assignment);
         assignment3[5] = 0;
         B3 = Blockmodel(3, graph, 0.5, assignment3);
     }
@@ -156,7 +156,7 @@ class BlockMergeTest : public ToyExample {
         new_block_degrees.block_degrees_out = { 0, 15, 8 };
         new_block_degrees.block_degrees_in = { 0, 16, 7 };
         new_block_degrees.block_degrees = { 0, 17, 9 };
-        std::vector<int> assignment2 = { 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
+        std::vector<long> assignment2 = { 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2 };
         B2 = Blockmodel(3, graph, 0.5, assignment2);
     }
 };
@@ -176,7 +176,7 @@ protected:
         Proposal = { 0, 1, 2, 3 };
         assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
         B = Blockmodel(6, graph, 0.5, assignment);
-        std::vector<int> assignment2(assignment);
+        std::vector<long> assignment2(assignment);
         assignment2[6] = Proposal.proposal;
         B2 = Blockmodel(6, graph, 0.5, assignment2);
         Updates.block_row = { 1, 0, 1, 1, 1, 0 };
@@ -219,7 +219,7 @@ protected:
                 EdgeWeights { { 4 }, { 1 } },
                 EdgeWeights { { 4, 5 }, { 1, 1 }}
         };
-        std::vector<int> assignment3(assignment);
+        std::vector<long> assignment3(assignment);
         assignment3[5] = Proposal.proposal;
         B3 = Blockmodel(6, graph, 0.5, assignment3);
     }
@@ -227,5 +227,18 @@ protected:
 //
 //    }
 };
+
+static void VECTOR_EQ(const std::vector<long> &a, const std::vector<long> &b) {
+    EXPECT_EQ(a.size(), b.size());
+    for (int i = 0; i < a.size(); ++i) {
+        EXPECT_EQ(a[i], b[i]) << "vectors differ at index " << i << " | " << a[i] << " /= " << b[i];
+    }
+}
+
+static void IS_SORTED(const std::vector<long> &a) {
+    for (int i = 0; i < a.size() - 1; ++i) {
+        EXPECT_TRUE(a[i] >= a[i + 1]) << "vector is not sorted: " << a[i] << " !>= " << a[i + 1];
+    }
+}
 
 #endif //DISTRIBUTEDSBP_TEST_TOY_EXAMPLE_H

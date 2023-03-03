@@ -16,91 +16,91 @@
 // #include <Eigen/Core>
 
 /**
- * C++ interface of the dictionary (map of maps) sparse matrix
+ * C++ longerface of the dictionary (map of maps) sparse matrix
  */
 class DistDictMatrix : public IDistSparseMatrix {
   public:
     DistDictMatrix() {}
-    // DistDictMatrix(int nrows, int ncols, const MPI &mpi, const std::vector<int> &myblocks) {
-    DistDictMatrix(int nrows, int ncols, const std::vector<int> &myblocks) {
+    // DistDictMatrix(long nrows, long ncols, const MPI &mpi, const std::vector<long> &myblocks) {
+    DistDictMatrix(long nrows, long ncols, const std::vector<long> &myblocks) {
         this->ncols = ncols;
         this->nrows = nrows;
-        // this->matrix = boost::numeric::ublas::coordinate_matrix<int>(this->nrows, this->ncols);
-        this->_matrix = std::vector<std::unordered_map<int, int>>(this->nrows, std::unordered_map<int, int>());
-        // this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
-        // int shape_array[2] = {this->nrows, this->ncols};
+        // this->matrix = boost::numeric::ublas::coordinate_matrix<long>(this->nrows, this->ncols);
+        this->_matrix = std::vector<std::unordered_map<long, long>>(this->nrows, std::unordered_map<long, long>());
+        // this->matrix = boost::numeric::ublas::mapped_matrix<long>(this->nrows, this->ncols);
+        // long shape_array[2] = {this->nrows, this->ncols};
         this->shape = std::make_pair(this->nrows, this->ncols);
         // this->sync_ownership(myblocks, mpi);
         this->sync_ownership(myblocks);
     }
-    virtual void add(int row, int col, int val) override;
-    // virtual void add(int row, std::vector<int> cols, std::vector<int> values) override;
-    virtual void clearcol(int col) override;
-    virtual void clearrow(int row) override;
+    virtual void add(long row, long col, long val) override;
+    // virtual void add(long row, std::vector<long> cols, std::vector<long> values) override;
+    virtual void clearcol(long col) override;
+    virtual void clearrow(long row) override;
     virtual ISparseMatrix* copy() const override;
     virtual IDistSparseMatrix* copyDistSparseMatrix() const override;
-    virtual int get(int row, int col) const override;
-    virtual std::vector<int> getcol(int col) const override;
-    virtual MapVector<int> getcol_sparse(int col) const override;
-    virtual void getcol_sparse(int col, MapVector<int> &col_vector) const override;
-    // virtual MapVector<int> getcol_sparse(int col) override;
-    // virtual const MapVector<int>& getcol_sparse(int col) const override;
-    virtual std::vector<int> getrow(int row) const override;
-    virtual MapVector<int> getrow_sparse(int row) const override;
-    virtual void getrow_sparse(int row, MapVector<int> &row_vector) const override;
-    // virtual MapVector<int> getrow_sparse(int row) override;
-    // virtual const MapVector<int>& getrow_sparse(int row) const override;
-    virtual EdgeWeights incoming_edges(int block) const override;
+    virtual long get(long row, long col) const override;
+    virtual std::vector<long> getcol(long col) const override;
+    virtual MapVector<long> getcol_sparse(long col) const override;
+    virtual void getcol_sparse(long col, MapVector<long> &col_vector) const override;
+    // virtual MapVector<long> getcol_sparse(long col) override;
+    // virtual const MapVector<long>& getcol_sparse(long col) const override;
+    virtual std::vector<long> getrow(long row) const override;
+    virtual MapVector<long> getrow_sparse(long row) const override;
+    virtual void getrow_sparse(long row, MapVector<long> &row_vector) const override;
+    // virtual MapVector<long> getrow_sparse(long row) override;
+    // virtual const MapVector<long>& getrow_sparse(long row) const override;
+    virtual EdgeWeights incoming_edges(long block) const override;
     virtual Indices nonzero() const override;
-    virtual EdgeWeights outgoing_edges(int block) const override;
+    virtual EdgeWeights outgoing_edges(long block) const override;
     // Returns True if this rank owns this block.
-    virtual bool stores(int block) const override;
+    virtual bool stores(long block) const override;
     /// Sets the values in a row equal to the input vector
-    virtual void setrow(int row, const MapVector<int> &vector) override;
+    virtual void setrow(long row, const MapVector<long> &vector) override;
     /// Sets the values in a column equal to the input vector
-    virtual void setcol(int col, const MapVector<int> &vector) override;
-    virtual void sub(int row, int col, int val) override;
-    virtual int edges() const override;
-    virtual std::vector<int> sum(int axis = 0) const override;
-    virtual int trace() const override;
-    virtual void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
-                                    std::vector<int> proposed_row, std::vector<int> current_col,
-                                    std::vector<int> proposed_col) override;
+    virtual void setcol(long col, const MapVector<long> &vector) override;
+    virtual void sub(long row, long col, long val) override;
+    virtual long edges() const override;
+    virtual std::vector<long> sum(long axis = 0) const override;
+    virtual long trace() const override;
+    virtual void update_edge_counts(long current_block, long proposed_block, std::vector<long> current_row,
+                                    std::vector<long> proposed_row, std::vector<long> current_col,
+                                    std::vector<long> proposed_col) override;
     void update_edge_counts(const PairIndexVector &delta) override;
-    virtual std::vector<int> values() const override;
+    virtual std::vector<long> values() const override;
 
   private:
-    std::vector<std::unordered_map<int, int>> _matrix;
-    // std::vector<int> _ownership;
+    std::vector<std::unordered_map<long, long>> _matrix;
+    // std::vector<long> _ownership;
     /// Syncs the ownership between all MPI processes.
-    // void sync_ownership(const std::vector<int> &myblocks, const MPI &mpi) {
-    virtual void sync_ownership(const std::vector<int> &myblocks) override;
-    // void sync_ownership(const std::vector<int> &myblocks) {
-    //     int numblocks[mpi.num_processes];
-    //     int num_blocks = myblocks.size();
-    //     MPI_Allgather(&(num_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
-    //     int offsets[mpi.num_processes];
+    // void sync_ownership(const std::vector<long> &myblocks, const MPI &mpi) {
+    virtual void sync_ownership(const std::vector<long> &myblocks) override;
+    // void sync_ownership(const std::vector<long> &myblocks) {
+    //     long numblocks[mpi.num_processes];
+    //     long num_blocks = myblocks.size();
+    //     MPI_Allgather(&(num_blocks), 1, MPI_long, &numblocks, 1, MPI_long, MPI_COMM_WORLD);
+    //     long offsets[mpi.num_processes];
     //     offsets[0] = 0;
-    //     for (int i = 1; i < mpi.num_processes; ++i) {
+    //     for (long i = 1; i < mpi.num_processes; ++i) {
     //         offsets[i] = offsets[i-1] + numblocks[i-1];
     //     }
-    //     int global_num_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
-    //     this->_ownership = std::vector<int>(global_num_blocks, -1);
+    //     long global_num_blocks = offsets[mpi.num_processes-1] + numblocks[mpi.num_processes-1];
+    //     this->_ownership = std::vector<long>(global_num_blocks, -1);
     //     std::cout << "rank: " << mpi.rank << " num_blocks: " << num_blocks << " and globally: " << global_num_blocks << std::endl;
-    //     std::vector<int> allblocks(global_num_blocks, -1);
-    //     MPI_Allgatherv(myblocks.data(), num_blocks, MPI_INT, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_INT, MPI_COMM_WORLD);
+    //     std::vector<long> allblocks(global_num_blocks, -1);
+    //     MPI_Allgatherv(myblocks.data(), num_blocks, MPI_long, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_long, MPI_COMM_WORLD);
     //     if (mpi.rank == 0) {
-    //         utils::print<int>(allblocks);
+    //         utils::print<long>(allblocks);
     //     }
-    //     int owner = 0;
-    //     for (int i = 0; i < global_num_blocks; ++i) {
+    //     long owner = 0;
+    //     for (long i = 0; i < global_num_blocks; ++i) {
     //         if (owner < mpi.num_processes - 1 && i >= offsets[owner+1]) {
     //             owner++;
     //         }
     //         this->_ownership[allblocks[i]] = owner;
     //     }
     //     if (mpi.rank == 0) {
-    //         utils::print<int>(this->_ownership);
+    //         utils::print<long>(this->_ownership);
     //     }
     // }
 };

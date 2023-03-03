@@ -34,7 +34,7 @@ struct Partition {
 };
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
-    std::vector<sbp::Intermediate> intermediate_results;
+    std::vector<sbp::intermediate> intermediate_results;
     if (mpi.num_processes > 1) {
         intermediate_results = sbp::dist::get_intermediates();
     } else {
@@ -58,7 +58,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
              << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
     }
-    for (const sbp::Intermediate &temp : intermediate_results) {
+    for (const sbp::intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
@@ -101,7 +101,7 @@ void run(Partition &partition) {
 
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
-    // int rank, num_processes;
+    // long rank, num_processes;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
         partition.graph = std::move(graph);
     }
     if (args.samplesize <= 0.0) {
-        std::cerr << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
+        std::cerr << "ERROR " << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
         exit(-5);
     } else if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();
