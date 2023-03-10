@@ -65,6 +65,52 @@ TEST_F(UtilsTest, RadixPairSortIsCorrect) {
     EXPECT_TRUE(found);
 }
 
+TEST_F(UtilsTest, TemplateSortIsCorrect) {
+    std::vector<std::pair<std::pair<long, long>, long>> to_sort = {
+            {{0, 10}, 154},
+            {{1, 5}, 0},
+            {{2, 5}, 1015234213214214213},
+            {{3, 3}, 12412515331},
+            {{4, 8}, 1},
+            {{5, 3}, std::numeric_limits<long>::max()},
+            {{6, 8}, 83434231423},
+            {{7, 3}, 456234645},
+            {{8, 1}, 456234646},
+            {{9, 6}, 567},
+            {{10, 2}, 632432132},
+            {{11, 7}, 1321987873},
+            {{12, 2}, 982325112},
+            {{13, 8}, 64324216324},
+            {{14, 1}, 1} };
+    const auto to_sort_copy = to_sort;
+    utils::radix_sort<std::pair<long, long>, long>(to_sort);
+    for (const auto &p : to_sort) {
+        std::cout << "((" << p.first.first << "," << p.first.second << ")," << p.second << "), ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < to_sort.size() - 1; ++i) {
+        EXPECT_TRUE(to_sort[i].second >= to_sort[i+1].second);
+        // Make sure pair.first isn't switched
+        int found = false;
+        for (const auto &p : to_sort_copy) {
+            if (p.first.first == to_sort[i].first.first && p.first.second == to_sort[i].first.second) {
+                EXPECT_TRUE(p.second == to_sort[i].second);
+                found = true;
+            }
+        }
+        EXPECT_TRUE(found);
+    }
+    int found = false;
+    const auto last_entry = to_sort[to_sort.size() - 1];
+    for (const auto &p : to_sort_copy) {
+        if (p.first == last_entry.first) {
+            EXPECT_TRUE(p.second == last_entry.second);
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
 TEST_F(UtilsTest, ArgsortIsCorrect) {
     std::vector<long> to_sort = { 0, 10303412354341, 5342, 64545323, 34234324, 43343, 23, 25234 };
     std::vector<long> indices = utils::argsort(to_sort);

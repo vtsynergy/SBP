@@ -21,7 +21,7 @@ namespace top_down {
 void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_splits,
                        const std::vector<double> &split_entropy, long target_num_communities) {
     // Sort entropies in ascending order
-    std::vector<long> sorted_splits = utils::sort_indices(split_entropy);
+    std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
     long num_blocks = blockmodel.getNum_blocks();
     long counter = 0;

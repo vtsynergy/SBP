@@ -37,7 +37,7 @@ typedef struct proposal_and_edge_counts_t {
 /// <args.type>_<args.overlap>Overlap_<args.blocksizevar>BlockSizeVar_<args.numvertices>_trueBlockmodel.tsv
 std::string build_filepath();
 
-/// Argsort based on radix sort in descending order (thanks ChatGPT!)
+/// Argsort based on radix sort in descending order
 std::vector<long> argsort(const std::vector<long>& v);
 
 /// Divides all elements in a MapVector<long> by a scalar, and stores the result in `result`
@@ -83,11 +83,52 @@ template <typename T> inline std::vector<T> constant(long size, T value) {
     return result;
 }
 
-/// Radix sort in descending order (thanks ChatGPT!)
+/// Radix sort in descending order
 void radix_sort(std::vector<long>& v);
 
-/// Radix sort in descending order for pairs (thanks ChatGPT!)
+/// Radix sort in descending order for pairs
 void radix_sort(std::vector<std::pair<long, long>>& v);
+
+template<typename T, typename Y> void radix_sort(std::vector<std::pair<T, Y>> &v) {
+    if (v.empty()) {
+        return;
+    }
+
+    // isolate integer byte by index.
+    auto bmask = [](Y x, size_t i) {
+        return (x >> i*8) & 0xFF;
+    };
+
+    // allocate temporary buffer.
+    std::vector<std::pair<T, Y>> sorted(v.size());
+
+    // for each byte in integer (assuming 4-byte int).
+    for (size_t i, j = 0; j < sizeof(long); j++) {
+        // initialize counter to zero;
+        size_t h[256] = {}, start;
+
+        // histogram.
+        // count each occurrence of indexed-byte value.
+        for (i = 0; i < v.size(); i++)
+            h[255 - bmask(v[i].second, j)]++;
+
+        // accumulate.
+        // generate positional offsets. adjust starting point
+        // if most significant digit.
+        start = (j != 7) ? 0 : 128;
+        for ( i = 1+start; i < 256+start; i++ )
+            h[i % 256] += h[(i-1) % 256];
+
+        // distribute.
+        // stable reordering of elements. backward to avoid shifting
+        // the counter array.
+        for ( i = v.size(); i > 0; i-- ) {
+            sorted[--h[255 - bmask(v[i-1].second, j)]] = v[i-1];
+        }
+
+        std::swap(v, sorted);
+    }
+}
 
 /// Returns a vector filled with values in the range[start, start+size).
 template <typename T> inline std::vector<T> range(long start, long size) {
@@ -119,12 +160,12 @@ template <typename T> inline T sum(const std::vector<T> &vector) {
 }
 
 /// Sorts the indices of an array in descending order according to the values of the array
-template <typename T> inline std::vector<long> sort_indices(const std::vector<T> &unsorted) {
+template <typename T> inline std::vector<long> argsort(const std::vector<T> &unsorted) {
     // initialize original index locations
     std::vector<long> indices = utils::range<long>(0, unsorted.size());
     // sort indexes based on comparing values in unsorted
     std::sort(std::execution::par_unseq, indices.data(), indices.data() + indices.size(),
-              [unsorted](size_t i1, size_t i2) { return unsorted[i1] > unsorted[i2]; });
+              [&unsorted](size_t i1, size_t i2) { return unsorted[i1] > unsorted[i2]; });
     return indices;
 }
 

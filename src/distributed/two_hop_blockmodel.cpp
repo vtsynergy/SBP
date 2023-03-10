@@ -99,7 +99,8 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     if (Rank_indices.empty()) {
         Rank_indices = utils::constant<long>(graph.num_vertices(), 0);
         std::vector<long> vertex_degrees = graph.degrees();
-        std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
+	    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
+        // std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
         for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
             long vertex = sorted_indices[i];
             Rank_indices[vertex] = 1;

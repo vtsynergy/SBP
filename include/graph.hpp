@@ -84,6 +84,8 @@ public:
     const std::vector<long> &out_neighbors(long v) const { return this->_out_neighbors[v]; }
     /// Sorts the vertices into low and high degree vertices
     void sort_vertices();
+    /// Sorts vertices into low and high influence vertices. Does this via vertex degree products of the graph edges
+    void degree_product_sort();
 private:
     /// For every vertex, stores the community they belong to.
     /// If assignment[v] = -1, then the community of v is not known
