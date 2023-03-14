@@ -29,6 +29,10 @@ double sample_time = 0.0;
 double sample_extend_time = 0.0;
 double finetune_time = 0.0;
 
+const int NUM_VERTICES_TAG = 0;
+const int VERTICES_TAG = 1;
+const int BLOCKS_TAG = 2;
+
 struct Partition {
     Graph graph;
     Blockmodel blockmodel;
@@ -100,6 +104,101 @@ void run(Partition &partition) {
     }
 }
 
+std::pair<sample::Sample, Blockmodel> combine_graphs(const sample::Sample &subgraph, const Graph &complete_graph,
+                                                     const Partition &partition, int partner, int level,
+                                                     MPI_Status &status) {
+    int partner_num_vertices;
+    MPI_Recv(&partner_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD, &status);
+    std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner has " << partner_num_vertices << "vertices" << std::endl;
+    std::vector<long> partner_vertices = utils::constant<long>(partner_num_vertices, -1);
+    std::vector<long> partner_assignment = utils::constant<long>(partner_num_vertices, -1);
+    MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD, &status);
+    std::cout << "Level " << level << " | rank " << mpi.rank << " received info from partner" << std::endl;
+    // Build combined subgraph
+    long index = subgraph.graph.num_vertices();
+    std::vector<long> combined_mapping = subgraph.mapping;
+    for (long vertex : partner_vertices) {
+        combined_mapping[vertex] = index;
+        index++;
+    }
+    std::vector<long> combined_vertices = partner_vertices;
+    std::cout << mpi.rank << " | combined_vertices starting size = " << combined_vertices.size() << std::endl;
+    for (long vertex = 0; vertex < complete_graph.num_vertices(); ++vertex) {
+        if (subgraph.mapping[vertex] >= 0) {
+            combined_vertices.push_back(vertex);
+        }
+    }
+    sample::Sample new_subgraph = sample::from_vertices(complete_graph, combined_vertices, combined_mapping);
+    std::cout << mpi.rank << " build combined subgraph with V = " << new_subgraph.graph.num_vertices() << std::endl;
+    // Build combined blockmodel
+    long combined_num_blocks = partition.blockmodel.getNum_blocks();
+    std::vector<long> combined_block_assignment = utils::constant<long>(new_subgraph.graph.num_vertices(), -1);
+    for (long index = 0; index < partition.blockmodel.block_assignment().size(); ++index) {
+        long assignment = partition.blockmodel.block_assignment(index);
+        combined_block_assignment[index] = assignment;
+    }
+    for (long index = 0; index < partner_num_vertices; ++index) {
+        long partner_vertex = partner_vertices[index];
+        long partner_block = partner_assignment[index];
+        long combined_vertex = combined_mapping[partner_vertex];
+        long combined_block = partner_block + partition.blockmodel.getNum_blocks();
+        combined_num_blocks = std::max(combined_block + 1, combined_num_blocks);
+        combined_block_assignment[combined_vertex] = combined_block;
+    }
+    std::cout << mpi.rank << " | combined assignment with max = "
+              << *(std::max_element(combined_block_assignment.begin(), combined_block_assignment.end()))
+              << " and B = " << combined_num_blocks << std::endl;
+//    partition.blockmodel = Blockmodel(combined_num_blocks, new_subgraph.complete_graph, 0.5, combined_block_assignment);
+    return std::make_pair(new_subgraph,
+                          Blockmodel(combined_num_blocks, new_subgraph.graph, 0.5, combined_block_assignment));
+}
+
+Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subgraph, long my_num_blocks, long combined_num_blocks) {
+    long partner_num_blocks = combined_num_blocks - my_num_blocks;
+    std::vector<long> merge_from_blocks, merge_to_blocks;
+    MapVector<std::pair<long, double>> best_merges;
+    if (my_num_blocks < partner_num_blocks) {
+        merge_from_blocks = utils::range<long>(0, my_num_blocks);
+        merge_to_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
+    } else {
+        merge_from_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
+        merge_to_blocks = utils::range<long>(0, my_num_blocks);
+    }
+    std::vector<long> block_map = utils::range<long>(0, blockmodel.getNum_blocks());
+    for (long merge_from : merge_from_blocks) {
+        best_merges[merge_from] = std::make_pair<long, double>(-1, std::numeric_limits<double>::max());
+        for (long merge_to : merge_to_blocks) {
+            // Calculate the delta entropy given the current block assignment
+            EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(merge_from);
+            EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(merge_from);
+            long k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
+            long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
+            long k = k_out + k_in;
+            utils::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
+            Delta delta = block_merge::blockmodel_delta(merge_from, proposal.proposal, blockmodel);
+            long proposed_block_self_edges = blockmodel.blockmatrix()->get(merge_to, merge_to)
+                                             + delta.get(merge_to, merge_to);
+            double dE = entropy::block_merge_delta_mdl(merge_from, proposal, blockmodel, delta);
+            if (dE < best_merges[merge_from].second) {
+                best_merges[merge_from] = std::make_pair(merge_to, dE);
+                block_map[merge_from] = merge_to;
+            }
+        }
+    }
+    std::vector<long> assignment = blockmodel.block_assignment();
+    for (long i = 0; i < subgraph.graph.num_vertices(); ++i) {
+        assignment[i] = block_map[assignment[i]];
+    }
+    std::vector<long> mapping = Blockmodel::build_mapping(assignment);
+    for (size_t i = 0; i < assignment.size(); ++i) {
+        long block = assignment[i];
+        long new_block = mapping[block];
+        assignment[i] = new_block;
+    }
+    return { (long) merge_to_blocks.size(), subgraph.graph, 0.5, assignment };
+}
+
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // long rank, num_processes;
@@ -134,9 +233,6 @@ int main(int argc, char* argv[]) {
     unsigned bitmask = 1;
     MPI_Status status;
     int level = 0;
-    int NUM_VERTICES_TAG = 0;
-    int VERTICES_TAG = 1;
-    int BLOCKS_TAG = 2;
     while (!done && bitmask < mpi.num_processes) {
         partner = mpi.rank ^ bitmask;
         std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner = " << partner << std::endl;
@@ -145,94 +241,14 @@ int main(int argc, char* argv[]) {
             continue;
         } else if (mpi.rank < partner) {
             // The receiver
-            int partner_num_vertices;
-            MPI_Recv(&partner_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD, &status);
-            std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner has " << partner_num_vertices << "vertices" << std::endl;
-            std::vector<long> partner_vertices = utils::constant<long>(partner_num_vertices, -1);
-            std::vector<long> partner_assignment = utils::constant<long>(partner_num_vertices, -1);
-            MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD, &status);
-            MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD, &status);
-            std::cout << "Level " << level << " | rank " << mpi.rank << " received info from partner" << std::endl;
-            // Build combined graph
-            long index = subgraph.graph.num_vertices();
-            std::vector<long> combined_mapping = subgraph.mapping;
-            for (long vertex : partner_vertices) {
-                combined_mapping[vertex] = index;
-                index++;
-            }
-            std::vector<long> combined_vertices = partner_vertices;
-            std::cout << mpi.rank << " | combined_vertices starting size = " << combined_vertices.size() << std::endl;
-            for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-                if (subgraph.mapping[vertex] >= 0) {
-                    combined_vertices.push_back(vertex);
-                }
-            }
-            subgraph = sample::from_vertices(graph, combined_vertices, combined_mapping);
-            std::cout << mpi.rank << " build combined subgraph with V = " << subgraph.graph.num_vertices() << std::endl;
-            // Build combined blockmodel
             long my_num_blocks = partition.blockmodel.getNum_blocks();
+            std::pair<sample::Sample, Blockmodel> combined = combine_graphs(subgraph, graph, partition, partner, level, status);
+            subgraph = combined.first;
+            partition.blockmodel = combined.second;
             long combined_num_blocks = partition.blockmodel.getNum_blocks();
-            std::vector<long> combined_block_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-            for (long index = 0; index < partition.blockmodel.block_assignment().size(); ++index) {
-                long assignment = partition.blockmodel.block_assignment(index);
-                combined_block_assignment[index] = assignment;
-            }
-            for (long index = 0; index < partner_num_vertices; ++index) {
-                long partner_vertex = partner_vertices[index];
-                long partner_block = partner_assignment[index];
-                long combined_vertex = combined_mapping[partner_vertex];
-                long combined_block = partner_block + partition.blockmodel.getNum_blocks();
-                combined_num_blocks = std::max(combined_block + 1, combined_num_blocks);
-                combined_block_assignment[combined_vertex] = combined_block;
-            }
-            std::cout << mpi.rank << " | combined assignment with max = "
-                      << *(std::max_element(combined_block_assignment.begin(), combined_block_assignment.end()))
-                      << " and B = " << combined_num_blocks << std::endl;
-            partition.blockmodel = Blockmodel(combined_num_blocks, subgraph.graph, 0.5, combined_block_assignment);
             std::cout << mpi.rank << " build combined blockmodel with B = " << partition.blockmodel.getNum_blocks() << std::endl;
-            // Merge blockmodels
-            long partner_num_blocks = combined_num_blocks - my_num_blocks;
-            std::vector<long> merge_from_blocks, merge_to_blocks;
-            MapVector<std::pair<long, double>> best_merges;
-            if (my_num_blocks < partner_num_blocks) {
-                merge_from_blocks = utils::range<long>(0, my_num_blocks);
-                merge_to_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
-            } else {
-                merge_from_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
-                merge_to_blocks = utils::range<long>(0, my_num_blocks);
-            }
-            std::vector<long> block_map = utils::range<long>(0, partition.blockmodel.getNum_blocks());
-            for (long merge_from : merge_from_blocks) {
-                best_merges[merge_from] = std::make_pair<long, double>(-1, std::numeric_limits<double>::max());
-                for (long merge_to : merge_to_blocks) {
-                    // Calculate the delta entropy given the current block assignment
-                    EdgeWeights out_blocks = partition.blockmodel.blockmatrix()->outgoing_edges(merge_from);
-                    EdgeWeights in_blocks = partition.blockmodel.blockmatrix()->incoming_edges(merge_from);
-                    long k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
-                    long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
-                    long k = k_out + k_in;
-                    utils::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
-                    Delta delta = block_merge::blockmodel_delta(merge_from, proposal.proposal, partition.blockmodel);
-                    long proposed_block_self_edges = partition.blockmodel.blockmatrix()->get(merge_to, merge_to)
-                                                    + delta.get(merge_to, merge_to);
-                    double dE = entropy::block_merge_delta_mdl(merge_from, proposal, partition.blockmodel, delta);
-                    if (dE < best_merges[merge_from].second) {
-                        best_merges[merge_from] = std::make_pair(merge_to, dE);
-                        block_map[merge_from] = merge_to;
-                    }
-                }
-            }
-            std::vector<long> assignment = partition.blockmodel.block_assignment();
-            for (long i = 0; i < subgraph.graph.num_vertices(); ++i) {
-                assignment[i] = block_map[assignment[i]];
-            }
-            std::vector<long> mapping = Blockmodel::build_mapping(assignment);
-            for (size_t i = 0; i < assignment.size(); ++i) {
-                long block = assignment[i];
-                long new_block = mapping[block];
-                assignment[i] = new_block;
-            }
-            partition.blockmodel = Blockmodel((long) merge_to_blocks.size(), subgraph.graph, 0.5, assignment);
+            // Merge blockmodel blocks
+            partition.blockmodel = merge_blocks(partition.blockmodel, subgraph, my_num_blocks, combined_num_blocks);
             std::cout << mpi.rank << " | merged Blockmodel to one with B = " << partition.blockmodel.getNum_blocks() << std::endl;
             bitmask <<= 1;
         } else {
