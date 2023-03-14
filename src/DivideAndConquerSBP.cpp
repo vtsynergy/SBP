@@ -109,12 +109,12 @@ std::pair<sample::Sample, Blockmodel> combine_graphs(const sample::Sample &subgr
                                                      MPI_Status &status) {
     int partner_num_vertices;
     MPI_Recv(&partner_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD, &status);
-    std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner has " << partner_num_vertices << "vertices" << std::endl;
+//    std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner has " << partner_num_vertices << "vertices" << std::endl;
     std::vector<long> partner_vertices = utils::constant<long>(partner_num_vertices, -1);
     std::vector<long> partner_assignment = utils::constant<long>(partner_num_vertices, -1);
     MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD, &status);
-    std::cout << "Level " << level << " | rank " << mpi.rank << " received info from partner" << std::endl;
+//    std::cout << "Level " << level << " | rank " << mpi.rank << " received info from partner" << std::endl;
     // Build combined subgraph
     long index = subgraph.graph.num_vertices();
     std::vector<long> combined_mapping = subgraph.mapping;
@@ -123,14 +123,14 @@ std::pair<sample::Sample, Blockmodel> combine_graphs(const sample::Sample &subgr
         index++;
     }
     std::vector<long> combined_vertices = partner_vertices;
-    std::cout << mpi.rank << " | combined_vertices starting size = " << combined_vertices.size() << std::endl;
+//    std::cout << mpi.rank << " | combined_vertices starting size = " << combined_vertices.size() << std::endl;
     for (long vertex = 0; vertex < complete_graph.num_vertices(); ++vertex) {
         if (subgraph.mapping[vertex] >= 0) {
             combined_vertices.push_back(vertex);
         }
     }
     sample::Sample new_subgraph = sample::from_vertices(complete_graph, combined_vertices, combined_mapping);
-    std::cout << mpi.rank << " build combined subgraph with V = " << new_subgraph.graph.num_vertices() << std::endl;
+//    std::cout << mpi.rank << " build combined subgraph with V = " << new_subgraph.graph.num_vertices() << std::endl;
     // Build combined blockmodel
     long combined_num_blocks = partition.blockmodel.getNum_blocks();
     std::vector<long> combined_block_assignment = utils::constant<long>(new_subgraph.graph.num_vertices(), -1);
@@ -146,9 +146,9 @@ std::pair<sample::Sample, Blockmodel> combine_graphs(const sample::Sample &subgr
         combined_num_blocks = std::max(combined_block + 1, combined_num_blocks);
         combined_block_assignment[combined_vertex] = combined_block;
     }
-    std::cout << mpi.rank << " | combined assignment with max = "
-              << *(std::max_element(combined_block_assignment.begin(), combined_block_assignment.end()))
-              << " and B = " << combined_num_blocks << std::endl;
+//    std::cout << mpi.rank << " | combined assignment with max = "
+//              << *(std::max_element(combined_block_assignment.begin(), combined_block_assignment.end()))
+//              << " and B = " << combined_num_blocks << std::endl;
 //    partition.blockmodel = Blockmodel(combined_num_blocks, new_subgraph.complete_graph, 0.5, combined_block_assignment);
     return std::make_pair(new_subgraph,
                           Blockmodel(combined_num_blocks, new_subgraph.graph, 0.5, combined_block_assignment));
@@ -233,11 +233,21 @@ int main(int argc, char* argv[]) {
     unsigned bitmask = 1;
     MPI_Status status;
     int level = 0;
-    while (!done && bitmask < mpi.num_processes) {
+    while (bitmask < mpi.num_processes) {
+        std::cout << "Level " << level << " | rank " << mpi.rank << " is waiting at the barrier with bitmask = " << bitmask << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (done) {
+            bitmask <<=1;
+            std::cout << "Level " << level << " | rank " << mpi.rank << " is done with bitmask = " << bitmask << std::endl;
+            level++;
+            continue;
+        }
         partner = mpi.rank ^ bitmask;
         std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner = " << partner << std::endl;
         if (partner >= mpi.num_processes) {
             bitmask <<=1;
+            std::cout << "Level " << level << " | rank " << mpi.rank << " is done with bitmask = " << bitmask << std::endl;
+            level++;
             continue;
         } else if (mpi.rank < partner) {
             // The receiver
@@ -249,7 +259,7 @@ int main(int argc, char* argv[]) {
             std::cout << mpi.rank << " build combined blockmodel with B = " << partition.blockmodel.getNum_blocks() << std::endl;
             // Merge blockmodel blocks
             partition.blockmodel = merge_blocks(partition.blockmodel, subgraph, my_num_blocks, combined_num_blocks);
-            std::cout << mpi.rank << " | merged Blockmodel to one with B = " << partition.blockmodel.getNum_blocks() << std::endl;
+//            std::cout << mpi.rank << " | merged Blockmodel to one with B = " << partition.blockmodel.getNum_blocks() << std::endl;
             bitmask <<= 1;
         } else {
             // The sender
@@ -270,6 +280,7 @@ int main(int argc, char* argv[]) {
             MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD);
             MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD);
             done = true;
+            bitmask <<= 1;
         }
         level++;
     }
