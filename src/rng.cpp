@@ -31,8 +31,6 @@ Gen &generator() {
 }
 
 void init_generators() {
-    std::cout << "initializing generators!" << std::endl;
-    std::cout << "size = " << generators.size() << " and nthreads = " << args.threads << std::endl;
     pcg_extras::seed_seq_from<std::random_device> seed_source;
 //    std::random_device seeder;
     long num_threads = args.threads;
