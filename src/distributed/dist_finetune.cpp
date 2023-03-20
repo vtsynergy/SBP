@@ -38,7 +38,7 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     int rank_moves[mpi.num_processes];
 //    double t1 = MPI_Wtime();
 //    my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
-    MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, mpi.comm);
     int offsets[mpi.num_processes];
     offsets[0] = 0;
     for (long i = 1; i < mpi.num_processes; ++i) {
@@ -47,7 +47,7 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     long batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
     std::vector<Membership> collected_membership_updates(batch_vertex_moves);
     MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
-                   rank_moves, offsets, Membership_t, MPI_COMM_WORLD);
+                   rank_moves, offsets, Membership_t, mpi.comm);
     return collected_membership_updates;
 }
 

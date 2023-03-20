@@ -178,11 +178,11 @@ Sample random(const Graph &graph) {
     return from_vertices(graph, sampled, mapping);
 }
 
-Sample round_robin(const Graph &graph) {
+Sample round_robin(const Graph &graph, int subgraph_index, int num_subgraphs) {
     std::vector<long> sampled;
     std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
     long index = 0;
-    for (long vertex = mpi.rank; vertex < graph.num_vertices(); vertex += mpi.num_processes) {
+    for (long vertex = subgraph_index; vertex < graph.num_vertices(); vertex += num_subgraphs) {
         sampled.push_back(vertex);
 	mapping[vertex] = index;
 	index++;

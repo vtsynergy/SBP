@@ -195,6 +195,7 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, long current_block, lo
 }
 
 Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_edges) {
+    assert(blockmodel.blockmatrix()->edges() == graph.num_edges());
     // TODO: add block merge timings to evaluation
     long num_blocks = blockmodel.getNum_blocks();
     std::vector<long> best_merge_for_each_block = utils::constant<long>(num_blocks, -1);
@@ -205,11 +206,27 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
     long num_avoided = 0;  // number of avoided/skipped calculations
     double start_t = MPI_Wtime();
     #pragma omp parallel for schedule(dynamic) reduction( + : num_avoided) default(none) \
-    shared(num_blocks, num_edges, blockmodel, delta_entropy_for_each_block, best_merge_for_each_block)
+    shared(num_blocks, num_edges, blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, std::cout, graph)
     for (long current_block = 0; current_block < num_blocks; ++current_block) {
         std::unordered_map<long, bool> past_proposals;
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, past_proposals);
+            if (proposal.delta_entropy == 0.0) {
+                std::cout << current_block << " --> " << proposal.proposed_block << " == " << proposal.delta_entropy << std::endl;
+                int numvertices = 0;
+                for (int block : blockmodel.block_assignment()) {
+                    if (block == current_block) numvertices++;
+                }
+                std::cout << "num vertices with block = " << current_block << " = " << numvertices << std::endl;
+//                std::cout << "current block neighbors: ";
+//                utils::print<long>(blockmodel.blockmatrix()->neighbors_weights(current_block));
+//                std::cout << "current block row: ";
+//                utils::print<long>(blockmodel.blockmatrix()->getrow_sparse(current_block));
+//                std::cout << "current block col: ";
+//                utils::print<long>(blockmodel.blockmatrix()->getcol_sparse(current_block));
+//                std::cout << "proposed block neighbors: ";
+//                utils::print<long>(blockmodel.blockmatrix()->neighbors_weights(proposal.proposed_block));
+            }
             if (proposal.delta_entropy == std::numeric_limits<double>::max()) num_avoided++;
             if (proposal.delta_entropy < delta_entropy_for_each_block[current_block]) {
                 best_merge_for_each_block[current_block] = proposal.proposed_block;

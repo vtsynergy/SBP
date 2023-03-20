@@ -14,7 +14,7 @@ std::vector<Merge> mpi_get_best_merges(std::vector<Merge> &merge_buffer, int my_
         index++;
     }
     int numblocks[mpi.num_processes];
-    MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, mpi.comm);
     int offsets[mpi.num_processes];
     offsets[0] = 0;
     for (long i = 1; i < mpi.num_processes; ++i) {
@@ -24,7 +24,7 @@ std::vector<Merge> mpi_get_best_merges(std::vector<Merge> &merge_buffer, int my_
     // TODO: change the size of this to total_blocks? Otherwise when there is overlapping computation there may be a segfault
     std::vector<Merge> all_best_merges(total_blocks);
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
-                   Merge_t, MPI_COMM_WORLD);
+                   Merge_t, mpi.comm);
     return all_best_merges;
 }
 
@@ -69,9 +69,10 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     // END MPI COMMUNICATION
     std::vector<long> best_merge_for_each_block = utils::constant<long>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block = utils::constant<double>(num_blocks, -1);
-    // TODO: use a more longelligent way to assign these when there is overlap?
+    // TODO: use a more intelligent way to assign these when there is overlap?
     for (const Merge &m: all_best_merges) {
 //        std::cout << "block: " << m.block << " proposal: " << m.proposal << " dE: " << m.delta_entropy << std::endl;
+//        if (mpi.rank == 0) std::cout << "rank " << mpi.rank << " | m.block = " << m.block << " num blocks = " << best_merge_for_each_block.size() << std::endl;
         best_merge_for_each_block[m.block] = m.proposal;
         delta_entropy_for_each_block[m.block] = m.delta_entropy;
     }

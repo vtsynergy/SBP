@@ -19,6 +19,7 @@ const int MSG_SIZECOL = 6E8;
 struct MPI_t {
     int rank;           // The rank of the current process
     int num_processes;  // The total number of processes
+    MPI_Comm comm = MPI_COMM_WORLD;      // Communicator to use
 };
 
 extern MPI_t mpi;

@@ -266,7 +266,7 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
         // Some vertices may be unassigned across all ranks. Find out what they are, and assign 1/num_processes of them
         // to this process.
         std::vector<long> global_selected(neighbors.size(), 0);
-        MPI_Allreduce(this->_my_vertices.data(), global_selected.data(), neighbors.size(), MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce(this->_my_vertices.data(), global_selected.data(), neighbors.size(), MPI_LONG, MPI_MAX, mpi.comm);
         // if (mpi.rank == 0) {
             // std::cout << "my selected: " << std::boolalpha;
             // utils::print<long>(this->_my_vertices);
@@ -360,7 +360,7 @@ double TwoHopBlockmodel::log_posterior_probability() const {
             if (this->_my_blocks[block])
                 my_blocks[block] = mpi.rank;
         }
-        MPI_Allreduce(MPI_IN_PLACE, my_blocks.data(), this->num_blocks, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, my_blocks.data(), this->num_blocks, MPI_LONG, MPI_MAX, mpi.comm);
         // utils::print<long>(my_blocks);
     }
     Indices nonzero_indices = this->_blockmatrix->nonzero();
@@ -385,7 +385,7 @@ double TwoHopBlockmodel::log_posterior_probability() const {
     double partial_sum = utils::sum<double>(temp);
     // MPI COMMUNICATION START
     double final_sum = 0.0;
-    MPI_Allreduce(&partial_sum, &final_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&partial_sum, &final_sum, 1, MPI_DOUBLE, MPI_SUM, mpi.comm);
     // MPI COMMUNICATION END
     // Alternative Plan for sampled 2-hop blockmodel:
     // 1. Break all_values, degrees_in, degrees_out into row-like statuses

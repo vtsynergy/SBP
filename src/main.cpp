@@ -85,7 +85,7 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
 
 void run(Partition &partition) {
     if (mpi.num_processes > 1) {
-//        MPI_Barrier(MPI_COMM_WORLD);  // keep start - end as close as possible for all processes
+//        MPI_Barrier(mpi.comm);  // keep start - end as close as possible for all processes
 //        double start = MPI_Wtime();
         partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args);
 //        double end = MPI_Wtime();
@@ -103,8 +103,8 @@ int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // long rank, num_processes;
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
+    MPI_Comm_rank(mpi.comm, &mpi.rank);
+    MPI_Comm_size(mpi.comm, &mpi.num_processes);
     // std::cout << "rank: " << mpi.rank << " np: " << mpi.num_processes << std::endl;
 
     args = Args(argc, argv);

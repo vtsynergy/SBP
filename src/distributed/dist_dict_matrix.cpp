@@ -97,14 +97,14 @@ std::vector<long> DistDictMatrix::getrow(long row) const {
         return row_values;  // py::array_t<long>(this->ncols, row_values);
     }
     // send message asking for row
-    MPI_Send(&row, 1, MPI_LONG, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), MPI_COMM_WORLD);
+    MPI_Send(&row, 1, MPI_LONG, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), mpi.comm);
     long rowsize = -1;
     MPI_Status status;
-    MPI_Recv(&rowsize, 1, MPI_LONG, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), MPI_COMM_WORLD, &status);
+    MPI_Recv(&rowsize, 1, MPI_LONG, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), mpi.comm, &status);
     // Other side
     MPI_Status status2;
     long requested;
-    MPI_Recv(&requested, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    MPI_Recv(&requested, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, mpi.comm, &status2);
     long threadID = status2.MPI_TAG % 100000;
     long tag = status2.MPI_TAG - threadID;
     if (tag == MSG_GETROW) {
@@ -126,17 +126,17 @@ void DistDictMatrix::getrow_sparse(long row, MapVector<long> &row_vector) const 
         return;
     }
     // send message asking for row
-    MPI_Send(&row, 1, MPI_LONG, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), MPI_COMM_WORLD);
+    MPI_Send(&row, 1, MPI_LONG, this->_ownership[row], MSG_GETROW + omp_get_thread_num(), mpi.comm);
     long rowsize = -1;
     MPI_Status status;
-    MPI_Recv(&rowsize, 1, MPI_LONG, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), MPI_COMM_WORLD, &status);
+    MPI_Recv(&rowsize, 1, MPI_LONG, this->_ownership[row], MSG_SIZEROW + omp_get_thread_num(), mpi.comm, &status);
     // Other side
     MPI_Status status2;
     long requested;
-    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, mpi.comm, &status2);
     // Change count type depending on status
     MPI_Get_count(&status, MPI_LONG, &requested);
-    MPI_Recv(&requested, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status2);
+    MPI_Recv(&requested, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, mpi.comm, &status2);
     long threadID = status2.MPI_TAG % 100000;
     long tag = status2.MPI_TAG - threadID;
     if (tag == MSG_GETROW) {
@@ -147,7 +147,7 @@ void DistDictMatrix::getrow_sparse(long row, MapVector<long> &row_vector) const 
             sendrow.push_back(p.first);
             sendrow.push_back(p.second);
         }
-        MPI_Send(sendrow.data(), sendrow.size(), MPI_LONG, status2.MPI_SOURCE, MSG_SENDROW, MPI_COMM_WORLD);
+        MPI_Send(sendrow.data(), sendrow.size(), MPI_LONG, status2.MPI_SOURCE, MSG_SENDROW, mpi.comm);
     }
 }
 
@@ -260,7 +260,7 @@ std::vector<long> DistDictMatrix::sum(long axis) const {
 void DistDictMatrix::sync_ownership(const std::vector<long> &myblocks) {
     long numblocks[mpi.num_processes];
     long num_blocks = myblocks.size();
-    MPI_Allgather(&(num_blocks), 1, MPI_LONG, &numblocks, 1, MPI_LONG, MPI_COMM_WORLD);
+    MPI_Allgather(&(num_blocks), 1, MPI_LONG, &numblocks, 1, MPI_LONG, mpi.comm);
     long offsets[mpi.num_processes];
     offsets[0] = 0;
     for (long i = 1; i < mpi.num_processes; ++i) {
@@ -270,7 +270,7 @@ void DistDictMatrix::sync_ownership(const std::vector<long> &myblocks) {
     this->_ownership = std::vector<long>(global_num_blocks, -1);
     std::cout << "rank: " << mpi.rank << " num_blocks: " << num_blocks << " and globally: " << global_num_blocks << std::endl;
     std::vector<long> allblocks(global_num_blocks, -1);
-    MPI_Allgatherv(myblocks.data(), num_blocks, MPI_LONG, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_LONG, MPI_COMM_WORLD);
+    MPI_Allgatherv(myblocks.data(), num_blocks, MPI_LONG, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_LONG, mpi.comm);
     if (mpi.rank == 0) {
         utils::print<long>(allblocks);
     }

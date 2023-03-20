@@ -34,6 +34,7 @@ public:  // Everything in here is public, because why not?
     std::string partition;
     double samplesize;
     std::string samplingalg;
+    int subgraphs;
     std::string tag;
     int threads;
     bool transpose;
@@ -107,6 +108,9 @@ public:  // Everything in here is public, because why not?
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
                                                       false, "random", "random|max_degree|expansion_snowball", parser);
+            TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
+                                            "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
+                                            false, 0, "<= number of MPI ranks>", parser);
             TCLAP::ValueArg<std::string> _tag("", "tag", "The tag value for this run, for differentiating different "
                                               "runs or adding custom parameters to the save file", false, "default tag",
                                               "string or param1=value1;param2=value2", parser);
@@ -140,6 +144,7 @@ public:  // Everything in here is public, because why not?
             this->partition = _partition.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
+            this->subgraphs = _subgraphs.getValue();
             this->tag = _tag.getValue();
             this->threads = _threads.getValue();
             this->transpose = _transpose.getValue();

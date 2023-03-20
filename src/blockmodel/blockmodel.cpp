@@ -72,7 +72,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
                                                                this->num_blocks_to_merge + 1);
     double sort_end_t = MPI_Wtime();
     Blockmodel_sort_time += sort_end_t - sort_start_t;
-    // std::vector<long> best_merges = utils::sort_indices(delta_entropy_for_each_block);
+    // std::vector<long> best_merges = utils::argsort(delta_entropy_for_each_block);
     std::vector<long> block_map = utils::range<long>(0, this->num_blocks);
     if (mpi.rank == 0) std::cout << "block map size: " << block_map.size() << std::endl;
     auto translate = [&block_map](long block) -> long {

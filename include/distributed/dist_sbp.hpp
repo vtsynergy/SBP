@@ -19,7 +19,7 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
 std::vector<intermediate> get_intermediates();
 
 /// Performs community detection on the provided graph using MPI, using the stochastic block partitioning algorithm
-Blockmodel stochastic_block_partition(Graph &graph, Args &args);
+Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer = false);
 
 /// Returns true if the exit condition is reached based on the provided distributed blockmodels
 bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet,

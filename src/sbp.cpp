@@ -58,10 +58,11 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
     intermediate.total_time = total_time;
     intermediate.update_assignment = Blockmodel_update_assignment;
     intermediate_results.push_back(intermediate);
-    std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
-              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
-              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
-              << total_time << std::endl;
+    if (mpi.rank == 0)
+        std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
+                  << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
+                  << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
+                  << total_time << std::endl;
 }
 
 Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
@@ -82,7 +83,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
                 (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
-                MPI_Barrier(MPI_COMM_WORLD);
+                MPI_Barrier(mpi.comm);
                 blockmodel_triplet.status();
                 blockmodel = blockmodel_triplet.get(0).copy();
                 break;
@@ -121,7 +122,6 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());
     add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
-    std::cout << "Initial blockmodel init time = " << Blockmodel_first_build_time << std::endl;
     return blockmodel;
 }
 

@@ -78,7 +78,7 @@ class DistDictMatrix : public IDistSparseMatrix {
     // void sync_ownership(const std::vector<long> &myblocks) {
     //     long numblocks[mpi.num_processes];
     //     long num_blocks = myblocks.size();
-    //     MPI_Allgather(&(num_blocks), 1, MPI_long, &numblocks, 1, MPI_long, MPI_COMM_WORLD);
+    //     MPI_Allgather(&(num_blocks), 1, MPI_long, &numblocks, 1, MPI_long, mpi.comm);
     //     long offsets[mpi.num_processes];
     //     offsets[0] = 0;
     //     for (long i = 1; i < mpi.num_processes; ++i) {
@@ -88,7 +88,7 @@ class DistDictMatrix : public IDistSparseMatrix {
     //     this->_ownership = std::vector<long>(global_num_blocks, -1);
     //     std::cout << "rank: " << mpi.rank << " num_blocks: " << num_blocks << " and globally: " << global_num_blocks << std::endl;
     //     std::vector<long> allblocks(global_num_blocks, -1);
-    //     MPI_Allgatherv(myblocks.data(), num_blocks, MPI_long, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_long, MPI_COMM_WORLD);
+    //     MPI_Allgatherv(myblocks.data(), num_blocks, MPI_long, allblocks.data(), &(numblocks[0]), &(offsets[0]), MPI_long, mpi.comm);
     //     if (mpi.rank == 0) {
     //         utils::print<long>(allblocks);
     //     }

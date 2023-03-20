@@ -67,15 +67,15 @@ void record_runtime_imbalance() {
     std::vector<unsigned long long> all_mcmc_aggregate_block_degrees(recvcount * mpi.num_processes, 0);
     std::cout << mpi.rank << " : allocated vector size = " << all_mcmc_runtimes.size() << std::endl;
     MPI_Gather(finetune::dist::MCMC_RUNTIMES.data(), recvcount, MPI_DOUBLE,
-               all_mcmc_runtimes.data(), recvcount, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+               all_mcmc_runtimes.data(), recvcount, MPI_DOUBLE, 0, mpi.comm);
     MPI_Gather(finetune::dist::MCMC_VERTEX_EDGES.data(), recvcount, MPI_UNSIGNED,
-               all_mcmc_vertex_edges.data(), recvcount, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+               all_mcmc_vertex_edges.data(), recvcount, MPI_UNSIGNED, 0, mpi.comm);
     MPI_Gather(finetune::dist::MCMC_NUM_BLOCKS.data(), recvcount, MPI_LONG,
-               all_mcmc_num_blocks.data(), recvcount, MPI_LONG, 0, MPI_COMM_WORLD);
+               all_mcmc_num_blocks.data(), recvcount, MPI_LONG, 0, mpi.comm);
     MPI_Gather(finetune::dist::MCMC_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG,
-               all_mcmc_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+               all_mcmc_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG, 0, mpi.comm);
     MPI_Gather(finetune::dist::MCMC_AGGREGATE_BLOCK_DEGREES.data(), recvcount, MPI_UNSIGNED_LONG_LONG,
-               all_mcmc_aggregate_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+               all_mcmc_aggregate_block_degrees.data(), recvcount, MPI_UNSIGNED_LONG_LONG, 0, mpi.comm);
     if (mpi.rank != 0) return;  // Only rank 0 should actually save a CSV file
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
@@ -140,7 +140,7 @@ void record_runtime_imbalance() {
 }
 
 // Blockmodel stochastic_block_partition(Graph &graph, MPI &mpi, Args &args) {
-Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
+Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
@@ -156,6 +156,15 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args) {
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
     long iteration = 0;
     while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
+        if (divide_and_conquer) {
+            if (!blockmodel_triplet.golden_ratio_not_reached() ||
+                (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
+                MPI_Barrier(mpi.comm);
+                blockmodel_triplet.status();
+                blockmodel = blockmodel_triplet.get(0).copy();
+                break;
+            }
+        }
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
