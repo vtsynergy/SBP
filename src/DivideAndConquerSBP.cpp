@@ -199,6 +199,27 @@ Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subg
     return { (long) merge_to_blocks.size(), subgraph.graph, 0.5, assignment };
 }
 
+std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vertices,
+                                          const std::vector<long> &assignment_a,
+                                          const std::vector<long> &assignment_b, const Graph &original_graph) {
+    std::vector<long> combined_mapping = utils::constant<long>(original_graph.num_vertices(), -1);
+    for (int index = 0; index < combined_vertices.size(); ++index) {
+        long true_vertex_index = combined_vertices[index];
+        combined_mapping[true_vertex_index] = index;
+    }
+    std::vector<long> combined_assignment = assignment_a;
+    long offset = *std::max_element(assignment_a.begin(), assignment_a.end()) + 1;
+    combined_assignment.reserve(assignment_a.size() + assignment_b.size());
+    for (const long &block : assignment_b) {
+        combined_assignment.push_back(block + offset);
+    }
+    sample::Sample new_subgraph = sample::from_vertices(original_graph, combined_vertices, combined_mapping);
+    long combined_num_blocks = *std::max_element(combined_assignment.begin(), combined_assignment.end()) + 1;
+    Blockmodel blockmodel = Blockmodel(combined_num_blocks, new_subgraph.graph, 0.5, combined_assignment);
+    Blockmodel merged_blockmodel = merge_blocks(blockmodel, new_subgraph, offset, combined_num_blocks);
+    return merged_blockmodel.block_assignment();
+}
+
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // long rank, num_processes;
@@ -227,67 +248,91 @@ int main(int argc, char* argv[]) {
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
               << partition.blockmodel.getNum_blocks() << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
-    // Checking tree structure
-    int partner;
-    bool done = false;
-    unsigned bitmask = 1;
+
     MPI_Status status;
-    int level = 0;
-    while (bitmask < mpi.num_processes) {
-        std::cout << "Level " << level << " | rank " << mpi.rank << " is waiting at the barrier with bitmask = " << bitmask << std::endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (done) {
-            bitmask <<=1;
-            std::cout << "Level " << level << " | rank " << mpi.rank << " is done with bitmask = " << bitmask << std::endl;
-            level++;
-            continue;
-        }
-        partner = mpi.rank ^ bitmask;
-        std::cout << "Level " << level << " | rank " << mpi.rank << "'s partner = " << partner << std::endl;
-        if (partner >= mpi.num_processes) {
-            bitmask <<=1;
-            std::cout << "Level " << level << " | rank " << mpi.rank << " is done with bitmask = " << bitmask << std::endl;
-            level++;
-            continue;
-        } else if (mpi.rank < partner) {
-            // The receiver
-            long my_num_blocks = partition.blockmodel.getNum_blocks();
-            std::pair<sample::Sample, Blockmodel> combined = combine_graphs(subgraph, graph, partition, partner, level, status);
-            subgraph = combined.first;
-            partition.blockmodel = combined.second;
-            long combined_num_blocks = partition.blockmodel.getNum_blocks();
-            std::cout << mpi.rank << " build combined blockmodel with B = " << partition.blockmodel.getNum_blocks() << std::endl;
-            // Merge blockmodel blocks
-            partition.blockmodel = merge_blocks(partition.blockmodel, subgraph, my_num_blocks, combined_num_blocks);
-//            std::cout << mpi.rank << " | merged Blockmodel to one with B = " << partition.blockmodel.getNum_blocks() << std::endl;
-            bitmask <<= 1;
-        } else {
-            // The sender
-            // Send number of vertices
-            int local_num_vertices = subgraph.graph.num_vertices();
-            std::vector<long> local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-            std::vector<long> local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-            #pragma omp parallel for schedule(dynamic) default(none) \
+
+    std::vector<std::vector<long>> rank_vertices;
+    std::vector<std::vector<long>> rank_assignment;
+
+    // Compute local partition information
+    int local_num_vertices = subgraph.graph.num_vertices();
+    std::vector<long> local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+    std::vector<long> local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+    #pragma omp parallel for schedule(dynamic) default(none) \
             shared(graph, subgraph, partition, local_vertices, local_assignment)
-            for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-                long subgraph_index = subgraph.mapping[vertex];
-                if (subgraph_index < 0) continue;  // vertex not present
-                long assignment = partition.blockmodel.block_assignment(subgraph_index);
-                local_vertices[subgraph_index] = vertex;
-                local_assignment[subgraph_index] = assignment;
-            }
-            MPI_Send(&local_num_vertices, 1, MPI_INT, partner, NUM_VERTICES_TAG, MPI_COMM_WORLD);
-            MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, partner, VERTICES_TAG, MPI_COMM_WORLD);
-            MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, partner, BLOCKS_TAG, MPI_COMM_WORLD);
-            done = true;
-            bitmask <<= 1;
-        }
-        level++;
+    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        long subgraph_index = subgraph.mapping[vertex];
+        if (subgraph_index < 0) continue;  // vertex not present
+        long assignment = partition.blockmodel.block_assignment(subgraph_index);
+        local_vertices[subgraph_index] = vertex;
+        local_assignment[subgraph_index] = assignment;
     }
+
     if (mpi.rank == 0) {
+        rank_vertices.push_back(local_vertices);
+        rank_assignment.push_back(local_assignment);
+        // Receive data from all processes
+        for (int rank = 1; rank < mpi.num_processes; ++rank) {
+            std::cout << "Root waiting for info from rank " << rank << std::endl;
+            int partner_num_vertices;
+            MPI_Recv(&partner_num_vertices, 1, MPI_INT, rank, NUM_VERTICES_TAG, MPI_COMM_WORLD, &status);
+            std::vector<long> partner_vertices = utils::constant<long>(partner_num_vertices, -1);
+            std::vector<long> partner_assignment = utils::constant<long>(partner_num_vertices, -1);
+            MPI_Recv(partner_vertices.data(), partner_num_vertices, MPI_LONG, rank, VERTICES_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(partner_assignment.data(), partner_num_vertices, MPI_LONG, rank, BLOCKS_TAG, MPI_COMM_WORLD, &status);
+            rank_vertices.push_back(partner_vertices);
+            rank_assignment.push_back(partner_assignment);
+            std::cout << "Root received info from rank " << rank << std::endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    } else {
+        // The sender
+        // Send partition information to root
+        MPI_Send(&local_num_vertices, 1, MPI_INT, 0, NUM_VERTICES_TAG, MPI_COMM_WORLD);
+        MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, 0, VERTICES_TAG, MPI_COMM_WORLD);
+        MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, 0, BLOCKS_TAG, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    if (mpi.rank == 0) {
+        // Iteratively merge blockmodels together
+        while (rank_vertices.size() > 4) {  // Taken from iHeartGraph code
+            std::vector<std::vector<long>> new_rank_vertices;
+            std::vector<std::vector<long>> new_rank_assignment;
+            for (int piece = 0; piece < rank_vertices.size(); piece += 2) {
+                if (piece == rank_vertices.size() - 1) {  // num pieces is odd, and this is last piece
+                    new_rank_vertices.push_back(rank_vertices[piece]);
+                    new_rank_assignment.push_back(rank_assignment[piece]);
+                    continue;
+                }
+                std::vector<long> combined_vertices = rank_vertices[piece];
+                combined_vertices.reserve(combined_vertices.size() + rank_vertices[piece + 1].size());
+                combined_vertices.insert(combined_vertices.end(), rank_vertices[piece + 1].begin(),
+                                         rank_vertices[piece + 1].end());
+                std::vector<long> combined_assignment = combine_two_blockmodels(combined_vertices,
+                                                                                rank_assignment[piece],
+                                                                                rank_assignment[piece + 1], graph);
+                new_rank_vertices.push_back(combined_vertices);
+                new_rank_assignment.push_back(combined_assignment);
+            }
+            rank_vertices = std::move(new_rank_vertices);
+            rank_assignment = std::move(new_rank_assignment);
+        }
+        // Merge remaining blockmodels together
+        std::vector<long> combined_assignment = utils::constant<long>(graph.num_vertices(), -1);
+        long offset = 0;
+        for (int piece = 0; piece < rank_vertices.size(); ++piece) {
+            for (int index = 0; index < rank_vertices[piece].size(); ++index) {
+                long vertex_index = rank_vertices[piece][index];
+                long assignment = rank_assignment[piece][index] + offset;
+                combined_assignment[vertex_index] = assignment;
+            }
+            offset += *std::max_element(rank_assignment[piece].begin(), rank_assignment[piece].end()) + 1;
+        }
+        Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
         // Finetune final assignment
-        Blockmodel blockmodel = std::move(partition.blockmodel);
-        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, subgraph.graph.num_vertices(), subgraph.graph.num_edges()));
+//        Blockmodel blockmodel = std::move(partition.blockmodel);
+        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
         BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         double iteration = sbp::get_intermediates().size();
@@ -297,7 +342,7 @@ int main(int argc, char* argv[]) {
                           << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
             }
             double start_bm = MPI_Wtime();
-            blockmodel = block_merge::merge_blocks(blockmodel, subgraph.graph, subgraph.graph.num_edges());
+            blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
             block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
             std::cout << "Starting MCMC vertex moves" << std::endl;
             double start_mcmc = MPI_Wtime();
@@ -306,14 +351,14 @@ int main(int argc, char* argv[]) {
 //        else
             common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
             if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
-                blockmodel = finetune::asynchronous_gibbs(blockmodel, subgraph.graph, blockmodel_triplet);
+                blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
             else if (args.algorithm == "hybrid_mcmc")
-                blockmodel = finetune::hybrid_mcmc(blockmodel, subgraph.graph, blockmodel_triplet);
+                blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet);
             else // args.algorithm == "metropolis_hastings"
-                blockmodel = finetune::metropolis_hastings(blockmodel, subgraph.graph, blockmodel_triplet);
+                blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
             finetune::MCMC_time += MPI_Wtime() - start_mcmc;
             sbp::total_time += MPI_Wtime() - start_bm;
-            sbp::add_intermediate(++iteration, subgraph.graph, -1, blockmodel.getOverall_entropy());
+            sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
             blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
             common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         }
@@ -321,18 +366,18 @@ int main(int argc, char* argv[]) {
         double modularity = -1;
         if (args.modularity)
             modularity = graph.modularity(blockmodel.block_assignment());
-        sbp::add_intermediate(-1, subgraph.graph, modularity, blockmodel.getOverall_entropy());
+        sbp::add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
         // Evaluate finetuned assignment
-        // Reorder truth labels to match the reordered graph vertices
-        std::vector<long> reordered_truth = utils::constant<long>(graph.num_vertices(), -1);
-        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-            long mapped_index = subgraph.mapping[vertex];
-            long truth_community = graph.assignment(vertex);
-            reordered_truth[mapped_index] = truth_community;
-        }
+//        // Reorder truth labels to match the reordered graph vertices
+//        std::vector<long> reordered_truth = utils::constant<long>(graph.num_vertices(), -1);
+//        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+//            long mapped_index = subgraph.mapping[vertex];
+//            long truth_community = graph.assignment(vertex);
+//            reordered_truth[mapped_index] = truth_community;
+//        }
         double end = MPI_Wtime();
-        subgraph.graph.assignment(reordered_truth);
-        evaluate_partition(subgraph.graph, blockmodel, end - start);
+//        subgraph.graph.assignment(reordered_truth);
+        evaluate_partition(graph, blockmodel, end - start);
     }
     /*
     sample::Sample detached;
