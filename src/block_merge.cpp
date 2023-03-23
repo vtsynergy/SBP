@@ -217,7 +217,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
                 for (int block : blockmodel.block_assignment()) {
                     if (block == current_block) numvertices++;
                 }
-                std::cout << "num vertices with block = " << current_block << " = " << numvertices << std::endl;
+//                std::cout << "num vertices with block = " << current_block << " = " << numvertices << std::endl;
 //                std::cout << "current block neighbors: ";
 //                utils::print<long>(blockmodel.blockmatrix()->neighbors_weights(current_block));
 //                std::cout << "current block row: ";

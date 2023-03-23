@@ -12,6 +12,10 @@
 
 #include <mpi.h>
 
+double sample_time = 0.0;
+double sample_extend_time = 0.0;
+double finetune_time = 0.0;
+
 namespace dnc {
 
 std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vector<std::vector<long>> &vertex_lists,
@@ -71,6 +75,14 @@ std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vert
     Blockmodel blockmodel = Blockmodel(combined_num_blocks, new_subgraph.graph, 0.5, combined_assignment);
     Blockmodel merged_blockmodel = merge_blocks(blockmodel, new_subgraph, offset, combined_num_blocks);
     return merged_blockmodel.block_assignment();
+}
+
+void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runtime) {
+    if (mpi.rank != 0) return;
+    evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
+    std::cout << "Final F1 score = " << result.f1_score << std::endl;
+    std::cout << "Community detection runtime = " << runtime << "s" << std::endl;
+    write_results(graph, result, runtime);
 }
 
 Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
@@ -163,6 +175,44 @@ void receive_partition(int src, std::vector<std::vector<long>> &src_vertices,
     src_vertices.push_back(partner_vertices);
     src_assignments.push_back(partner_assignment);
     std::cout << "Root received info from rank " << src << std::endl;
+}
+
+void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
+    std::vector<sbp::intermediate> intermediate_results;
+    intermediate_results = sbp::get_intermediates();
+    std::ostringstream filepath_stream;
+    filepath_stream << args.csv << args.numvertices;
+    std::string filepath_dir = filepath_stream.str();
+    filepath_stream << "/" << args.type << ".csv";
+    std::string filepath = filepath_stream.str();
+    bool file_exists = fs::exists(filepath);
+    std::cout << std::boolalpha <<  "writing results to " << filepath << " exists = " << file_exists << std::endl;
+    fs::create_directories(fs::path(filepath_dir));
+    std::ofstream file;
+    file.open(filepath, std::ios_base::app);
+    if (!file_exists) {
+        file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
+             << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
+             << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
+             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, block_merge_time, "
+             << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
+             << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
+    }
+    for (const sbp::intermediate &temp : intermediate_results) {
+        file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
+             << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
+             << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
+             << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
+             << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
+             << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
+             << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
+             << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
+             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << temp.block_merge_time << ", "
+             << temp.block_merge_loop_time << ", " << temp.blockmodel_build_time << ", "
+             << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", " << temp.load_balancing_time << ", "
+             << temp.access_time << ", " << temp.update_assignment << ", " << temp.total_time << std::endl;
+    }
+    file.close();
 }
 
 }
