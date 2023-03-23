@@ -58,6 +58,7 @@ add_library(SBP STATIC
         src/distributed/dist_common.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
+        src/distributed/divide_and_conquer.cpp
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp
