@@ -40,11 +40,7 @@ struct Partition {
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::intermediate> intermediate_results;
-    if (mpi.num_processes > 1) {
-        intermediate_results = sbp::dist::get_intermediates();
-    } else {
-        intermediate_results = sbp::get_intermediates();
-    }
+    intermediate_results = sbp::get_intermediates();
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
