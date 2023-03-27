@@ -212,7 +212,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, past_proposals);
             if (proposal.delta_entropy == 0.0) {
-                std::cout << current_block << " --> " << proposal.proposed_block << " == " << proposal.delta_entropy << std::endl;
+//                std::cout << current_block << " --> " << proposal.proposed_block << " == " << proposal.delta_entropy << std::endl;
                 int numvertices = 0;
                 for (int block : blockmodel.block_assignment()) {
                     if (block == current_block) numvertices++;

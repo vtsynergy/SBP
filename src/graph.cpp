@@ -221,8 +221,8 @@ void Graph::sort_vertices() {
         this->degree_product_sort();
         return;
     }
-    std::cout << "Starting to sort vertices" << std::endl;
-    double start_t = MPI_Wtime();
+//    std::cout << "Starting to sort vertices" << std::endl;
+//    double start_t = MPI_Wtime();
     std::vector<long> vertex_degrees = this->degrees();
     std::vector<int> indices = utils::range<int>(0, this->_num_vertices);
     std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + int(args.mh_percent * this->_num_vertices),
@@ -241,8 +241,8 @@ void Graph::sort_vertices() {
             this->_low_degree_vertices.push_back(vertex);
         }
     }
-    std::cout << "Done sorting vertices, time = " << MPI_Wtime() - start_t << "s" << std::endl;
-    std::cout << "Range = " << *std::min_element(vertex_degrees.begin(), vertex_degrees.end()) << " - " << *std::max_element(vertex_degrees.begin(), vertex_degrees.end()) << std::endl;
+//    std::cout << "Done sorting vertices, time = " << MPI_Wtime() - start_t << "s" << std::endl;
+//    std::cout << "Range = " << *std::min_element(vertex_degrees.begin(), vertex_degrees.end()) << " - " << *std::max_element(vertex_degrees.begin(), vertex_degrees.end()) << std::endl;
     int num_islands = 0;
     for (int deg : vertex_degrees) {
         if (deg == 0) num_islands++;
@@ -251,8 +251,8 @@ void Graph::sort_vertices() {
 }
 
 void Graph::degree_product_sort() {
-    std::cout << "Starting to sort vertices based on influence" << std::endl;
-    double start_t = MPI_Wtime();
+//    std::cout << "Starting to sort vertices based on influence" << std::endl;
+//    double start_t = MPI_Wtime();
     std::vector<long> vertex_degrees = this->degrees();
     std::vector<std::pair<std::pair<long, long>, long>> edge_info;
     for (long source = 0; source < this->_num_vertices; ++source) {
@@ -281,5 +281,5 @@ void Graph::degree_product_sort() {
         if (selected[vertex]) continue;
         this->_low_degree_vertices.push_back(vertex);
     }
-    std::cout << "Done sorting vertices, time = " << MPI_Wtime() - start_t << "s" << std::endl;
+//    std::cout << "Done sorting vertices, time = " << MPI_Wtime() - start_t << "s" << std::endl;
 }
