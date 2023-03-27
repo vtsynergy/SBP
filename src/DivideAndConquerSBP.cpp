@@ -95,29 +95,50 @@ int main(int argc, char* argv[]) {
         local_vertices[subgraph_index] = vertex;
         local_assignment[subgraph_index] = assignment;
     }
+    rank_vertices.push_back(local_vertices);
+    rank_assignment.push_back(local_assignment);
 
-    if (mpi.rank == 0) {
-        rank_vertices.push_back(local_vertices);
-        rank_assignment.push_back(local_assignment);
-        // Receive data from all processes
-        for (int rank = 1; rank < mpi.num_processes; ++rank) {
-            dnc::receive_partition(rank, rank_vertices, rank_assignment);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    } else {
-        // The sender
-        // Send partition information to root
-        MPI_Send(&local_num_vertices, 1, MPI_INT, 0, NUM_VERTICES_TAG, MPI_COMM_WORLD);
-        MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, 0, VERTICES_TAG, MPI_COMM_WORLD);
-        MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, 0, BLOCKS_TAG, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
+    // For some reason program hangs using MPI_Send and MPI_Recv. Buffer full or something like that?
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << mpi.rank << " | Ranks about to start combining partial results (1)" << std::endl;
+    int num_vertices[mpi.num_processes];
+//    MPI_Allgather(&local_num_vertices, 1, MPI_INT, &num_vertices, 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Gather(&local_num_vertices, 1, MPI_INT, num_vertices, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    std::cout << mpi.rank << " | All ranks sent their vertex numbers (2)" << std::endl;
+    int offsets[mpi.num_processes];
+    offsets[0] = 0;
+    for (int rank = 1; rank < mpi.num_processes; ++rank) {
+        offsets[rank] = num_vertices[rank - 1] + offsets[rank - 1];
     }
+    std::vector<long> all_vertices = utils::constant<long>(graph.num_vertices(), -1);
+    std::vector<long> all_assignments = utils::constant<long>(graph.num_vertices(), -1);
+    MPI_Gatherv(local_vertices.data(), local_num_vertices, MPI_LONG, all_vertices.data(), num_vertices, offsets, MPI_LONG, 0, MPI_COMM_WORLD);
+    std::cout << mpi.rank << " | All ranks have sent their vertex ids (3)" << std::endl;
+    MPI_Gatherv(local_assignment.data(), local_num_vertices, MPI_LONG, all_assignments.data(), num_vertices, offsets, MPI_LONG, 0, MPI_COMM_WORLD);
+    std::cout << mpi.rank << " | All ranks have completed communication (4)" << std::endl;
 
     if (mpi.rank == 0) {
+        // Fill up rank_vertices and rank_assignment
+        for (int rank = 1; rank < mpi.num_processes; ++rank) {
+            int offset = offsets[rank];
+            int num_v = num_vertices[rank];
+            std::vector<long> rank_vertex_list = utils::constant<long>(num_v, -1);
+            std::vector<long> rank_assignment_list = utils::constant<long>(num_v, -1);
+            for (int index = 0; index < num_v; ++index) {
+                rank_vertex_list[index] = all_vertices[index + offset];
+                rank_assignment_list[index] = all_assignments[index + offset];
+            }
+            rank_vertices.push_back(rank_vertex_list);
+            rank_assignment.push_back(rank_assignment_list);
+        }
+        // Start the combination process
         long offset = 0;
         std::vector<long> combined_assignment = dnc::combine_partitions(graph, offset, rank_vertices, rank_assignment);
+        std::cout << "Done combining partitions" << std::endl;
         Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
+        std::cout << "Done building blockmodel" << std::endl;
         blockmodel = dnc::finetune_partition(blockmodel, graph);
+        std::cout << "Done finetuning result" << std::endl;
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)
