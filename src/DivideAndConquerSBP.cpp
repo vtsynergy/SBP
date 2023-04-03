@@ -105,6 +105,22 @@ int main(int argc, char* argv[]) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     std::cout << "Rank " << mpi.rank << " done sending/receiving local information" << std::endl;
+
+    if (mpi.rank == 0) {
+        long offset = 0;
+        std::vector<long> combined_assignment = dnc::combine_partitions(graph, offset, rank_vertices, rank_assignment);
+        Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
+        // Make this distributed?
+        blockmodel = dnc::finetune_partition(blockmodel, graph);
+        // only last iteration result will calculate expensive modularity
+        double modularity = -1;
+        if (args.modularity)
+            modularity = graph.modularity(blockmodel.block_assignment());
+        sbp::add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+        // Evaluate finetuned assignment
+        double end = MPI_Wtime();
+        dnc::evaluate_partition(graph, blockmodel, end - start);
+    }
 //
 //    // For some reason program hangs using MPI_Send and MPI_Recv. Buffer full or something like that?
 //    MPI_Barrier(MPI_COMM_WORLD);
