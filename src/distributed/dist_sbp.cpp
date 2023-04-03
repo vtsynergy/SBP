@@ -159,7 +159,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
                 (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
-                MPI_Barrier(mpi.comm);
+//                MPI_Barrier(mpi.comm);
                 blockmodel_triplet.status();
                 blockmodel = blockmodel_triplet.get(0).copy();
                 break;
