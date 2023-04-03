@@ -81,27 +81,30 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
-
-    // Compute local partition information
-//    std::vector<long> local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-//    std::vector<long> local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-//    #pragma omp parallel for schedule(dynamic) default(none) \
-//            shared(graph, subgraph, partition, local_vertices, local_assignment)
-//    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-//        long subgraph_index = subgraph.mapping[vertex];
-//        if (subgraph_index < 0) continue;  // vertex not present
-//        long assignment = partition.blockmodel.block_assignment(subgraph_index);
-//        local_vertices[subgraph_index] = vertex;
-//        local_assignment[subgraph_index] = assignment;
-//    }
     std::vector<long> local_vertices, local_assignment;
     dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph.num_vertices(),
                                    partition.blockmodel.block_assignment());
-    rank_vertices.push_back(local_vertices);
-    rank_assignment.push_back(local_assignment);
     int local_num_vertices = subgraph.graph.num_vertices();
     MPI_Barrier(MPI_COMM_WORLD);
     std::cout << "Rank " << mpi.rank << " done computing local information" << std::endl;
+
+    if (mpi.rank == 0) {
+        rank_vertices.push_back(local_vertices);
+        rank_assignment.push_back(local_assignment);
+        // Receive data from all processes
+        for (int rank = 1; rank < mpi.num_processes; ++rank) {
+            dnc::receive_partition(rank, rank_vertices, rank_assignment);
+        }
+    } else {
+        // The sender
+        // Send partition information to root
+        std::cout << "rank " << mpi.rank << " sending info to root..." << std::endl;
+        MPI_Send(&local_num_vertices, 1, MPI_INT, 0, NUM_VERTICES_TAG, MPI_COMM_WORLD);
+        MPI_Send(local_vertices.data(), local_num_vertices, MPI_LONG, 0, VERTICES_TAG, MPI_COMM_WORLD);
+        MPI_Send(local_assignment.data(), local_num_vertices, MPI_LONG, 0, BLOCKS_TAG, MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "Rank " << mpi.rank << " done sending/receiving local information" << std::endl;
 //
 //    // For some reason program hangs using MPI_Send and MPI_Recv. Buffer full or something like that?
 //    MPI_Barrier(MPI_COMM_WORLD);
