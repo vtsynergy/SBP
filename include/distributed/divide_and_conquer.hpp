@@ -38,6 +38,10 @@ Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subg
 void receive_partition(int src, std::vector<std::vector<long>> &src_vertices,
                        std::vector<std::vector<long>> &src_assignments);
 
+void translate_local_partition(std::vector<long> &local_vertices, std::vector<long> &local_assignment,
+                               const sample::Sample &subgraph, long num_vertices,
+                               const std::vector<long> &partition_assignment);
+
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime);
 
 }

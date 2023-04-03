@@ -177,6 +177,22 @@ void receive_partition(int src, std::vector<std::vector<long>> &src_vertices,
     std::cout << "Root received info from rank " << src << std::endl;
 }
 
+void translate_local_partition(std::vector<long> &local_vertices, std::vector<long> &local_assignment,
+                               const sample::Sample &subgraph, long num_vertices,
+                               const std::vector<long> &partition_assignment) {
+    local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+    local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+    #pragma omp parallel for schedule(dynamic) default(none) \
+            shared(num_vertices, subgraph, partition_assignment, local_vertices, local_assignment)
+    for (long vertex = 0; vertex < num_vertices; ++vertex) {
+        long subgraph_index = subgraph.mapping[vertex];
+        if (subgraph_index < 0) continue;  // vertex not present
+        long assignment = partition_assignment[subgraph_index];
+        local_vertices[subgraph_index] = vertex;
+        local_assignment[subgraph_index] = assignment;
+    }
+}
+
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::intermediate> intermediate_results;
     intermediate_results = sbp::get_intermediates();

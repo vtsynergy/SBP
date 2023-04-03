@@ -78,12 +78,11 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
               << partition.blockmodel.getNum_blocks() << std::endl;
-//
-//    std::vector<std::vector<long>> rank_vertices;
-//    std::vector<std::vector<long>> rank_assignment;
-//
-//    // Compute local partition information
-//    int local_num_vertices = subgraph.graph.num_vertices();
+
+    std::vector<std::vector<long>> rank_vertices;
+    std::vector<std::vector<long>> rank_assignment;
+
+    // Compute local partition information
 //    std::vector<long> local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
 //    std::vector<long> local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
 //    #pragma omp parallel for schedule(dynamic) default(none) \
@@ -95,8 +94,14 @@ int main(int argc, char* argv[]) {
 //        local_vertices[subgraph_index] = vertex;
 //        local_assignment[subgraph_index] = assignment;
 //    }
-//    rank_vertices.push_back(local_vertices);
-//    rank_assignment.push_back(local_assignment);
+    std::vector<long> local_vertices, local_assignment;
+    dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph.num_vertices(),
+                                   partition.blockmodel.block_assignment());
+    rank_vertices.push_back(local_vertices);
+    rank_assignment.push_back(local_assignment);
+    int local_num_vertices = subgraph.graph.num_vertices();
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "Rank " << mpi.rank << " done computing local information" << std::endl;
 //
 //    // For some reason program hangs using MPI_Send and MPI_Recv. Buffer full or something like that?
 //    MPI_Barrier(MPI_COMM_WORLD);

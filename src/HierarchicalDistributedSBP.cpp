@@ -104,6 +104,13 @@ int main(int argc, char* argv[]) {
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish initial partitioning | final B = "
               << partition.blockmodel.getNum_blocks() << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
+
+    std::vector<std::vector<long>> rank_vertices;
+    std::vector<std::vector<long>> rank_assignment;
+    std::vector<long> local_vertices, local_assignment;
+    dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph.num_vertices(),
+                                   partition.blockmodel.block_assignment());
+    int local_num_vertices = subgraph.graph.num_vertices();
 //
 //    std::vector<std::vector<long>> rank_vertices;
 //    std::vector<std::vector<long>> rank_assignment;
