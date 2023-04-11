@@ -15,6 +15,7 @@
 double sample_time = 0.0;
 double sample_extend_time = 0.0;
 double finetune_time = 0.0;
+long total_num_islands = 0;
 
 namespace dnc {
 
@@ -82,6 +83,9 @@ void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runti
     evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
     std::cout << "Final F1 score = " << result.f1_score << std::endl;
     std::cout << "Community detection runtime = " << runtime << "s" << std::endl;
+    if (std::isnan(result.nmi) || std::isinf(result.nmi)) {
+        result.nmi = 0.00;
+    }
     write_results(graph, result, runtime);
 }
 
@@ -210,9 +214,9 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
         file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
              << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
              << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
-             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, block_merge_time, "
-             << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
-             << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
+             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, total_num_islands, "
+             << "block_merge_time, block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, "
+             << "sort_time, load_balancing_time, access_time, update_assignment, total_time" << std::endl;
     }
     for (const sbp::intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
@@ -223,10 +227,11 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
-             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << temp.block_merge_time << ", "
-             << temp.block_merge_loop_time << ", " << temp.blockmodel_build_time << ", "
-             << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", " << temp.load_balancing_time << ", "
-             << temp.access_time << ", " << temp.update_assignment << ", " << temp.total_time << std::endl;
+             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << total_num_islands << ", "
+             << temp.block_merge_time << ", " << temp.block_merge_loop_time << ", "
+             << temp.blockmodel_build_time << ", " << temp.blockmodel_first_build_time << ", "
+             << temp.sort_time << ", " << temp.load_balancing_time << ", " << temp.access_time << ", "
+             << temp.update_assignment << ", " << temp.total_time << std::endl;
     }
     file.close();
 }

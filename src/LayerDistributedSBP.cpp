@@ -70,12 +70,12 @@ int main(int argc, char* argv[]) {
     // Need to ensure that every rank within a subgraph gets the same subgraph
 
     args = Args(argc, argv);
+    rng::init_generators();
 
     int ranks_in_color = ceil(double(TotalRanks) / double(args.subgraphs));
     int color = GlobalRank / ranks_in_color;
 //    if (args.subgraphs == 1) color = 0;
     MPI_Comm_split(MPI_COMM_WORLD, color, GlobalRank % args.subgraphs, &mpi.comm);
-    rng::init_generators();
 
     MPI_Comm_rank(mpi.comm, &mpi.rank);
     MPI_Comm_size(mpi.comm, &mpi.num_processes);
@@ -89,6 +89,15 @@ int main(int argc, char* argv[]) {
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
     Graph graph = Graph::load();
     sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
+    long num_islands = 0;
+    if (mpi.rank == 0) {
+        num_islands = subgraph.graph.num_islands();
+        std::cout << "Global Rank " << GlobalRank << "'s graph has " << num_islands << " island vertices." << std::endl;
+    }
+    MPI_Reduce(&num_islands, &total_num_islands, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (mpi.rank == 0) {
+        std::cout << "====== Total island vertices = " << total_num_islands << std::endl;
+    }
 
     std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << subgraph.graph.num_vertices() << " V and E = " << subgraph.graph.num_edges() << std::endl;
 

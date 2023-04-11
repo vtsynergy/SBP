@@ -76,6 +76,8 @@ public:
     double modularity(const std::vector<long> &assignment) const;
     /// Returns the number of edges in this graph
     long num_edges() const { return this->_num_edges; }
+    /// Counts the number of island vertices in this graph
+    long num_islands() const;
     /// Returns the number of vertices in this graph
     long num_vertices() const { return this->_num_vertices; }
     /// Returns a const reference to the out neighbors

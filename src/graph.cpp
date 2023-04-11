@@ -283,3 +283,12 @@ void Graph::degree_product_sort() {
     }
 //    std::cout << "Done sorting vertices, time = " << MPI_Wtime() - start_t << "s" << std::endl;
 }
+
+long Graph::num_islands() const {
+    std::vector<long> vertex_degrees = this->degrees();
+    long num_islands = 0;
+    for (const long &degree : vertex_degrees) {
+        if (degree == 0) num_islands++;
+    }
+    return num_islands;
+}

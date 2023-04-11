@@ -184,8 +184,8 @@ Sample round_robin(const Graph &graph, int subgraph_index, int num_subgraphs) {
     long index = 0;
     for (long vertex = subgraph_index; vertex < graph.num_vertices(); vertex += num_subgraphs) {
         sampled.push_back(vertex);
-	mapping[vertex] = index;
-	index++;
+	    mapping[vertex] = index;
+	    index++;
     }
     return from_vertices(graph, sampled, mapping);
 }

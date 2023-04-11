@@ -18,6 +18,8 @@ const int BLOCKS_TAG = 2;
 extern double sample_time;
 extern double sample_extend_time;
 extern double finetune_time;
+/// The total number of island vertices across MPI ranks
+extern long total_num_islands;
 
 namespace dnc {
 
