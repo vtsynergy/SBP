@@ -187,7 +187,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());
     add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
-    record_runtime_imbalance();
+//    record_runtime_imbalance();
     return blockmodel;
 }
 
