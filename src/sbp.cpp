@@ -13,7 +13,7 @@
 namespace sbp {
 
 double total_time = 0.0;
-
+long total_num_islands = 0;
 double Blockmodel_first_build_time = 0.0;
 
 std::vector<intermediate> intermediate_results;

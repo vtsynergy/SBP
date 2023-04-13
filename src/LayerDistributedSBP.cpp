@@ -94,9 +94,9 @@ int main(int argc, char* argv[]) {
         num_islands = subgraph.graph.num_islands();
         std::cout << "Global Rank " << GlobalRank << "'s graph has " << num_islands << " island vertices." << std::endl;
     }
-    MPI_Reduce(&num_islands, &total_num_islands, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if (mpi.rank == 0) {
-        std::cout << "====== Total island vertices = " << total_num_islands << std::endl;
+        std::cout << "====== Total island vertices = " << sbp::total_num_islands << std::endl;
     }
 
     std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << subgraph.graph.num_vertices() << " V and E = " << subgraph.graph.num_edges() << std::endl;

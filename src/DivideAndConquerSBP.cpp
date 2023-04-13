@@ -71,9 +71,9 @@ int main(int argc, char* argv[]) {
     sample::Sample subgraph = sample::round_robin(graph, mpi.rank, mpi.num_processes);
     long num_islands = subgraph.graph.num_islands();
     std::cout << "Rank " << mpi.rank << "'s graph has " << num_islands << " island vertices." << std::endl;
-    MPI_Reduce(&num_islands, &total_num_islands, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if (mpi.rank == 0) {
-        std::cout << "====== Total island vertices = " << total_num_islands << std::endl;
+        std::cout << "====== Total island vertices = " << sbp::total_num_islands << std::endl;
     }
     Partition partition;
     double start = MPI_Wtime();

@@ -15,7 +15,6 @@
 double sample_time = 0.0;
 double sample_extend_time = 0.0;
 double finetune_time = 0.0;
-long total_num_islands = 0;
 
 namespace dnc {
 
@@ -227,11 +226,11 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
-             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << total_num_islands << ", "
+             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << sbp::total_num_islands << ", "
              << temp.block_merge_time << ", " << temp.block_merge_loop_time << ", "
-             << temp.blockmodel_build_time << ", " << temp.blockmodel_first_build_time << ", "
-             << temp.sort_time << ", " << temp.load_balancing_time << ", " << temp.access_time << ", "
-             << temp.update_assignment << ", " << temp.total_time << std::endl;
+             << temp.blockmodel_build_time << ", " << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", "
+             << temp.load_balancing_time << ", " << temp.access_time << ", " << temp.update_assignment << ", "
+             << temp.total_time << std::endl;
     }
     file.close();
 }

@@ -54,9 +54,9 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
         file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
              << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
              << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
-             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, block_merge_time, "
-             << "block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, sort_time, "
-             << "load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
+             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, total_num_islands, "
+             << "block_merge_time, block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, "
+             << "sort_time, load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
     }
     for (const sbp::intermediate &temp : intermediate_results) {
         file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
@@ -67,10 +67,11 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
-             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << temp.block_merge_time << ", "
-             << temp.block_merge_loop_time << ", " << temp.blockmodel_build_time << ", "
-             << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", " << temp.load_balancing_time << ", "
-             << temp.access_time << ", " << temp.update_assignment << ", " << temp.total_time << std::endl;
+             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << sbp::total_num_islands << ", "
+             << temp.block_merge_time << ", " << temp.block_merge_loop_time << ", "
+             << temp.blockmodel_build_time << ", " << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", "
+             << temp.load_balancing_time << ", " << temp.access_time << ", " << temp.update_assignment << ", "
+             << temp.total_time << std::endl;
     }
     file.close();
 }
@@ -84,18 +85,11 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
 }
 
 void run(Partition &partition) {
+    sbp::total_num_islands = partition.graph.num_islands();
     if (mpi.num_processes > 1) {
-//        MPI_Barrier(mpi.comm);  // keep start - end as close as possible for all processes
-//        double start = MPI_Wtime();
         partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args);
-//        double end = MPI_Wtime();
-//        if (mpi.rank == 0)
-//        evaluate_partition(partition.graph, partition.blockmodel, end - start);
     } else {
-//        auto start = std::chrono::steady_clock::now();
         partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args);
-//        auto end = std::chrono::steady_clock::now();
-//        evaluate_partition(partition.graph, partition.blockmodel, std::chrono::duration<double>(end - start).count());
     }
 }
 

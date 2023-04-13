@@ -15,6 +15,8 @@ namespace sbp {
 
 /// The total amount of time spent community detection, to be dynamically updated during execution.
 extern double total_time;
+/// The total number of island vertices (across all MPI ranks, if applicable)
+extern long total_num_islands;
 
 /// Stores intermediate information for later printing.
 struct intermediate {
