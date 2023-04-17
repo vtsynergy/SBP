@@ -15,11 +15,11 @@ class CommonComplexTest : public ComplexExample {
 };
 
 TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     utils::ProposalAndEdgeCounts proposal {0, 2, 3, 5};
-    int current_block_self_edges = 3;
-    int proposed_block_self_edges = 8;
+    long current_block_self_edges = 3;
+    long proposed_block_self_edges = 8;
     common::NewBlockDegrees nbd = common::compute_new_block_degrees(
             current_block, B, current_block_self_edges, proposed_block_self_edges, proposal);
     EXPECT_EQ(nbd.block_degrees_out[0], 10);
@@ -36,14 +36,14 @@ TEST_F(CommonTest, NewBlockDegreesAreCorrectlyComputed) {
 }
 
 TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithBlockmodelDeltas) {
-    int current_block = 3;
-    int current_block_self_edges = B.blockmatrix()->get(current_block, current_block)
+    long current_block = 3;
+    long current_block_self_edges = B.blockmatrix()->get(current_block, current_block)
                                    + Deltas.get(current_block, current_block);
-    int proposed_block_self_edges = B.blockmatrix()->get(Proposal.proposal, Proposal.proposal)
+    long proposed_block_self_edges = B.blockmatrix()->get(Proposal.proposal, Proposal.proposal)
                                     + Deltas.get(Proposal.proposal, Proposal.proposal);
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
-    for (int block = 0; block < 6; ++block) {
+    for (long block = 0; block < 6; ++block) {
         EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
         EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
         EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);
@@ -51,12 +51,12 @@ TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithBlockmodelDelta
 }
 
 TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithDenseEdgeCountUpdates) {
-    int current_block = 3;
-    int current_block_self_edges = Updates.block_row[current_block];
-    int proposed_block_self_edges = Updates.proposal_row[Proposal.proposal];
+    long current_block = 3;
+    long current_block_self_edges = Updates.block_row[current_block];
+    long proposed_block_self_edges = Updates.proposal_row[Proposal.proposal];
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
-    for (int block = 0; block < 6; ++block) {
+    for (long block = 0; block < 6; ++block) {
         EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
         EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
         EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);
@@ -64,12 +64,12 @@ TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithDenseEdgeCountU
 }
 
 TEST_F(CommonComplexTest, NewBlockDegreesAreCorrectlyComputedWithSparseEdgeCountUpdates) {
-    int current_block = 3;
-    int current_block_self_edges = SparseUpdates.block_row[current_block];
-    int proposed_block_self_edges = SparseUpdates.proposal_row[Proposal.proposal];
+    long current_block = 3;
+    long current_block_self_edges = SparseUpdates.block_row[current_block];
+    long proposed_block_self_edges = SparseUpdates.proposal_row[Proposal.proposal];
     common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
             current_block, B, current_block_self_edges, proposed_block_self_edges, Proposal);
-    for (int block = 0; block < 6; ++block) {
+    for (long block = 0; block < 6; ++block) {
         EXPECT_EQ(new_block_degrees.block_degrees_out[block], BlockDegreesAfterUpdates.block_degrees_out[block]);
         EXPECT_EQ(new_block_degrees.block_degrees_in[block], BlockDegreesAfterUpdates.block_degrees_in[block]);
         EXPECT_EQ(new_block_degrees.block_degrees[block], BlockDegreesAfterUpdates.block_degrees[block]);

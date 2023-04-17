@@ -20,18 +20,21 @@ public:  // Everything in here is public, because why not?
     std::string blocksizevar;
     size_t cachesize;
     std::string csv;  // TODO: save results in a csv file
+    bool degreeproductsort;
     std::string delimiter;
     bool detach;
     std::string distribute;
     std::string directory;
     bool greedy;
+    float mh_percent;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     int numvertices;
     std::string overlap;
     std::string partition;
-    float samplesize;
+    double samplesize;
     std::string samplingalg;
+    int subgraphs;
     std::string tag;
     int threads;
     bool transpose;
@@ -68,6 +71,8 @@ public:  // Everything in here is public, because why not?
                                               "without the suffix, e.g.:\n"
                                               "if --csv=eval/test, results will be stored in eval/test.csv.",
                                               false, "./eval/test", "path", parser);
+            TCLAP::SwitchArg _degreeproductsort("", "degreeproductsort", "If set, will use edge degree products to split vertices "
+                                                "into high and low influence sets.", parser, false);
             TCLAP::ValueArg<std::string> _delimiter("", "delimiter", "The delimiter used in the file storing the graph",
                                                     false, "\t", "string, usually `\\t` or `,`", parser);
             TCLAP::SwitchArg _detach("", "detach", "If set, will detach 1-degree vertices before running"
@@ -86,6 +91,8 @@ public:  // Everything in here is public, because why not?
                                                    false, "./data", "path", parser);
             TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
                                      parser, true);
+            TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
+                                               false, 0.075, "float", parser);
             TCLAP::SwitchArg _modularity("", "modularity", "If set, will compute modularity at the end of execution.",
                                          parser, false);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
@@ -97,10 +104,13 @@ public:  // Everything in here is public, because why not?
             TCLAP::ValueArg<std::string> _partition("p", "partition", "Deprecated: The type of partitioning to use to divide the "
                                                     "graph amongst the MPI Processes. Only matters when nprocs > 1",
                                                     false, "round_robin", "round_robin|random|snowball", parser);
-            TCLAP::ValueArg<float> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
+            TCLAP::ValueArg<double> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
                                                       false, "random", "random|max_degree|expansion_snowball", parser);
+            TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
+                                            "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
+                                            false, 0, "<= number of MPI ranks>", parser);
             TCLAP::ValueArg<std::string> _tag("", "tag", "The tag value for this run, for differentiating different "
                                               "runs or adding custom parameters to the save file", false, "default tag",
                                               "string or param1=value1;param2=value2", parser);
@@ -120,11 +130,13 @@ public:  // Everything in here is public, because why not?
             this->blocksizevar = _blocksizevar.getValue();
             this->cachesize = _cachesize.getValue();
             this->csv = _csv.getValue();
+            this->degreeproductsort = _degreeproductsort.getValue();
             this->delimiter = _delimiter.getValue();
             this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
             this->greedy = _greedy.getValue();
+            this->mh_percent = _mh_percent.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->numvertices = _numvertices.getValue();
@@ -132,13 +144,14 @@ public:  // Everything in here is public, because why not?
             this->partition = _partition.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
+            this->subgraphs = _subgraphs.getValue();
             this->tag = _tag.getValue();
             this->threads = _threads.getValue();
             this->transpose = _transpose.getValue();
             this->type = _type.getValue();
             this->undirected = _undirected.getValue();
         } catch (TCLAP::ArgException &exception) {
-            std::cerr << "ERROR: " << exception.error() << " for argument " << exception.argId() << std::endl;
+            std::cerr << "ERROR " << "ERROR: " << exception.error() << " for argument " << exception.argId() << std::endl;
             exit(-1);
         }
     }

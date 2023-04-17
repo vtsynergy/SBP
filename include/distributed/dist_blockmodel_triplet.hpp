@@ -13,7 +13,7 @@ public:
     /// TODO
     bool optimal_num_blocks_found;
     /// TODO
-    TwoHopBlockmodel &get(int i) { return this->blockmodels[i]; }
+    TwoHopBlockmodel &get(long i) { return this->blockmodels[i]; }
     /// TODO
     TwoHopBlockmodel get_next_blockmodel(TwoHopBlockmodel &old_blockmodel);
     /// TODO
@@ -31,9 +31,9 @@ private:
     /// TODO
     TwoHopBlockmodel blockmodels[3];
     /// TODO
-    int lower_difference();
+    long lower_difference();
     /// TODO
-    int upper_difference();
+    long upper_difference();
 };
 
 #endif  // SBP_DIST_BLOCKMODEL_TRIPLET_HPP

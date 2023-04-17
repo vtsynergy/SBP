@@ -5,8 +5,8 @@ namespace finetune::dist {
 
 /// Stores individual MCMC runtimes per MCMC iteration for checking runtime imbalance
 extern std::vector<double> MCMC_RUNTIMES;
-extern std::vector<unsigned int> MCMC_VERTEX_EDGES;
-extern std::vector<int> MCMC_NUM_BLOCKS;
+extern std::vector<unsigned long> MCMC_VERTEX_EDGES;
+extern std::vector<long> MCMC_NUM_BLOCKS;
 extern std::vector<unsigned long> MCMC_BLOCK_DEGREES;
 extern std::vector<unsigned long long> MCMC_AGGREGATE_BLOCK_DEGREES;
 
@@ -18,10 +18,10 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 
 /// Runs one iteration of the asynchronous Gibbs algorithm in a distributed fashion using MPI.
 std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
-                                                     const std::vector<int> &active_set = std::vector<int>());
+                                                     const std::vector<long> &active_set = std::vector<long>());
 
 /// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
-bool early_stop(int iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
 /// Runs the hybrid MCMC algorithm in a distributed fashion using MPI.
@@ -35,12 +35,12 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 
 /// Runs one iteration of the Metropolis-Hastings algorithm. Returns the accepted vertex moves.
 std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
-                                                      const std::vector<int> &active_set = std::vector<int>());
+                                                      const std::vector<long> &active_set = std::vector<long>());
 
 /// Proposes an asynchronous Gibbs move in a distributed setting.
-VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
+VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph);
 
 /// Proposes a metropolis hastings move in a distributed setting.
-VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, int vertex, const Graph &graph);
+VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph);
 
 }  // namespace finetune::dist

@@ -8,7 +8,7 @@
 
 #include <omp.h>
 
-std::vector<float> fastlog_cache;
+std::vector<double> fastlog_cache;
 
 void init_fastlog(size_t x) {
     #pragma omp critical (fastlog)
@@ -16,7 +16,7 @@ void init_fastlog(size_t x) {
         if (x >= fastlog_cache.size()) {
             fastlog_cache.resize(x + 1);
             for (size_t i = 0; i < fastlog_cache.size(); ++i) {
-                fastlog_cache[i] = logf(float(i));
+                fastlog_cache[i] = logf(double(i));
             }
         }
     }

@@ -15,9 +15,9 @@ typedef pcg32 Gen;
 //typedef std::mt19937 Gen;
 
 extern std::vector<Gen> generators;
-extern std::vector<std::uniform_real_distribution<float>> distributions;
+extern std::vector<std::uniform_real_distribution<double>> distributions;
 
-float generate();
+double generate();
 
 Gen &generator();
 

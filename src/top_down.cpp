@@ -19,23 +19,23 @@
 namespace top_down {
 
 void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_splits,
-                       const std::vector<double> &split_entropy, int target_num_communities) {
+                       const std::vector<double> &split_entropy, long target_num_communities) {
     // Sort entropies in ascending order
-    std::vector<int> sorted_splits = utils::sort_indices(split_entropy);
+    std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
-    int num_blocks = blockmodel.getNum_blocks();
-    int counter = 0;
+    long num_blocks = blockmodel.getNum_blocks();
+    long counter = 0;
     while (num_blocks < target_num_communities) {
-        int block = sorted_splits[counter];
+        long block = sorted_splits[counter];
         const Split& split = best_splits[block];
-        MapVector<int> reverse_translator;
+        MapVector<long> reverse_translator;
         for (const auto &entry : split.translator) {
             reverse_translator[entry.second] = entry.first;
         }
-        for (int index = 0; index < split.num_vertices; ++index) {
-            int assignment = split.blockmodel->block_assignment(index);
+        for (long index = 0; index < split.num_vertices; ++index) {
+            long assignment = split.blockmodel->block_assignment(index);
             if (assignment == 1) {
-                int vertex = reverse_translator[index];
+                long vertex = reverse_translator[index];
                 blockmodel.set_block_assignment(vertex, num_blocks);
             }
         }
@@ -45,31 +45,31 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
     blockmodel.setNum_blocks(num_blocks);
 }
 
-Split propose_split(int community, const Graph &graph, const Blockmodel &blockmodel) {
+Split propose_split(long community, const Graph &graph, const Blockmodel &blockmodel) {
     Split split;
     std::vector<bool> community_flag = utils::constant<bool>(graph.num_vertices(), false);
-    std::vector<int> community_vertices;
-    int index = 0;
-    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+    std::vector<long> community_vertices;
+    long index = 0;
+    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
         if (blockmodel.block_assignment(vertex) != community) continue;
         community_flag[vertex] = true;
         community_vertices.push_back(vertex);
         split.translator[vertex] = index;
         index++;
     }
-    split.num_vertices = int(community_vertices.size());
+    split.num_vertices = long(community_vertices.size());
     Graph subgraph(split.num_vertices);
-    for (int vertex : community_vertices) {
-        for (int neighbor : graph.out_neighbors(vertex)) {
+    for (long vertex : community_vertices) {
+        for (long neighbor : graph.out_neighbors(vertex)) {
             if (!community_flag[neighbor]) continue;
             subgraph.add_edge(split.translator[vertex], split.translator[neighbor]);
         }
     }
     // TODO: -1s in assignment may screw with blockmodel formation
-    std::vector<int> split_assignment = utils::constant<int>(split.num_vertices, -1);
-    std::uniform_int_distribution<int> distribution(0, 1);
+    std::vector<long> split_assignment = utils::constant<long>(split.num_vertices, -1);
+    std::uniform_int_distribution<long> distribution(0, 1);
     // TODO: implement translator for vertex IDs, and store it in Split
-    for (int vertex = 0; vertex < split.num_vertices; ++vertex) {
+    for (long vertex = 0; vertex < split.num_vertices; ++vertex) {
         split_assignment[vertex] = distribution(rng::generator());
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
@@ -77,14 +77,14 @@ Split propose_split(int community, const Graph &graph, const Blockmodel &blockmo
     return split;
 }
 
-Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities) {
-    int num_blocks = blockmodel.getNum_blocks();
+Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, long target_num_communities) {
+    long num_blocks = blockmodel.getNum_blocks();
     std::vector<Split> best_split_for_each_block(num_blocks);
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
-//    std::vector<int> block_assignment = utils::range<int>(0, num_blocks);
-    for (int current_block = 0; current_block < num_blocks; ++current_block) {
-        for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
+//    std::vector<long> block_assignment = utils::range<long>(0, num_blocks);
+    for (long current_block = 0; current_block < num_blocks; ++current_block) {
+        for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             Split split = propose_split(current_block, graph, blockmodel);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
             double new_entropy = entropy::mdl(*(split.blockmodel), split.num_vertices, split.num_edges);

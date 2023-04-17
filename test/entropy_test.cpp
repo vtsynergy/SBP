@@ -25,7 +25,7 @@ protected:
 
     void SetUp() override {
         ToyExample::SetUp();
-        std::vector<int> assignment3 = {0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5};
+        std::vector<long> assignment3 = {0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5};
         B3 = Blockmodel(6, graph, 0.5, assignment3);
 //        Deltas[std::make_pair(0, 0)] = 1;
 //        Deltas[std::make_pair(0, 1)] = 0;
@@ -54,9 +54,9 @@ TEST_F(EntropyTest, MDLGivesCorrectAnswer) {
 
 /// TODO: same test but using a vertex with a self edge
 TEST_F(EntropyTest, DenseDeltaMDLGivesCorrectAnswer) {
-    int vertex = 7;
+    long vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
-    int current_block = B.block_assignment(vertex);
+    long current_block = B.block_assignment(vertex);
     double delta_entropy =
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
     std::cout << "dE using updates = " << delta_entropy;
@@ -68,9 +68,9 @@ TEST_F(EntropyTest, DenseDeltaMDLGivesCorrectAnswer) {
 }
 
 TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
-    int vertex = 7;
+    long vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
-    int current_block = B.block_assignment(vertex);
+    long current_block = B.block_assignment(vertex);
     double delta_entropy =
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), SparseUpdates,
                                new_block_degrees);
@@ -84,11 +84,11 @@ TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
 
 /// TODO: same test but using a vertex with a self edge
 TEST_F(EntropyTest, DeltaMDLUsingBlockmodelDeltasGivesCorrectAnswer) {
-    int vertex = 7;
+    long vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     double delta_entropy = entropy::delta_mdl(B, Deltas, Proposal);
     B.move_vertex(vertex, Deltas, Proposal);
-    int blockmodel_edges = utils::sum<int>(B.blockmatrix()->values());
+    long blockmodel_edges = utils::sum<long>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges())
                         << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
     double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
@@ -98,16 +98,16 @@ TEST_F(EntropyTest, DeltaMDLUsingBlockmodelDeltasGivesCorrectAnswer) {
 }
 
 TEST_F(EntropyTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmodelDeltas) {
-    int vertex = 7;
-    MapVector<int> block_counts1;
-//    std::unordered_map<int, int> block_counts1;
-    for (const int neighbor: graph.out_neighbors(vertex)) {
-        int neighbor_block = B.block_assignment(neighbor);
+    long vertex = 7;
+    MapVector<long> block_counts1;
+//    std::unordered_map<long, long> block_counts1;
+    for (const long neighbor: graph.out_neighbors(vertex)) {
+        long neighbor_block = B.block_assignment(neighbor);
         block_counts1[neighbor_block] += 1;
     }
-    for (const int neighbor: graph.in_neighbors(vertex)) {
+    for (const long neighbor: graph.in_neighbors(vertex)) {
         if (neighbor == vertex) continue;
-        int neighbor_block = B.block_assignment(neighbor);
+        long neighbor_block = B.block_assignment(neighbor);
         block_counts1[neighbor_block] += 1;
     }
     utils::print(block_counts1);
@@ -115,16 +115,16 @@ TEST_F(EntropyTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmo
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
-    MapVector<int> block_counts2;
-//    std::unordered_map<int, int> block_counts2;
-    for (uint i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
-        int block = blocks_out_neighbors.indices[i];
-        int weight = blocks_out_neighbors.values[i];
+    MapVector<long> block_counts2;
+//    std::unordered_map<long, long> block_counts2;
+    for (ulong i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
+        long block = blocks_out_neighbors.indices[i];
+        long weight = blocks_out_neighbors.values[i];
         block_counts2[block] += weight; // block_count[new block] should initialize to 0
     }
-    for (uint i = 0; i < blocks_in_neighbors.indices.size(); ++i) {
-        int block = blocks_in_neighbors.indices[i];
-        int weight = blocks_in_neighbors.values[i];
+    for (ulong i = 0; i < blocks_in_neighbors.indices.size(); ++i) {
+        long block = blocks_in_neighbors.indices[i];
+        long weight = blocks_in_neighbors.values[i];
         block_counts2[block] += weight; // block_count[new block] should initialize to 0
     }
     utils::print(block_counts2);
@@ -137,8 +137,8 @@ TEST_F(EntropyTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmo
 }
 
 TEST_F(EntropyTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     double hastings1 = entropy::hastings_correction(vertex, graph, B, Deltas, current_block, Proposal);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
@@ -150,7 +150,7 @@ TEST_F(EntropyTest, HastingsCorrectionWithAndWithoutDeltaGivesSameResult) {
 }
 
 TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
-    int vertex = 6;
+    long vertex = 6;
     utils::ProposalAndEdgeCounts proposal{0, 1, 2, 3};
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 option(DEBUG "If ON, executable will try to diagnose where failures occur." OFF)
 option(SCOREP "If ON, will add score-p instrumentation to the executable." OFF)
+option(VALGRIND "If ON, will not link against -fsanitize=address." OFF)
 
 # set compilers
 if (SCOREP)
@@ -58,6 +59,7 @@ add_library(SBP STATIC
         src/distributed/dist_common.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
+        src/distributed/divide_and_conquer.cpp
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp
@@ -67,33 +69,49 @@ target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-#add_executable(Influence src/influence.cpp)
-#target_include_directories(Influence PUBLIC ${INCLUDE_DIRS})
-
 add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp)
 target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 
-if (DEBUG)
-    #    To check for heap overflows and such, use -fsanitize=address
-    #    To run with valgrind, do NOT use -fsanitize=address
-    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
-    target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address tbb)
-    target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
-    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
-#    target_link_libraries(Influence PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
-    #    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3)
-    #    target_link_libraries(SBP PUBLIC hungarian -fopenmp stdc++fs -g3)
-    #    target_link_libraries(DistributedSBP PUBLIC SBP -g3)
-    #    target_link_libraries(Influence PUBLIC SBP -g3)
-else (DEBUG)
-    #    target_compile_options(DistributedSBP PUBLIC -Wall -O3 -no-pie -fopenmp)
-    #    target_link_libraries(DistributedSBP PUBLIC SBP hungarian -fopenmp stdc++fs)
-    target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
-    target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
-    target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map tbb)
-    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb)
-#    target_link_libraries(Influence PUBLIC SBP absl::hash absl::flat_hash_map tbb)
-endif (DEBUG)
+add_executable(ladis src/LayerDistributedSBP.cpp)
+target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
+
+if (DEBUG AND VALGRIND)
+    set(COMPILE_OPTS -g3 -static-libasan)
+    message("Compiling with -g3 and -static-libasan. Valgrind cannot run with -fsanitize=address")
+elseif (DEBUG)
+    set(COMPILE_OPTS -g3 -fsanitize=address)
+    message("Compiling with -g3 and -fsanitize=address. Valgrind will not work with these executables")
+else()
+    set(COMPILE_OPTS "")
+    message("Compiling without debug options")
+endif()
+
+target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp ${COMPILE_OPTS})
+target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb ${COMPILE_OPTS})
+target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map tbb ${COMPILE_OPTS})
+target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb ${COMPILE_OPTS})
+target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb ${COMPILE_OPTS})
+
+#if (DEBUG)
+#    #    To check for heap overflows and such, use -fsanitize=address
+#    #    To run with valgrind, do NOT use -fsanitize=address
+##    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -fsanitize=address)
+##    target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 -fsanitize=address tbb)
+##    target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
+##    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
+##    target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map -g3 -fsanitize=address tbb)
+#    target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp -g3 -static-libasan)
+#    target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs -g3 tbb -static-libasan)
+#    target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map -g3 tbb -static-libasan)
+#    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map -g3 tbb -static-libasan)
+#    target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map -g3 tbb -static-libasan)
+#else (DEBUG)
+#    target_compile_options(SBP PUBLIC -Wall -O3 -no-pie -fopenmp)
+#    target_link_libraries(SBP PUBLIC hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
+#    target_link_libraries(DistributedSBP PUBLIC SBP absl::hash absl::flat_hash_map tbb)
+#    target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb)
+#    target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb)
+#endif (DEBUG)
 
 # Google Test Suite
 enable_testing()
@@ -107,9 +125,10 @@ add_executable(Test
         test/entropy_test.cpp
         test/evaluate_test.cpp
         test/finetune_test.cpp
+        src/rng.cpp
         test/sample_test.cpp
         test/toy_example.hpp
-        src/rng.cpp)
+        test/utils_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
 target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)

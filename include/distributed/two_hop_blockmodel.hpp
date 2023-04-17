@@ -24,26 +24,26 @@
 
 extern double Load_balancing_time;
 
-extern std::vector<int> Rank_indices;
+extern std::vector<long> Rank_indices;
 
 class TwoHopBlockmodel : public Blockmodel {
 public:
     // using Blockmodel::Blockmodel;
     // Constructors are not derived from base class
     TwoHopBlockmodel() : Blockmodel() {}
-    TwoHopBlockmodel(int num_blocks, float block_reduction_rate) : Blockmodel(num_blocks, block_reduction_rate) {}
-    TwoHopBlockmodel(int num_blocks, const Graph &graph, float block_reduction_rate)
+    TwoHopBlockmodel(long num_blocks, double block_reduction_rate) : Blockmodel(num_blocks, block_reduction_rate) {}
+    TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
             : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // If the block assignment is not provided, use round-robin assignment
         this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-        for (int i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {  // round-robin work mapping
+        for (long i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {  // round-robin work mapping
             this->_my_blocks[i] = true;
         }
         this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);  // no distribution
         this->initialize_edge_counts(graph);
     }
-    TwoHopBlockmodel(int num_blocks, const Graph &graph, float block_reduction_rate,
-                     std::vector<int> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
+    TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate,
+                     std::vector<long> &block_assignment) : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
         this->distribute(graph);
@@ -61,16 +61,16 @@ public:
     void initialize_edge_counts(const Graph &graph);
     double log_posterior_probability() const;
     /// Returns true if this blockmodel owns the compute for the requested block.
-    bool owns_block(int block) const;
+    bool owns_block(long block) const;
     /// Returns true if this blockmodel owns the compute for the requested vertex.
-    bool owns_vertex(int vertex) const;
+    bool owns_vertex(long vertex) const;
     /// Returns true if this blockmodel owns storage for the requested block.
-    bool stores(int block) const;
+    bool stores(long block) const;
     bool validate(const Graph &graph) const;
 private:
     // ===== Functions
     /// Returns a sorted vector of <block, block size> pairs, in descending order of block size.
-    std::vector<std::pair<int,int>> sorted_block_sizes() const;
+    std::vector<std::pair<long,long>> sorted_block_sizes() const;
     /// No data distribution, work on blocks is mapped using round-robin strategy.
     void distribute_none();
     /// No data distribution, work on vertices is mapped to try to distribute aggregate block degree amongst MPI ranks.
@@ -99,7 +99,7 @@ private:
     /// Stores true for my_blocks[block] if this blockmodel owns the compute for this block.
     std::vector<bool> _my_blocks;
     /// Stores 1 for any vertex that this blockmodel owns.
-    std::vector<int> _my_vertices;
+    std::vector<long> _my_vertices;
 };
 
 #endif // SBP_DIST_BLOCKMODEL_HPP

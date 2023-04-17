@@ -14,20 +14,20 @@ class DictTransposeMatrixComplexTest : public ComplexExample {
 };
 
 TEST_F(DictTransposeMatrixTest, NeighborsAreCorrectlyReturned) {
-    std::set<int> neighbors = B.blockmatrix()->neighbors(1);
+    std::set<long> neighbors = B.blockmatrix()->neighbors(1);
     // neighbors should contain all 3 blocks
     EXPECT_EQ(neighbors.size(), 3);
-    for (int i = 0; i < 3; ++i) {
+    for (long i = 0; i < 3; ++i) {
         EXPECT_TRUE(neighbors.find(i) != neighbors.end());
     }
 }
 
 TEST_F(DictTransposeMatrixComplexTest, NeighborsAreCorrectlyReturned) {
-    std::set<int> neighbors = B.blockmatrix()->neighbors(1);
+    std::set<long> neighbors = B.blockmatrix()->neighbors(1);
     // neighbors should contain all 3 blocks
-    std::vector<int> correct_neighbors = { 0, 3, 4, 5 };
+    std::vector<long> correct_neighbors = { 0, 3, 4, 5 };
     EXPECT_EQ(neighbors.size(), correct_neighbors.size());
-    for (const int neighbor : correct_neighbors) {
+    for (const long neighbor : correct_neighbors) {
         EXPECT_TRUE(neighbors.find(neighbor) != neighbors.end());
     }
 }
