@@ -20,7 +20,7 @@ protected:
     Blockmodel B3;
     void SetUp() override {
         ToyExample::SetUp();
-        std::vector<int> assignment3 = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
+        std::vector<long> assignment3 = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
         B3 = Blockmodel(6, graph, 0.5, assignment3);
 //        Deltas[std::make_pair(0, 0)] = 1;
 //        Deltas[std::make_pair(0, 1)] = 0;
@@ -41,8 +41,8 @@ TEST_F(FinetuneTest, SetUpWorksCorrectly) {
 }
 
 TEST_F(FinetuneTest, SparseEdgeCountUpdatesAreCorrect) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
@@ -63,8 +63,8 @@ TEST_F(FinetuneTest, SparseEdgeCountUpdatesAreCorrect) {
 }
 
 TEST_F(FinetuneTest, SparseEdgeCountUpdatesWithSelfEdgesAreCorrect) {
-    int vertex = 5;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 5;
+    long current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
@@ -85,8 +85,8 @@ TEST_F(FinetuneTest, SparseEdgeCountUpdatesWithSelfEdgesAreCorrect) {
 
 /// TODO: same test but using a vertex with a self edge
 TEST_F(FinetuneTest, BlockmodelDeltasAreCorrect) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
     Delta delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
@@ -103,12 +103,12 @@ TEST_F(FinetuneTest, BlockmodelDeltasAreCorrect) {
 
 /// TODO: same test but using a vertex with a self edge
 TEST_F(FinetuneTest, BlockmodelDeltasShouldSumUpToZero) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, false);
     Delta delta = finetune::blockmodel_delta(vertex, current_block, Proposal.proposal, out_edges, in_edges, B);
-    int sum = 0;
+    long sum = 0;
     for (const auto &entry : delta.entries()) {
         sum += std::get<2>(entry);
     }
@@ -126,8 +126,8 @@ TEST_F(FinetuneTest, BlockmodelDeltasShouldSumUpToZero) {
 }
 
 TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
-    int vertex = 7;
-    int current_block = B.block_assignment(vertex);
+    long vertex = 7;
+    long current_block = B.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     B.print_blockmatrix();
@@ -139,10 +139,10 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
     B2.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
                    new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B2.print_blockmatrix();
-    for (int row = 0; row < B.getNum_blocks(); ++row) {
-        for (int col = 0; col < B.getNum_blocks(); ++col) {
-            int val1 = B1.blockmatrix()->get(row, col);
-            int val2 = B2.blockmatrix()->get(row, col);
+    for (long row = 0; row < B.getNum_blocks(); ++row) {
+        for (long col = 0; col < B.getNum_blocks(); ++col) {
+            long val1 = B1.blockmatrix()->get(row, col);
+            long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
                 << "Blockmatrices differ at " << row << "," << col << " : using updates, value = " << val1
                 << " using deltas, value = " << val2;
@@ -151,16 +151,16 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
 }
 
 TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockmodelDeltas) {
-    int vertex = 7;
-    MapVector<int> block_counts1;
-//    std::unordered_map<int, int> block_counts1;
-    for (const int neighbor : graph.out_neighbors(vertex)) {
-        int neighbor_block = B.block_assignment(neighbor);
+    long vertex = 7;
+    MapVector<long> block_counts1;
+//    std::unordered_map<long, long> block_counts1;
+    for (const long neighbor : graph.out_neighbors(vertex)) {
+        long neighbor_block = B.block_assignment(neighbor);
         block_counts1[neighbor_block] += 1;
     }
-    for (const int neighbor : graph.in_neighbors(vertex)) {
+    for (const long neighbor : graph.in_neighbors(vertex)) {
         if (neighbor == vertex) continue;
-        int neighbor_block = B.block_assignment(neighbor);
+        long neighbor_block = B.block_assignment(neighbor);
         block_counts1[neighbor_block] += 1;
     }
     utils::print(block_counts1);
@@ -168,16 +168,16 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     EdgeWeights blocks_out_neighbors = finetune::block_edge_weights(B.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = finetune::block_edge_weights(B.block_assignment(), in_edges);
-    MapVector<int> block_counts2;
-//    std::unordered_map<int, int> block_counts2;
-    for (uint i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
-        int block = blocks_out_neighbors.indices[i];
-        int weight = blocks_out_neighbors.values[i];
+    MapVector<long> block_counts2;
+//    std::unordered_map<long, long> block_counts2;
+    for (ulong i = 0; i < blocks_out_neighbors.indices.size(); ++i) {
+        long block = blocks_out_neighbors.indices[i];
+        long weight = blocks_out_neighbors.values[i];
         block_counts2[block] += weight; // block_count[new block] should initialize to 0
     }
-    for (uint i = 0; i < blocks_in_neighbors.indices.size(); ++i) {
-        int block = blocks_in_neighbors.indices[i];
-        int weight = blocks_in_neighbors.values[i];
+    for (ulong i = 0; i < blocks_in_neighbors.indices.size(); ++i) {
+        long block = blocks_in_neighbors.indices[i];
+        long weight = blocks_in_neighbors.values[i];
         block_counts2[block] += weight; // block_count[new block] should initialize to 0
     }
     utils::print(block_counts2);
@@ -190,8 +190,8 @@ TEST_F(FinetuneTest, HastingsCorrectionBlockCountsAreTheSameWithAndWithoutBlockm
 }
 
 TEST_F(FinetuneTest, SpecialCaseGivesCorrectSparseEdgeCountUpdates) {
-    int vertex = 6;
-    int current_block = B3.block_assignment(vertex);
+    long vertex = 6;
+    long current_block = B3.block_assignment(vertex);
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);
     SparseEdgeCountUpdates updates;
@@ -223,7 +223,7 @@ TEST_F(FinetuneTest, SpecialCaseGivesCorrectSparseEdgeCountUpdates) {
 }
 
 TEST_F(FinetuneTest, SpecialCaseBlockmodelDeltasAreCorrect) {
-    int vertex = 6;
+    long vertex = 6;
     utils::ProposalAndEdgeCounts proposal {0, 1, 2, 3 };
     EdgeWeights out_edges = finetune::edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex, true);

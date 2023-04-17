@@ -9,7 +9,7 @@ protected:
     // My variables
     std::vector<std::vector<int>> Matrix;
     std::vector<std::vector<int>> Matrix2;
-    int N, N2;
+    long N, N2;
     double RandIndex;
     double Precision;
     double Recall;

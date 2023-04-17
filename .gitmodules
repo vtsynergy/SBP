@@ -16,3 +16,6 @@
 [submodule "scripts/gini"]
 	path = scripts/gini
 	url = https://github.com/oliviaguest/gini.git
+[submodule "extern/pcg-cpp"]
+	path = extern/pcg-cpp
+	url = git@github.com:imneme/pcg-cpp.git

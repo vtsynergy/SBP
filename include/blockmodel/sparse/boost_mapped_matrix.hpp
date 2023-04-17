@@ -13,45 +13,45 @@
 // #include <Eigen/Core>
 
 /**
- * C++ interface of the dictionary (map of maps) sparse matrix
+ * C++ longerface of the dictionary (map of maps) sparse matrix
  */
 // class BoostMappedMatrix : public CSparseMatrix {
 class BoostMappedMatrix {
   public:
     BoostMappedMatrix() {}
-    BoostMappedMatrix(int nrows, int ncols) : ncols(ncols), nrows(nrows) {
-        // this->matrix = boost::numeric::ublas::coordinate_matrix<int>(this->nrows, this->ncols);
-        this->matrix = boost::numeric::ublas::compressed_matrix<int>(this->nrows, this->ncols);
-        // this->matrix = boost::numeric::ublas::mapped_matrix<int>(this->nrows, this->ncols);
-        // int shape_array[2] = {this->nrows, this->ncols};
+    BoostMappedMatrix(long nrows, long ncols) : ncols(ncols), nrows(nrows) {
+        // this->matrix = boost::numeric::ublas::coordinate_matrix<long>(this->nrows, this->ncols);
+        this->matrix = boost::numeric::ublas::compressed_matrix<long>(this->nrows, this->ncols);
+        // this->matrix = boost::numeric::ublas::mapped_matrix<long>(this->nrows, this->ncols);
+        // long shape_array[2] = {this->nrows, this->ncols};
         this->shape = std::make_pair(this->nrows, this->ncols);
     }
-    void add(int row, int col, int val);
-    void add(int row, std::vector<int> cols, std::vector<int> values);
+    void add(long row, long col, long val);
+    void add(long row, std::vector<long> cols, std::vector<long> values);
     BoostMappedMatrix copy();
-    int get(int row, int col);
-    std::vector<int> getcol(int col);
-    std::vector<int> getrow(int row);
-    EdgeWeights incoming_edges(int block);
+    long get(long row, long col);
+    std::vector<long> getcol(long col);
+    std::vector<long> getrow(long row);
+    EdgeWeights incoming_edges(long block);
     Indices nonzero();
-    EdgeWeights outgoing_edges(int block);
-    void sub(int row, int col, int val);
-    int sum();
-    std::vector<int> sum(int axis = 0);
-    int trace();
-    void update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
-                            std::vector<int> proposed_row, std::vector<int> current_col, std::vector<int> proposed_col);
-    std::vector<int> values();
-    std::pair<int, int> shape;
+    EdgeWeights outgoing_edges(long block);
+    void sub(long row, long col, long val);
+    long sum();
+    std::vector<long> sum(long axis = 0);
+    long trace();
+    void update_edge_counts(long current_block, long proposed_block, std::vector<long> current_row,
+                            std::vector<long> proposed_row, std::vector<long> current_col, std::vector<long> proposed_col);
+    std::vector<long> values();
+    std::pair<long, long> shape;
 
   private:
-    void check_row_bounds(int row);
-    void check_col_bounds(int col);
-    int ncols;
-    int nrows;
-    boost::numeric::ublas::compressed_matrix<int> matrix;
-    // boost::numeric::ublas::mapped_matrix<int> matrix;
-    // boost::numeric::ublas::coordinate_matrix<int> matrix;
+    void check_row_bounds(long row);
+    void check_col_bounds(long col);
+    long ncols;
+    long nrows;
+    boost::numeric::ublas::compressed_matrix<long> matrix;
+    // boost::numeric::ublas::mapped_matrix<long> matrix;
+    // boost::numeric::ublas::coordinate_matrix<long> matrix;
 };
 
 #endif // CPPSBP_PARTITION_SPARSE_BOOST_MAPPED_MATRIX_HPP

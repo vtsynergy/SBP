@@ -19,9 +19,9 @@ struct Eval {
     double true_mdl;
 };
 
-double calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table);
+double calculate_f1_score(long num_vertices, Hungarian::Matrix &contingency_table);
 
-double calculate_nmi(int num_vertices, Hungarian::Matrix &contingency_table);
+double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table);
 
 Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel);
 

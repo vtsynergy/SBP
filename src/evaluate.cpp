@@ -4,19 +4,19 @@
 
 namespace evaluate {
 
-double calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table) {
+double calculate_f1_score(long num_vertices, Hungarian::Matrix &contingency_table) {
     // The number of vertex pairs = |V| choose 2 = |V|! / (2! * (|V| - 2)!) = (|V| * |V|-1) / 2
     double num_pairs = (num_vertices * (num_vertices - 1.0)) / 2.0;
-    const int nrows = contingency_table.size();
-    const int ncols = contingency_table[0].size();
+    const long nrows = contingency_table.size();
+    const long ncols = contingency_table[0].size();
     std::vector<double> rowsums(nrows, 0);
     std::vector<double> colsums(ncols, 0);
     double cell_pairs = 0;  // num_agreement_same
     double cells_squared = 0;  // sum_table_squared
     double correctly_classified = 0.0;
-    for (int row = 0; row < nrows; ++row) {
-        for (int col = 0; col < ncols; ++col) {
-            int value = contingency_table[row][col];
+    for (long row = 0; row < nrows; ++row) {
+        for (long col = 0; col < ncols; ++col) {
+            long value = contingency_table[row][col];
             rowsums[row] += value;
             colsums[col] += value;
             cell_pairs += (value * (value - 1));
@@ -58,8 +58,8 @@ double calculate_f1_score(int num_vertices, Hungarian::Matrix &contingency_table
     return f1_score;
 }
 
-double calculate_nmi(int num_vertices, Hungarian::Matrix &contingency_table) {
-    std::vector<std::vector<double>> joint_probability;
+double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table) {
+    std::vector<std::vector<double>> jolong_probability;
     double sum = num_vertices;
     size_t nrows = contingency_table.size();
     size_t ncols = contingency_table[0].size();
@@ -67,10 +67,10 @@ double calculate_nmi(int num_vertices, Hungarian::Matrix &contingency_table) {
     std::vector<double> marginal_prob_b1(nrows, 0.0);
     std::vector<double> marginal_prob_b2(ncols, 0.0);
     for (size_t i = 0; i < nrows; ++i) {
-        joint_probability.emplace_back(std::vector<double>());
+        jolong_probability.emplace_back(std::vector<double>());
         for (size_t j = 0; j < ncols; ++j) {
             double value = contingency_table[i][j] / sum;
-            joint_probability[i].push_back(value);
+            jolong_probability[i].push_back(value);
             marginal_prob_b1[i] += value;
             marginal_prob_b2[j] += value;
         }
@@ -83,9 +83,9 @@ double calculate_nmi(int num_vertices, Hungarian::Matrix &contingency_table) {
 //        std::vector<double> row;
         for (size_t j = 0; j < ncols; ++j) {
             double marginal_product = marginal_prob_b1[i] * marginal_prob_b2[j];
-            double joint_prob = joint_probability[i][j];
-            if (joint_prob == 0.0) continue;
-            mi += joint_prob * log(joint_prob / marginal_product);
+            double jolong_prob = jolong_probability[i][j];
+            if (jolong_prob == 0.0) continue;
+            mi += jolong_prob * log(jolong_prob / marginal_product);
 //            row.push_back(marginal_prob_b1[i] * marginal_prob_b2[j]);
         }
 //        marginal_product.push_back(row);
@@ -100,11 +100,11 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
     double f1_score = calculate_f1_score(graph.num_vertices(), contingency_table);
     double nmi = calculate_nmi(graph.num_vertices(), contingency_table);
     MapVector<bool> unique;
-    std::vector<int> true_assignment(graph.assignment());
-    for (int block : true_assignment) {
+    std::vector<long> true_assignment(graph.assignment());
+    for (long block : true_assignment) {
         unique[block] = true;
     }
-    int true_num_blocks = int(unique.size());
+    long true_num_blocks = long(unique.size());
     Blockmodel true_blockmodel(true_num_blocks, graph, 0.5, true_assignment);
     double true_entropy = entropy::mdl(true_blockmodel, graph.num_vertices(), graph.num_edges());
     std::cout << "true entropy = " << true_entropy << std::endl;
@@ -113,17 +113,17 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
 
 Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     // Create contingency table
-    int num_true_communities = 0;
-    std::unordered_map<int, int> translator;  // TODO: add some kind of if statement for whether to use this or not
+    long num_true_communities = 0;
+    std::unordered_map<long, long> translator;  // TODO: add some kind of if statement for whether to use this or not
     translator[-1] = -1;
-    for (int community: graph.assignment()) {
+    for (long community: graph.assignment()) {
         if (community > -1) {
-            if (translator.insert(std::unordered_map<int, int>::value_type(community, num_true_communities)).second) {
+            if (translator.insert(std::unordered_map<long, long>::value_type(community, num_true_communities)).second) {
                 num_true_communities++;
             };
         }
     }
-    std::vector<int> true_assignment(graph.assignment());
+    std::vector<long> true_assignment(graph.assignment());
     for (size_t i = 0; i < true_assignment.size(); ++i) {
         true_assignment[i] = translator[true_assignment[i]];
     }
@@ -131,8 +131,8 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     std::cout << "Number of vertices: " << graph.num_vertices() << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
     std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
-    std::vector<int> rows, cols;
-    int nrows, ncols;
+    std::vector<long> rows, cols;
+    long nrows, ncols;
     if (num_true_communities < blockmodel.getNum_blocks()) {
         rows = true_assignment;
         cols = blockmodel.block_assignment();
@@ -145,9 +145,9 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
-    for (int i = 0; i < graph.num_vertices(); ++i) {
-        int row_block = rows[i];
-        int col_block = cols[i];
+    for (long i = 0; i < graph.num_vertices(); ++i) {
+        long row_block = rows[i];
+        long col_block = cols[i];
         if (true_assignment[i] > -1) {
             contingency_table[row_block][col_block]++;
         }
@@ -159,19 +159,19 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
         exit(-1);
     }
 
-    std::vector<int> assignment(result.assignment.size(), 0);
+    std::vector<long> assignment(result.assignment.size(), 0);
     for (size_t row = 0; row < result.assignment.size(); ++row) {
         for (size_t col = 0; col < result.assignment[0].size(); ++col) {
             if (result.assignment[row][col] == 1) {
-                assignment[row] = (int) col;
+                assignment[row] = (long) col;
             }
         }
     }
 
     std::vector<std::vector<int>> new_contingency_table(nrows, std::vector<int>(ncols, 0));
-    for (int original_column = 0; original_column < ncols; ++original_column) {
-        int new_column = assignment[original_column];
-        for (int row = 0; row < nrows; ++row) {
+    for (long original_column = 0; original_column < ncols; ++original_column) {
+        long new_column = assignment[original_column];
+        for (long row = 0; row < nrows; ++row) {
             new_contingency_table[row][original_column] = contingency_table[row][new_column];
         }
     }
@@ -179,24 +179,24 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     // Make sure rows represent algorithm communities, columns represent true communities
     if (num_true_communities < blockmodel.getNum_blocks()) {
         Hungarian::Matrix transpose_contingency_table(ncols, std::vector<int>(nrows, 0));
-        for (int row = 0; row < nrows; ++row) {
-            for (int col = 0; col < ncols; ++col) {
+        for (long row = 0; row < nrows; ++row) {
+            for (long col = 0; col < ncols; ++col) {
                 transpose_contingency_table[col][row] = new_contingency_table[row][col];
             }
         }
         new_contingency_table = transpose_contingency_table;
-        int temp = ncols;
+        long temp = ncols;
         ncols = nrows;
         nrows = temp;
     }
 
     std::cout << "Contingency Table" << std::endl;
-    for (int i = 0; i < nrows; ++i) {
+    for (long i = 0; i < nrows; ++i) {
         if (nrows > 50) {
             if (i == 25) std::cout << "...\n";
             if (i > 25 && i < (nrows - 25)) continue;
         }
-        for (int j = 0; j < ncols; ++j) {
+        for (long j = 0; j < ncols; ++j) {
             std::cout << new_contingency_table[i][j] << "\t";
         }
         std::cout << std::endl;

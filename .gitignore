@@ -123,6 +123,7 @@ dmypy.json
 
 # CMake stuff
 cmake-build-debug/
+cmake-*/
 
 # Data and trial runs
 **/eval
@@ -142,3 +143,4 @@ main
 *.csv
 *.xlsx
 *.png
+profiling/
