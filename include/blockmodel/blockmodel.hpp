@@ -47,10 +47,15 @@ typedef struct sparse_edge_count_updates_t {
     MapVector<long> proposal_col;
 } SparseEdgeCountUpdates;
 
-// TODO: make a Blockmodel longerface (?) Or keep Blockmodel polongers in memory
+// TODO: make a Blockmodel interface (?) Or keep Blockmodel pointers in memory
 class Blockmodel {
   public:
-    Blockmodel() : empty(true) {}
+    Blockmodel() : empty(true) {
+        this->num_blocks = 0;
+        this->block_reduction_rate = 0.0;
+        this->num_blocks_to_merge = 0;
+        this->overall_entropy = std::numeric_limits<double>::max();
+    }
     Blockmodel(long num_blocks, double block_reduction_rate) : empty(false) {
         this->num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
