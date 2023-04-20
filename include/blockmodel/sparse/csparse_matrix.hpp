@@ -1,5 +1,5 @@
 /***
- * Common longerface for sparse matrix types.
+ * Common interface for sparse matrix types.
  */
 #ifndef CPPSBP_PARTITION_SPARSE_CSPARSE_MATRIX_HPP
 #define CPPSBP_PARTITION_SPARSE_CSPARSE_MATRIX_HPP
@@ -37,7 +37,7 @@ private:
 };
 
 ///
-/// C++ implementation of the sparse matrix longerface
+/// C++ implementation of the sparse matrix interface
 ///
 class ISparseMatrix {
 public:
@@ -128,7 +128,7 @@ protected:
 };
 
 ///
-/// C++ implementation of the distributed sparse matrix longerface
+/// C++ implementation of the distributed sparse matrix interface
 ///
 class IDistSparseMatrix : public ISparseMatrix {
 public:

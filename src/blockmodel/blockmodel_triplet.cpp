@@ -19,7 +19,7 @@ Blockmodel BlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     if (this->is_done()) {
         return this->get(1).copy();
     }
-    // Find which Blockmodel would serve as the starting polong for the next iteration
+    // Find which Blockmodel would serve as the starting point for the next iteration
     long index = 1;
     // TODO: if things get funky, look into this if/else statement
     if (this->get(0).empty && this->get(1).getNum_blocks() > this->get(2).getNum_blocks()) {
@@ -69,12 +69,12 @@ void BlockmodelTriplet::status() {
         }
     }
     if (mpi.rank == 0) {
-        std::cout << mpi.rank << " | Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl;
-        std::cout << mpi.rank << " | Number of blocks: " << num_blocks[0] << " " << num_blocks[1] << " " << num_blocks[2] << std::endl;
+        std::cout << mpi.rank << " | Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl << std::flush;
+        std::cout << mpi.rank << " | Number of blocks: " << num_blocks[0] << " " << num_blocks[1] << " " << num_blocks[2] << std::endl << std::flush;
         if (this->optimal_num_blocks_found) {
-            std::cout << mpi.rank << " | Optimal blockmodel found with " << num_blocks[1] << " blocks" << std::endl;
+            std::cout << mpi.rank << " | Optimal blockmodel found with " << num_blocks[1] << " blocks" << std::endl << std::flush;
         } else if (!(this->golden_ratio_not_reached())) {
-            std::cout << mpi.rank << " | Golden ratio has been reached" << std::endl;
+            std::cout << mpi.rank << " | Golden ratio has been reached" << std::endl << std::flush;
         }
     }
 }
