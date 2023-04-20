@@ -166,6 +166,17 @@ double Graph::modularity(const std::vector<long> &assignment) const {
     return result;
 }
 
+std::vector<long> Graph::neighbors(long vertex) const {
+    std::vector<long> all_neighbors;
+    for (const long &out_neighbor : this->_out_neighbors[vertex]) {
+        all_neighbors.push_back(out_neighbor);
+    }
+    for (const long &in_neighbor : this->_in_neighbors[vertex]) {
+        all_neighbors.push_back(in_neighbor);
+    }
+    return all_neighbors;
+}
+
 void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbors, long &num_vertices,
                            std::vector<bool> &self_edges, std::vector<std::vector<std::string>> &contents) {
     for (std::vector<std::string> &edge : contents) {

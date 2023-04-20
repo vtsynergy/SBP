@@ -188,12 +188,15 @@ void translate_local_partition(std::vector<long> &local_vertices, std::vector<lo
     #pragma omp parallel for schedule(dynamic) default(none) \
             shared(num_vertices, subgraph, partition_assignment, local_vertices, local_assignment)
     for (long vertex = 0; vertex < num_vertices; ++vertex) {
-        long subgraph_index = subgraph.mapping[vertex];
-        if (subgraph_index < 0) continue;  // vertex not present
-        long assignment = partition_assignment[subgraph_index];
-        local_vertices[subgraph_index] = vertex;
-        local_assignment[subgraph_index] = assignment;
+        long local_index = subgraph.mapping[vertex];
+        if (local_index < 0) continue;  // vertex not present
+        long assignment = partition_assignment[local_index];
+        local_vertices[local_index] = vertex;
+        local_assignment[local_index] = assignment;
     }
+//    std::cout << "========= vertices from rank " << mpi.rank << " ===================" << std::endl;
+//    utils::print<long>(local_vertices);
+//    std::cout << "========= vertices from rank " << mpi.rank << " ===================" << std::endl;
 }
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
