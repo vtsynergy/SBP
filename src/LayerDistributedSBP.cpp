@@ -88,7 +88,15 @@ int main(int argc, char* argv[]) {
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
     Graph graph = Graph::load();
-    sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
+    sample::Sample subgraph;
+    if (args.subgraphpartition == "snowball") {
+        std::cout << "Running snowball partitioning" << std::endl;
+        subgraph = sample::snowball(graph, color, args.subgraphs);
+    } else {
+        std::cout << "Running round_robin partitioning" << std::endl;
+        subgraph = sample::round_robin(graph, color, args.subgraphs);
+    }
+//    sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
     long num_islands = 0;
     if (mpi.rank == 0) {
         num_islands = subgraph.graph.num_islands();

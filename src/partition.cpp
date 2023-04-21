@@ -5,13 +5,13 @@ Graph partition::partition(const Graph &graph, long rank, long num_processes, Ar
     std::cout << "target num vertices = " << target_num_vertices << std::endl;
     if (target_num_vertices == graph.num_vertices())
         return graph;
-    if (args.partition == "round_robin")
+    if (args.subgraphpartition == "round_robin")
         return partition_round_robin(graph, rank, num_processes, target_num_vertices);
-    if (args.partition == "random")
+    if (args.subgraphpartition == "random")
         return partition_random(graph, rank, num_processes, target_num_vertices);
-    if (args.partition == "snowball")
+    if (args.subgraphpartition == "snowball")
         return partition_snowball(graph, rank, num_processes, target_num_vertices);
-    std::cout << "The partition method " << args.partition << " doesn't exist. Defaulting to round robin." << std::endl;
+    std::cout << "The partition method " << args.subgraphpartition << " doesn't exist. Defaulting to round robin." << std::endl;
     return partition_round_robin(graph, rank, num_processes, target_num_vertices);
 }
 

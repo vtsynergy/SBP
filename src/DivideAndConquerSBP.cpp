@@ -68,8 +68,14 @@ int main(int argc, char* argv[]) {
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
     Graph graph = Graph::load();
-//    sample::Sample subgraph = sample::round_robin(graph, mpi.rank, mpi.num_processes);
-    sample::Sample subgraph = sample::snowball(graph, mpi.rank, mpi.num_processes);
+    sample::Sample subgraph;
+    if (args.subgraphpartition == "snowball") {
+        std::cout << "Running snowball partitioning" << std::endl;
+        subgraph = sample::snowball(graph, mpi.rank, mpi.num_processes);
+    } else {
+        std::cout << "Running round_robin partitioning" << std::endl;
+        subgraph = sample::round_robin(graph, mpi.rank, mpi.num_processes);
+    }
     long num_islands = subgraph.graph.num_islands();
     std::cout << "Rank " << mpi.rank << "'s graph has " << num_islands << " island vertices." << std::endl;
     MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);

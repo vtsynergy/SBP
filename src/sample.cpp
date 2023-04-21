@@ -194,7 +194,7 @@ Sample round_robin(const Graph &graph, int subgraph_index, int num_subgraphs) {
 Sample snowball(const Graph &graph, int subgraph_index, int num_subgraphs) {
 //    MapVector<bool> total_sampled;
     std::vector<int> total_sampled = utils::constant<int>(graph.num_vertices(), -1);
-    if (mpi.rank == 0) {
+    if (mpi.rank == 0) {  // With LaDiS, this work will be duplicated, but only global rank 0's will be used
         MapVector<bool> unsampled(graph.num_vertices());
         for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
             unsampled[vertex] = true;
@@ -265,26 +265,9 @@ Sample snowball(const Graph &graph, int subgraph_index, int num_subgraphs) {
         // ============= END OF SNOWBALL ==============
         std::cout << "Num unsampled: " << unsampled.size() << std::endl;
     }
-    MPI_Bcast(total_sampled.data(), (int) total_sampled.size(), MPI_INT, 0, mpi.comm);
-
-//    // Assign remaining vertices in random order
-//    // TODO: change this to do some sort of load balancing
-//    std::vector<long> remaining_vertices(graph.num_vertices() - total_sampled.size());
-//    int index = 0;
-//    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-//        if (total_sampled.find(vertex) == total_sampled.end()) {
-//            remaining_vertices[index] = vertex;
-//            index++;
-//        }
-//    }
-//    for (index = subgraph_index; index < remaining_vertices.size(); index += num_subgraphs) {
-//        long vertex = remaining_vertices[index];
-//        sampled[subgraph_index][vertex] = true;
-//    }
+    // Using MPI_COMM_WORLD explicitly to handle LaDiS. Then the rank is handled by
+    MPI_Bcast(total_sampled.data(), (int) total_sampled.size(), MPI_INT, 0, MPI_COMM_WORLD);
     // ============= BOOK-KEEPING ==============
-//    std::vector<std::vector<long>> sampled_lists;
-//    std::vector<std::vector<long>> mappings;
-//    for (int subgraph = 0; subgraph < num_subgraphs; ++subgraph) {
     std::vector<long> sampled_list;
     std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
     long mapped_index = 0;
