@@ -99,12 +99,8 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
     Hungarian::Matrix contingency_table = hungarian(graph, blockmodel);
     double f1_score = calculate_f1_score(graph.num_vertices(), contingency_table);
     double nmi = calculate_nmi(graph.num_vertices(), contingency_table);
-    MapVector<bool> unique;
     std::vector<long> true_assignment(graph.assignment());
-    for (long block : true_assignment) {
-        unique[block] = true;
-    }
-    long true_num_blocks = long(unique.size());
+    long true_num_blocks = 1 + *std::max_element(true_assignment.begin(), true_assignment.end());
     Blockmodel true_blockmodel(true_num_blocks, graph, 0.5, true_assignment);
     double true_entropy = entropy::mdl(true_blockmodel, graph.num_vertices(), graph.num_edges());
     std::cout << "true entropy = " << true_entropy << std::endl;
