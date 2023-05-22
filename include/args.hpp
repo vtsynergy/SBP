@@ -25,6 +25,7 @@ public:  // Everything in here is public, because why not?
     bool detach;
     std::string distribute;
     std::string directory;
+    std::string filepath;
     bool greedy;
     float mh_percent;
     bool modularity;
@@ -89,6 +90,8 @@ public:  // Everything in here is public, because why not?
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::ValueArg<std::string> _filepath("f", "filepath", "The filepath for the graph, minus the extension.",
+                                                   true, "./data/default_graph", "path", parser);
             TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
                                      parser, true);
             TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
@@ -134,6 +137,7 @@ public:  // Everything in here is public, because why not?
             this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
+            this->filepath = _filepath.getValue();
             this->greedy = _greedy.getValue();
             this->mh_percent = _mh_percent.getValue();
             this->modularity = _modularity.getValue();
