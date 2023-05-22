@@ -92,6 +92,7 @@ int main(int argc, char* argv[]) {
     partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args, true);
     double end_blockmodeling = MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
+    double finetune_start_t = MPI_Wtime();
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
               << partition.blockmodel.getNum_blocks() << std::endl;
     std::vector<std::vector<long>> rank_vertices;
@@ -130,6 +131,8 @@ int main(int argc, char* argv[]) {
         Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
         // Make this distributed?
         blockmodel = dnc::finetune_partition(blockmodel, graph);
+        double finetune_end_t = MPI_Wtime();
+        sbp::finetune_time = finetune_end_t - finetune_start_t;
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)

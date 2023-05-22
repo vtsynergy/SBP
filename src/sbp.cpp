@@ -14,7 +14,7 @@ namespace sbp {
 
 double total_time = 0.0;
 long total_num_islands = 0;
-double Blockmodel_first_build_time = 0.0;
+double finetune_time = 0.0;
 
 std::vector<intermediate> intermediate_results;
 
@@ -52,7 +52,7 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
     intermediate.block_merge_time = block_merge::BlockMerge_time;
     intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
     intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
-    intermediate.blockmodel_first_build_time = Blockmodel_first_build_time;
+    intermediate.finetune_time = finetune_time;
     intermediate.sort_time = Blockmodel_sort_time;
     intermediate.access_time = Blockmodel_access_time;
     intermediate.total_time = total_time;
@@ -73,7 +73,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph, double(BLOCK_REDUCTION_RATE));
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
-    Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
+//    Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
     BLOCKMODEL_BUILD_TIME = 0.0;
     double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     add_intermediate(0, graph, -1, initial_mdl);

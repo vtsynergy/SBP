@@ -13,6 +13,8 @@
 
 namespace sbp {
 
+// The time taken to finetune the partition.
+extern double finetune_time;
 /// The total amount of time spent community detection, to be dynamically updated during execution.
 extern double total_time;
 /// The total number of island vertices (across all MPI ranks, if applicable)
@@ -33,7 +35,7 @@ struct intermediate {
     double block_merge_time;
     double block_merge_loop_time;
     double blockmodel_build_time;
-    double blockmodel_first_build_time;
+    double finetune_time;
     double load_balancing_time = 0.0;
     double sort_time;
     double access_time;
