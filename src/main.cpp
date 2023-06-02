@@ -129,6 +129,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
 //        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
+        // TODO: communicate sample s information from root to all other ranks
         Partition sample_partition;
         sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
         // add timer
