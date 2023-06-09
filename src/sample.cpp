@@ -88,7 +88,7 @@ Sample expansion_snowball(const Graph &graph) {
     return from_vertices(graph, sampled, mapping);
 }
 
-Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
+std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
     std::cout << "Extending the sample results to the full graph" << std::endl;
     std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), -1);
     // Embed the known assignments from the partitioned sample
@@ -129,7 +129,8 @@ Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const
         }
         assignment[vertex] = likely_community;
     }
-    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
+    return assignment;
+//    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
 }
 
 Sample from_vertices(const Graph &graph, const std::vector<long> &vertices, const std::vector<long> &mapping) {

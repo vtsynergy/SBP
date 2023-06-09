@@ -24,6 +24,9 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
 bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
+/// Finetunes the partial results on a given graph.
+Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph);
+
 /// Runs the hybrid MCMC algorithm in a distributed fashion using MPI.
 TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
 

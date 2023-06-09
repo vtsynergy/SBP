@@ -10,6 +10,7 @@
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "distributed/dist_sbp.hpp"
+#include "distributed/dist_finetune.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
@@ -113,7 +114,7 @@ int main(int argc, char* argv[]) {
     sample::Sample detached;
     Partition partition;
     double start = MPI_Wtime();
-    if (args.detach) {
+    if (args.detach) {  // if we're getting rid of vertices with degree < 2
         detached = sample::detach(graph);
         partition.graph = std::move(detached.graph);
         std::cout << "detached num vertices: " << partition.graph.num_vertices() << " E: "
@@ -124,11 +125,24 @@ int main(int argc, char* argv[]) {
     if (args.samplesize <= 0.0) {
         std::cerr << "ERROR " << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
         exit(-5);
-    } else if (args.samplesize < 1.0) {
+    }
+    if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
 //        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
+        if (mpi.num_processes > 1) {
+            MPI_Bcast(s.mapping.data(), (int) partition.graph.num_vertices(), MPI_LONG, 0, mpi.comm);
+            if (mpi.rank > 0) {
+                std::vector<long> vertices;
+                for (const long &mapped_id : s.mapping) {
+                    if (mapped_id >= 0)
+                        vertices.push_back(mapped_id);
+                }
+                s = sample::from_vertices(partition.graph, vertices, s.mapping);
+            }
+            MPI_Barrier(mpi.comm);
+        }
         Partition sample_partition;
         sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
         // add timer
@@ -138,10 +152,18 @@ int main(int argc, char* argv[]) {
         double extend_start_t = MPI_Wtime();
         s.graph = std::move(sample_partition.graph);  // refill s.graph
         // extend sample to full graph
-        partition.blockmodel = sample::extend(partition.graph, sample_partition.blockmodel, s);
+        // TODO: this seems deterministic...
+        std::vector<long> assignment = sample::extend(partition.graph, sample_partition.blockmodel, s);
         // fine-tune full graph
         double finetune_start_t = MPI_Wtime();
-        partition.blockmodel = finetune::finetune_assignment(partition.blockmodel, partition.graph);
+        if (mpi.num_processes > 1) {
+            Rank_indices = std::vector<long>();  // reset the rank_indices
+            auto blockmodel = TwoHopBlockmodel(sample_partition.blockmodel.getNum_blocks(), partition.graph, 0.5, assignment);
+            partition.blockmodel = finetune::dist::finetune_assignment(blockmodel, partition.graph);
+        } else {
+            partition.blockmodel = Blockmodel(sample_partition.blockmodel.getNum_blocks(), graph, 0.5, assignment);
+            partition.blockmodel = finetune::finetune_assignment(partition.blockmodel, partition.graph);
+        }
         double finetune_end_t = MPI_Wtime();
         sample_extend_time = finetune_start_t - extend_start_t;
         finetune_time = finetune_end_t - finetune_start_t;

@@ -44,7 +44,7 @@ void es_update_contribution(const Graph &graph, ES_State &state, const std::vect
 Sample expansion_snowball(const Graph &graph);
 
 /// Extends the results from the sample graph blockmodel to the full graph blockmodel.
-Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample);
+std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample);
 
 /// Creates a Sample from sampled vertices and their mappings.
 Sample from_vertices(const Graph &graph, const std::vector<long> &vertices, const std::vector<long> &mapping);
