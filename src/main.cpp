@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
             auto blockmodel = TwoHopBlockmodel(sample_partition.blockmodel.getNum_blocks(), partition.graph, 0.5, assignment);
             partition.blockmodel = finetune::dist::finetune_assignment(blockmodel, partition.graph);
         } else {
-            partition.blockmodel = Blockmodel(sample_partition.blockmodel.getNum_blocks(), graph, 0.5, assignment);
+            partition.blockmodel = Blockmodel(sample_partition.blockmodel.getNum_blocks(), partition.graph, 0.5, assignment);
             partition.blockmodel = finetune::finetune_assignment(partition.blockmodel, partition.graph);
         }
         double finetune_end_t = MPI_Wtime();
