@@ -13,7 +13,7 @@ namespace sbp::dist {
 
 double total_time = 0.0;
 
-double Blockmodel_first_build_time = 0.0;
+double finetune_time = 0.0;
 
 std::vector<intermediate> intermediate_results;
 
@@ -40,7 +40,7 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
     intermediate.block_merge_time = block_merge::BlockMerge_time;
     intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
     intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
-    intermediate.blockmodel_first_build_time = Blockmodel_first_build_time;
+    intermediate.finetune_time = finetune_time;
     intermediate.load_balancing_time = Load_balancing_time;
     intermediate.sort_time = Blockmodel_sort_time;
     intermediate.access_time = Blockmodel_access_time;

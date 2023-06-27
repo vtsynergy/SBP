@@ -89,12 +89,13 @@ std::vector<long> argsort(const std::vector<long> &v) {
 }
 
 std::string build_filepath() {
-    std::ostringstream filepath_stream;
-    filepath_stream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
-    filepath_stream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
-    filepath_stream << "BlockSizeVar_" << args.numvertices << "_nodes";
-    // TODO: Add capability to process multiple "streaming" graph parts
-    std::string filepath = filepath_stream.str();
+//    std::ostringstream filepath_stream;
+//    filepath_stream << args.directory << "/" << args.type << "/" << args.overlap << "Overlap_" << args.blocksizevar;
+//    filepath_stream << "BlockSizeVar/" << args.type << "_" << args.overlap << "Overlap_" << args.blocksizevar;
+//    filepath_stream << "BlockSizeVar_" << args.numvertices << "_nodes";
+//    // TODO: Add capability to process multiple "streaming" graph parts
+//    std::string filepath = filepath_stream.str();
+    std::string filepath = args.filepath;
     if (!fs::exists(filepath + ".tsv") && !fs::exists(filepath + ".mtx")) {
         std::cerr << "ERROR " << "File doesn't exist: " << filepath + ".tsv/.mtx" << std::endl;
         exit(-1);

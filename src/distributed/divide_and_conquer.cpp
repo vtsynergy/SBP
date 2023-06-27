@@ -188,12 +188,15 @@ void translate_local_partition(std::vector<long> &local_vertices, std::vector<lo
     #pragma omp parallel for schedule(dynamic) default(none) \
             shared(num_vertices, subgraph, partition_assignment, local_vertices, local_assignment)
     for (long vertex = 0; vertex < num_vertices; ++vertex) {
-        long subgraph_index = subgraph.mapping[vertex];
-        if (subgraph_index < 0) continue;  // vertex not present
-        long assignment = partition_assignment[subgraph_index];
-        local_vertices[subgraph_index] = vertex;
-        local_assignment[subgraph_index] = assignment;
+        long local_index = subgraph.mapping[vertex];
+        if (local_index < 0) continue;  // vertex not present
+        long assignment = partition_assignment[local_index];
+        local_vertices[local_index] = vertex;
+        local_assignment[local_index] = assignment;
     }
+//    std::cout << "========= vertices from rank " << mpi.rank << " ===================" << std::endl;
+//    utils::print<long>(local_vertices);
+//    std::cout << "========= vertices from rank " << mpi.rank << " ===================" << std::endl;
 }
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
@@ -214,7 +217,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
              << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
              << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, total_num_islands, "
-             << "block_merge_time, block_merge_loop_time, blockmodel_build_time, first_blockmodel_build_time, "
+             << "block_merge_time, block_merge_loop_time, blockmodel_build_time, finetune_time, "
              << "sort_time, load_balancing_time, access_time, update_assignment, total_time" << std::endl;
     }
     for (const sbp::intermediate &temp : intermediate_results) {
@@ -228,7 +231,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
              << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << sbp::total_num_islands << ", "
              << temp.block_merge_time << ", " << temp.block_merge_loop_time << ", "
-             << temp.blockmodel_build_time << ", " << temp.blockmodel_first_build_time << ", " << temp.sort_time << ", "
+             << temp.blockmodel_build_time << ", " << temp.finetune_time << ", " << temp.sort_time << ", "
              << temp.load_balancing_time << ", " << temp.access_time << ", " << temp.update_assignment << ", "
              << temp.total_time << std::endl;
     }

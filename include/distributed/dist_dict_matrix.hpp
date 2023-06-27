@@ -16,7 +16,7 @@
 // #include <Eigen/Core>
 
 /**
- * C++ longerface of the dictionary (map of maps) sparse matrix
+ * C++ interface of the dictionary (map of maps) sparse matrix
  */
 class DistDictMatrix : public IDistSparseMatrix {
   public:

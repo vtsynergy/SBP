@@ -97,6 +97,7 @@ void TwoHopBlockmodel::distribute_none() {
 
 void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     if (Rank_indices.empty()) {
+        std::cout << mpi.rank << " | rebuilding rank indices! =============" << std::endl;
         Rank_indices = utils::constant<long>(graph.num_vertices(), 0);
         std::vector<long> vertex_degrees = graph.degrees();
 	    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
@@ -111,6 +112,16 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
         }
     }
     this->_my_vertices = Rank_indices;
+    for (int rank = 0; rank < mpi.num_processes; ++rank) {
+        if (mpi.rank == rank) {
+            std::cout << mpi.rank << " | rank indices = ";
+            for (int j = 0; j < 25; ++j) {
+                std::cout << Rank_indices[j] << ", ";
+            }
+            std::cout << std::endl;
+        }
+        MPI_Barrier(mpi.comm);
+    }
     this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
     std::vector<std::pair<long,long>> block_sizes = this->sorted_block_sizes();
     for (long i = mpi.rank; i < this->num_blocks; i += 2 * mpi.num_processes) {

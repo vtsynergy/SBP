@@ -88,7 +88,15 @@ int main(int argc, char* argv[]) {
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
     Graph graph = Graph::load();
-    sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
+    sample::Sample subgraph;
+    if (args.subgraphpartition == "snowball") {
+        std::cout << "Running snowball partitioning" << std::endl;
+        subgraph = sample::snowball(graph, color, args.subgraphs);
+    } else {
+        std::cout << "Running round_robin partitioning" << std::endl;
+        subgraph = sample::round_robin(graph, color, args.subgraphs);
+    }
+//    sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
     long num_islands = 0;
     if (mpi.rank == 0) {
         num_islands = subgraph.graph.num_islands();
@@ -114,6 +122,7 @@ int main(int argc, char* argv[]) {
               << partition.blockmodel.getNum_blocks() << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
 
+    double finetune_start_t = MPI_Wtime();
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
     std::vector<long> local_vertices, local_assignment;
@@ -146,6 +155,8 @@ int main(int argc, char* argv[]) {
         Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
         // Make this distributed?
         blockmodel = dnc::finetune_partition(blockmodel, graph);
+        double finetune_end_t = MPI_Wtime();
+        sbp::finetune_time = finetune_end_t - finetune_start_t;
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)

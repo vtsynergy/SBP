@@ -13,7 +13,7 @@
 // #include <Eigen/Core>
 
 /**
- * C++ longerface of the dictionary (map of maps) sparse matrix
+ * C++ interface of the dictionary (map of maps) sparse matrix
  */
 // class BoostMappedMatrix : public CSparseMatrix {
 class BoostMappedMatrix {

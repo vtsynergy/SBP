@@ -68,7 +68,14 @@ int main(int argc, char* argv[]) {
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
     Graph graph = Graph::load();
-    sample::Sample subgraph = sample::round_robin(graph, mpi.rank, mpi.num_processes);
+    sample::Sample subgraph;
+    if (args.subgraphpartition == "snowball") {
+        std::cout << "Running snowball partitioning" << std::endl;
+        subgraph = sample::snowball(graph, mpi.rank, mpi.num_processes);
+    } else {
+        std::cout << "Running round_robin partitioning" << std::endl;
+        subgraph = sample::round_robin(graph, mpi.rank, mpi.num_processes);
+    }
     long num_islands = subgraph.graph.num_islands();
     std::cout << "Rank " << mpi.rank << "'s graph has " << num_islands << " island vertices." << std::endl;
     MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -77,21 +84,25 @@ int main(int argc, char* argv[]) {
     }
     Partition partition;
     double start = MPI_Wtime();
+    std::cout << "Rank " << mpi.rank << "'s graph has V = " << subgraph.graph.num_vertices() << " E = " << subgraph.graph.num_edges() << std::endl << std::flush;
     partition.graph = std::move(subgraph.graph);
     // TODO: add stopping at golden ratio
+//    std::cout << "Rank " << mpi.rank << "'s graph has V = " << partition.graph.num_vertices() << " E = " << partition.graph.num_edges() << std::endl << std::flush;
+//    MPI_Barrier(MPI_COMM_WORLD);
     partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args, true);
     double end_blockmodeling = MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
+    double finetune_start_t = MPI_Wtime();
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
               << partition.blockmodel.getNum_blocks() << std::endl;
-
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
     std::vector<long> local_vertices, local_assignment;
     dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph.num_vertices(),
                                    partition.blockmodel.block_assignment());
     int local_num_vertices = subgraph.graph.num_vertices();
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    exit(-10);
     std::cout << "Rank " << mpi.rank << " done computing local information" << std::endl;
 
     if (mpi.rank == 0) {
@@ -115,9 +126,13 @@ int main(int argc, char* argv[]) {
     if (mpi.rank == 0) {
         long offset = 0;
         std::vector<long> combined_assignment = dnc::combine_partitions(graph, offset, rank_vertices, rank_assignment);
+//        std::cout << "======= Combined Assignment ==========" << std::endl;
+//        utils::print<long>(combined_assignment);
         Blockmodel blockmodel(offset, graph, 0.25, combined_assignment);
         // Make this distributed?
         blockmodel = dnc::finetune_partition(blockmodel, graph);
+        double finetune_end_t = MPI_Wtime();
+        sbp::finetune_time = finetune_end_t - finetune_start_t;
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)

@@ -139,7 +139,72 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
     return membership_updates;
 }
 
-// TODO: implement this!
+bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+                std::vector<double> &delta_entropies) {
+    size_t last_index = delta_entropies.size() - 1;
+    if (delta_entropies[last_index] == 0.0) {
+        return true;
+    }
+    if (iteration < 3) {
+        return false;
+    }
+    double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
+    average /= -3.0;
+    double threshold;
+    if (blockmodels.get(2).empty) { // Golden ratio bracket not yet established
+        threshold = 5e-4 * initial_entropy;
+    } else {
+        threshold = 1e-4 * initial_entropy;
+    }
+    return average < threshold;
+}
+
+Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
+    MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
+    MPI_Type_commit(&Membership_t);
+    if (mpi.rank == 0)
+        std::cout << "Fine-tuning partition results after sample results have been extended to full graph" << std::endl;
+    std::vector<double> delta_entropies;
+    // TODO: Add number of finetuning iterations to evaluation
+    long total_vertex_moves = 0;
+    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    blockmodel.setOverall_entropy(old_entropy);
+    double new_entropy = 0;
+    for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+//        measure_imbalance_metrics(blockmodel, graph);
+        double start_t = MPI_Wtime();
+        std::vector<long> block_assignment(blockmodel.block_assignment());
+        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
+        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
+        // TODO: [OPTIONAL] add option to skip this communication step
+        std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
+        for (const Membership &membership: collected_membership_updates) {
+            if (membership.block == block_assignment[membership.vertex]) continue;
+            async_move(membership, graph, blockmodel);
+        }
+        size_t vertex_moves = collected_membership_updates.size();
+        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double delta_entropy = new_entropy - old_entropy;
+        old_entropy = new_entropy;
+        delta_entropies.push_back(delta_entropy);
+        if (mpi.rank == 0) {
+            std::cout << "Itr: " << iteration << " vertex moves: " << vertex_moves << " delta S: "
+                      << delta_entropy / new_entropy << std::endl;
+        }
+        total_vertex_moves += vertex_moves;
+        MCMC_iterations++;
+        // Early stopping
+        if (finetune::early_stop(iteration, blockmodel.getOverall_entropy(), delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    MPI_Type_free(&Membership_t);
+    return blockmodel;
+}
+
 TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
@@ -157,13 +222,6 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
         double start_t = MPI_Wtime();
         std::vector<long> block_assignment(blockmodel.block_assignment());
         std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph.high_degree_vertices());
-//        // TODO: [OPTIONAL] add option to skip this communication step
-//        std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
-//        for (const Membership &membership: collected_membership_updates) {
-//            if (membership.block == block_assignment[membership.vertex]) continue;
-//            async_move(membership, graph, blockmodel);
-//        }
-//        size_t vertex_moves = collected_membership_updates.size();
         std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices());
         utils::extend<Membership>(membership_updates, async_updates);
         assert(membership_updates.size() >= async_updates.size());
@@ -281,26 +339,6 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
         }
     }
     return membership_updates;
-}
-
-bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
-                std::vector<double> &delta_entropies) {
-    size_t last_index = delta_entropies.size() - 1;
-    if (delta_entropies[last_index] == 0.0) {
-        return true;
-    }
-    if (iteration < 3) {
-        return false;
-    }
-    double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
-    average /= -3.0;
-    double threshold;
-    if (blockmodels.get(2).empty) { // Golden ratio bracket not yet established
-        threshold = 5e-4 * initial_entropy;
-    } else {
-        threshold = 1e-4 * initial_entropy;
-    }
-    return average < threshold;
 }
 
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {

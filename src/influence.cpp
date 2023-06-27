@@ -287,14 +287,14 @@ std::vector<long> pseudoshuffle_range(long num, long range_max, long num_vertice
         const auto it = mapping.find(random_index);
         if (it != mapping.end())
             random_index = it->second;
-        long polonger_index = index;
-        const auto it2 = mapping.find(polonger_index);
+        long pointer_index = index;
+        const auto it2 = mapping.find(pointer_index);
         if (it2 != mapping.end())
-            polonger_index = it2->second;
-        mapping[random_index] = polonger_index;
-        const auto it3 = mapping.find(polonger_index);
+            pointer_index = it2->second;
+        mapping[random_index] = pointer_index;
+        const auto it3 = mapping.find(pointer_index);
         if (it3 != mapping.end())
-            mapping.erase(polonger_index);
+            mapping.erase(pointer_index);
         long vertex1 = random_index / num_vertices;
         long vertex2 = random_index % num_vertices;
         if (vertex1 != vertex2)

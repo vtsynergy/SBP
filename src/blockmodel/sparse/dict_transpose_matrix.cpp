@@ -174,7 +174,7 @@ std::set<long> DictTransposeMatrix::neighbors(long block) const {
 }
 
 MapVector<long> DictTransposeMatrix::neighbors_weights(long block) const {
-    MapVector<long> result;
+    MapVector<long> result(this->matrix[block].size() + this->matrix_transpose[block].size());
     for (const std::pair<long, long> &entry : this->matrix[block]) {
         result[entry.first] += entry.second;
 //        result.insert(entry.first);

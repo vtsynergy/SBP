@@ -19,3 +19,6 @@
 [submodule "extern/pcg-cpp"]
 	path = extern/pcg-cpp
 	url = git@github.com:imneme/pcg-cpp.git
+[submodule "extern/json"]
+	path = extern/json
+	url = https://github.com/nlohmann/json.git

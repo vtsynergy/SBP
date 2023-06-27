@@ -74,6 +74,9 @@ public:
     const std::vector<long> &low_degree_vertices() const { return this->_low_degree_vertices; }
     /// Calculates the modularity of this graph given a particular vertex-to-block `assignment`
     double modularity(const std::vector<long> &assignment) const;
+    /// Returns all the neighbors of a given vertex. Note that vertices that are both in- and out- neighbors are
+    /// repeated.
+    [[nodiscard]] std::vector<long> neighbors(long vertex) const;
     /// Returns the number of edges in this graph
     long num_edges() const { return this->_num_edges; }
     /// Counts the number of island vertices in this graph

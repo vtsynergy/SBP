@@ -148,7 +148,7 @@ public:
     long proposed_block() const { return this->_proposed_block; }
 };
 
-//class PolongerDelta {
+//class PointerDelta {
 //private:
 //    MapVector<long> _current_block_row;
 //    MapVector<long> _proposed_block_row;
@@ -159,12 +159,12 @@ public:
 //    long _self_edge_weight;
 //
 //public:
-//    PolongerDelta() {
+//    PointerDelta() {
 //        this->_current_vertex = -1;
 //        this->_proposed_block = -1;
 //        this->_self_edge_weight = 0;
 //    }
-//    PolongerDelta(long current_block, long proposed_block, long buckets = 10) {
+//    PointerDelta(long current_block, long proposed_block, long buckets = 10) {
 //        this->_current_vertex = current_block;
 //        this->_proposed_block = proposed_block;
 //        this->_self_edge_weight = 0;
@@ -173,7 +173,7 @@ public:
 //        this->_current_block_col = MapVector<long>(buckets);
 //        this->_proposed_block_col = MapVector<long>(buckets);
 //    }
-//    PolongerDelta(long current_block, long proposed_block, const MapVector<long> &block_row,
+//    PointerDelta(long current_block, long proposed_block, const MapVector<long> &block_row,
 //                 const MapVector<long> &block_col, const MapVector<long> &proposed_row,
 //                 const MapVector<long> &proposed_col) {
 //        this->_current_vertex = current_block;

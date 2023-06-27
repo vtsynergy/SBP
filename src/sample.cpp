@@ -5,6 +5,7 @@
 #include "args.hpp"
 #include "common.hpp"
 #include "mpi_data.hpp"
+#include "random"
 
 namespace sample {
 
@@ -87,7 +88,7 @@ Sample expansion_snowball(const Graph &graph) {
     return from_vertices(graph, sampled, mapping);
 }
 
-Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
+std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
     std::cout << "Extending the sample results to the full graph" << std::endl;
     std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), -1);
     // Embed the known assignments from the partitioned sample
@@ -128,7 +129,8 @@ Blockmodel extend(const Graph &graph, const Blockmodel &sample_blockmodel, const
         }
         assignment[vertex] = likely_community;
     }
-    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
+    return assignment;
+//    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
 }
 
 Sample from_vertices(const Graph &graph, const std::vector<long> &vertices, const std::vector<long> &mapping) {
@@ -188,6 +190,96 @@ Sample round_robin(const Graph &graph, int subgraph_index, int num_subgraphs) {
 	    index++;
     }
     return from_vertices(graph, sampled, mapping);
+}
+
+Sample snowball(const Graph &graph, int subgraph_index, int num_subgraphs) {
+//    MapVector<bool> total_sampled;
+    std::vector<int> total_sampled = utils::constant<int>(graph.num_vertices(), -1);
+    if (mpi.rank == 0) {  // With LaDiS, this work will be duplicated, but only global rank 0's will be used
+        MapVector<bool> unsampled(graph.num_vertices());
+        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+            unsampled[vertex] = true;
+        }
+        std::vector<MapVector<bool>> sampled(num_subgraphs);
+        std::vector<MapVector<bool>> frontiers(num_subgraphs);
+        std::vector<long> vertex_degrees = graph.degrees();
+        // ============= SETUP ================
+        // Start with `num_subgraphs` high degree vertices
+        std::vector<int> indices = utils::range<int>(0, graph.num_vertices());
+        // I think the problem here is that the starting vertices aren't the same between ranks. Should broadcast the top n
+        // vertices out to every rank, or have one rank do the sampling for all ranks and then broadcast results
+        std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + num_subgraphs,
+                         indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
+                    return vertex_degrees[i1] > vertex_degrees[i2];
+                });
+        // make sure seed vertices are consistent through all subgraphs
+    //    std::vector<long> seed_vertices = utils::constant<long>(num_subgraphs, -1);
+    //    for (int subgraph = 0; subgraph < num_subgraphs; ++subgraph) {
+    //        seed_vertices[subgraph] = indices[subgraph];
+    //    }
+    //    MPI_Bcast(seed_vertices.data(), (int) seed_vertices.size(), MPI_LONG, 0, mpi.comm);
+        // done making sure seed vertices are consistent through all subgraphs
+        // Mark vertices as sampled
+        for (int subgraph = 0; subgraph < num_subgraphs; ++subgraph) {
+            long nth_vertex = indices[subgraph];
+            std::cout << mpi.rank << " | " << nth_vertex << " goes to subgraph " << subgraph << std::endl;
+            total_sampled[nth_vertex] = subgraph;
+            sampled[subgraph][nth_vertex] = true;
+            unsampled.erase(nth_vertex);
+        }
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    exit(-5);
+        // Fill in frontiers
+        for (int subgraph = 0; subgraph < num_subgraphs; ++subgraph) {
+            std::vector<long> neighbors = graph.neighbors(indices[subgraph]);
+            for (const long &vertex : neighbors) {
+                if (total_sampled[vertex] != -1) continue;  // vertices that were already sampled shouldn't be in the frontier
+                frontiers[subgraph][vertex] = true;
+            }
+        }
+        // ============= END OF SETUP ===============
+        // ============= SNOWBALL ==============
+        int empty_frontiers = 0;
+        while (!unsampled.empty()) {
+            for (int subgraph = 0; subgraph < num_subgraphs; ++subgraph) {  // Iterate through the subgraphs
+                // TODO: sample highest degree vertex in frontier
+                long selected;
+                if (frontiers[subgraph].empty()) { // Select a random (first) unsampled vertex.
+                    selected = unsampled.begin()->first;
+                    empty_frontiers++;
+                } else {
+                    selected = frontiers[subgraph].begin()->first;
+                }
+                total_sampled[selected] = subgraph;
+                sampled[subgraph][selected] = true;
+                unsampled.erase(selected);
+                for (MapVector<bool> &frontier : frontiers) {
+                    frontier.erase(selected);
+                }
+                for (const long &neighbor : graph.neighbors(selected)) {
+                    if (total_sampled[neighbor] != -1) continue;  // If already sampled, don't add to frontier
+                    frontiers[subgraph][neighbor] = true;
+                }
+            }
+        }
+        if (mpi.rank == 0) std::cout << "Restarted due to empty frontiers " << empty_frontiers << " times in " << graph.num_vertices() / float(num_subgraphs) << " iterations" << std::endl;
+        // ============= END OF SNOWBALL ==============
+        std::cout << "Num unsampled: " << unsampled.size() << std::endl;
+    }
+    // Using MPI_COMM_WORLD explicitly to handle LaDiS. Then the rank is handled by
+    MPI_Bcast(total_sampled.data(), (int) total_sampled.size(), MPI_INT, 0, MPI_COMM_WORLD);
+    // ============= BOOK-KEEPING ==============
+    std::vector<long> sampled_list;
+    std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
+    long mapped_index = 0;
+    for (int vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        if (total_sampled[vertex] != subgraph_index) continue;  // this vertex goes to another rank
+        sampled_list.push_back(vertex);
+        mapping[vertex] = mapped_index;
+        mapped_index++;
+    }
+    // ============= END OF BOOK-KEEPING ==============
+    return from_vertices(graph, sampled_list, mapping);
 }
 
 Sample sample(const Graph &graph) {

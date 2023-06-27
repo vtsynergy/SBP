@@ -20,7 +20,7 @@ TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &ol
     if (this->is_done()) {
         return this->get(1).copy();
     }
-    // Find which Blockmodel would serve as the starting polong for the next iteration
+    // Find which Blockmodel would serve as the starting point for the next iteration
     long index = 1;
     // TODO: if things get funky, look into this if/else statement
     if (this->get(0).empty && this->get(1).getNum_blocks() > this->get(2).getNum_blocks()) {

@@ -25,16 +25,17 @@ public:  // Everything in here is public, because why not?
     bool detach;
     std::string distribute;
     std::string directory;
+    std::string filepath;
     bool greedy;
     float mh_percent;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     int numvertices;
     std::string overlap;
-    std::string partition;
     double samplesize;
     std::string samplingalg;
     int subgraphs;
+    std::string subgraphpartition;
     std::string tag;
     int threads;
     bool transpose;
@@ -89,6 +90,8 @@ public:  // Everything in here is public, because why not?
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::ValueArg<std::string> _filepath("f", "filepath", "The filepath for the graph, minus the extension.",
+                                                   true, "./data/default_graph", "path", parser);
             TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
                                      parser, true);
             TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
@@ -101,9 +104,6 @@ public:  // Everything in here is public, because why not?
                                               "int", parser);
             TCLAP::ValueArg<std::string> _overlap("o", "overlap", "The degree of overlap between communities", false,
                                                   "low", "low|high|unk", parser);
-            TCLAP::ValueArg<std::string> _partition("p", "partition", "Deprecated: The type of partitioning to use to divide the "
-                                                    "graph amongst the MPI Processes. Only matters when nprocs > 1",
-                                                    false, "round_robin", "round_robin|random|snowball", parser);
             TCLAP::ValueArg<double> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
@@ -111,6 +111,8 @@ public:  // Everything in here is public, because why not?
             TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
                                             "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
                                             false, 0, "<= number of MPI ranks>", parser);
+            TCLAP::ValueArg<std::string> _subgraphpartition("", "subgraphpartition", "The algorithm used to create subgraphs when using the divide-and-conquer scheme",
+                                                            false, "round_robin", "round_robin|snowball", parser);
             TCLAP::ValueArg<std::string> _tag("", "tag", "The tag value for this run, for differentiating different "
                                               "runs or adding custom parameters to the save file", false, "default tag",
                                               "string or param1=value1;param2=value2", parser);
@@ -135,16 +137,17 @@ public:  // Everything in here is public, because why not?
             this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
+            this->filepath = _filepath.getValue();
             this->greedy = _greedy.getValue();
             this->mh_percent = _mh_percent.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->numvertices = _numvertices.getValue();
             this->overlap = _overlap.getValue();
-            this->partition = _partition.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
             this->subgraphs = _subgraphs.getValue();
+            this->subgraphpartition = _subgraphpartition.getValue();
             this->tag = _tag.getValue();
             this->threads = _threads.getValue();
             this->transpose = _transpose.getValue();
