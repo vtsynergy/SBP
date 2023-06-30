@@ -25,6 +25,40 @@ Sample detach(const Graph &graph) {
     return from_vertices(graph, sampled, mapping);
 }
 
+Sample degree_product(const Graph &graph) {
+    std::vector<long> vertex_degrees = graph.degrees();
+    std::vector<std::pair<std::pair<long, long>, long>> edge_info;
+    for (long source = 0; source < graph.num_vertices(); ++source) {
+        const std::vector<long> &neighbors = graph.neighbors(source);
+        for (const long &dest : neighbors) {
+            long information = vertex_degrees[source] * vertex_degrees[dest];
+            edge_info.emplace_back(std::make_pair(source, dest), information);
+        }
+    }
+    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
+        return i1.second > i2.second;
+    });
+    std::vector<long> sampled;
+    std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
+    int num_sampled = 0;
+    for (const std::pair<std::pair<long, long>, long> &edge : edge_info) {
+        long source = edge.first.first;
+        long destination = edge.first.second;
+        if (mapping[source] ==  -1) {
+            sampled.push_back(source);
+            mapping[source] = num_sampled;
+            num_sampled++;
+        }
+        if (mapping[destination] ==  -1) {
+            sampled.push_back(destination);
+            mapping[destination] = num_sampled;
+            num_sampled++;
+        }
+        if (num_sampled >= long(args.samplesize * double(graph.num_vertices()))) break;
+    }
+    return from_vertices(graph, sampled, mapping);
+}
+
 void es_add_vertex(const Graph &graph, ES_State &state, std::vector<long> &sampled, std::vector<long> &mapping,
                    long vertex) {
     sampled.push_back(vertex);
@@ -289,6 +323,8 @@ Sample sample(const Graph &graph) {
         return random(graph);
     else if (args.samplingalg == "expansion_snowball")
         return expansion_snowball(graph);
+    else if (args.samplingalg == "degree_product")
+        return degree_product(graph);
     else
         return random(graph);
 }
