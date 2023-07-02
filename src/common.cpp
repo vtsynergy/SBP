@@ -207,7 +207,7 @@ long propose_random_block(long current_block, long num_blocks) {
     return proposed;
 }
 
-long random_longeger(long low, long high) {
+long random_integer(long low, long high) {
     std::uniform_int_distribution<long> distribution(low, high);
     return distribution(rng::generator());
 }
