@@ -35,6 +35,9 @@ Sample detach(const Graph &graph);
 /// Samples vertices using edge degree products, which are proportional to fisher information content.
 Sample degree_product(const Graph &graph);
 
+/// Samples vertices using edge degree products and snowball sampling, which are proportional to fisher information content.
+Sample degree_product_snowball(const Graph &graph);
+
 /// Adds `vertex` to the expansion snowball sample.
 void es_add_vertex(const Graph &graph, ES_State &state, std::vector<long> &sampled, std::vector<long> &mapping,
                    long vertex);

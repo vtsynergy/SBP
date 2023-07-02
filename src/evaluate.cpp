@@ -59,7 +59,7 @@ double calculate_f1_score(long num_vertices, Hungarian::Matrix &contingency_tabl
 }
 
 double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table) {
-    std::vector<std::vector<double>> jolong_probability;
+    std::vector<std::vector<double>> joint_probability;
     double sum = num_vertices;
     size_t nrows = contingency_table.size();
     size_t ncols = contingency_table[0].size();
@@ -67,10 +67,10 @@ double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table) {
     std::vector<double> marginal_prob_b1(nrows, 0.0);
     std::vector<double> marginal_prob_b2(ncols, 0.0);
     for (size_t i = 0; i < nrows; ++i) {
-        jolong_probability.emplace_back(std::vector<double>());
+        joint_probability.emplace_back(std::vector<double>());
         for (size_t j = 0; j < ncols; ++j) {
             double value = contingency_table[i][j] / sum;
-            jolong_probability[i].push_back(value);
+            joint_probability[i].push_back(value);
             marginal_prob_b1[i] += value;
             marginal_prob_b2[j] += value;
         }
@@ -83,9 +83,9 @@ double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table) {
 //        std::vector<double> row;
         for (size_t j = 0; j < ncols; ++j) {
             double marginal_product = marginal_prob_b1[i] * marginal_prob_b2[j];
-            double jolong_prob = jolong_probability[i][j];
-            if (jolong_prob == 0.0) continue;
-            mi += jolong_prob * log(jolong_prob / marginal_product);
+            double joint_prob = joint_probability[i][j];
+            if (joint_prob == 0.0) continue;
+            mi += joint_prob * log(joint_prob / marginal_product);
 //            row.push_back(marginal_prob_b1[i] * marginal_prob_b2[j]);
         }
 //        marginal_product.push_back(row);

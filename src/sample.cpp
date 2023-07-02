@@ -26,18 +26,7 @@ Sample detach(const Graph &graph) {
 }
 
 Sample degree_product(const Graph &graph) {
-    std::vector<long> vertex_degrees = graph.degrees();
-    std::vector<std::pair<std::pair<long, long>, long>> edge_info;
-    for (long source = 0; source < graph.num_vertices(); ++source) {
-        const std::vector<long> &neighbors = graph.neighbors(source);
-        for (const long &dest : neighbors) {
-            long information = vertex_degrees[source] * vertex_degrees[dest];
-            edge_info.emplace_back(std::make_pair(source, dest), information);
-        }
-    }
-    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
-        return i1.second > i2.second;
-    });
+    std::vector<std::pair<std::pair<long, long>, long>> edge_info = graph.sorted_edge_list();
     std::vector<long> sampled;
     std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
     int num_sampled = 0;
@@ -55,6 +44,49 @@ Sample degree_product(const Graph &graph) {
             num_sampled++;
         }
         if (num_sampled >= long(args.samplesize * double(graph.num_vertices()))) break;
+    }
+    return from_vertices(graph, sampled, mapping);
+}
+
+Sample degree_product_snowball(const Graph &graph) {
+//    std::vector<std::pair<std::pair<long, long>, long>> edge_info = graph.sorted_edge_list();
+    std::vector<long> degrees = graph.degrees();
+    std::vector<long> sampled;
+    std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
+//    std::vector<long> vertex_max_degree_product = utils::constant<long>(graph.num_vertices(), 0);
+    typedef std::tuple<long, long, long> edge_t;
+    auto cmp_fxn = [](edge_t left, edge_t right) { return std::get<2>(left) < std::get<2>(right); };
+    std::priority_queue<edge_t, std::vector<edge_t>, decltype(cmp_fxn)> frontier(cmp_fxn);
+    auto dps_add_vertex = [&graph, &frontier, &mapping, &sampled, &degrees](long vertex) {
+        mapping[vertex] = (long) sampled.size();
+        sampled.push_back(vertex);
+        for (const long &neighbor : graph.out_neighbors(vertex)) {
+            if (mapping[neighbor] != -1) continue;  // neighbor already sampled
+            frontier.push(std::make_tuple(vertex, neighbor, degrees[vertex] * degrees[neighbor]));
+        }
+        for (const long &neighbor : graph.in_neighbors(vertex)) {
+            if (mapping[neighbor] != -1) continue;  // neighbor already sampled
+            frontier.push(std::make_tuple(neighbor, vertex, degrees[neighbor] * degrees[vertex]));
+        }
+    };
+    long start = common::random_integer(0, graph.num_vertices() - 1);
+    dps_add_vertex(start);
+    while (long(sampled.size()) < long(double(graph.num_vertices()) * args.samplesize)) {
+        if (frontier.empty()) {  // restart from a new vertex if frontier is empty
+            long vertex;
+            do {
+                vertex = common::random_integer(0, graph.num_vertices() - 1);
+            } while (mapping[vertex] >= 0);
+            dps_add_vertex(vertex);
+        }
+        edge_t next = frontier.top();
+        frontier.pop();
+        long source = std::get<0>(next);
+        long destination = std::get<1>(next);
+        if (mapping[source] == -1) dps_add_vertex(source);
+        if (mapping[destination] == -1) dps_add_vertex(destination);
+        // if source and destination both sampled (can happen with directed graphs), neither is added, and we're back in
+        // the while loop
     }
     return from_vertices(graph, sampled, mapping);
 }
@@ -95,7 +127,7 @@ Sample expansion_snowball(const Graph &graph) {
     std::vector<long> sampled;
     std::vector<long> mapping = utils::constant<long>(graph.num_vertices(), -1);
     ES_State state(graph.num_vertices());
-    long start = common::random_longeger(0, graph.num_vertices() - 1);
+    long start = common::random_integer(0, graph.num_vertices() - 1);
     es_add_vertex(graph, state, sampled, mapping, start);
     while (long(sampled.size()) < long(double(graph.num_vertices()) * args.samplesize)) {
         if (state.neighbors.empty()) {  // choose random vertex not already sampled
@@ -103,12 +135,12 @@ Sample expansion_snowball(const Graph &graph) {
             // Assuming sample size is < 50% (0.5), this should run less than 2 times on average.
             // If the graph consists of just one connected component, this whole if statement should never run at all.
             do {
-                vertex = common::random_longeger(0, graph.num_vertices() - 1);
+                vertex = common::random_integer(0, graph.num_vertices() - 1);
             } while (mapping[vertex] >= 0);
             es_add_vertex(graph, state, sampled, mapping, vertex);
             continue;
         } else if (state.contribution_sum == 0) {  // choose random neighbor
-            long index = common::random_longeger(0, long(state.neighbors.size()) - 1);
+            long index = common::random_integer(0, long(state.neighbors.size()) - 1);
             auto it = state.neighbors.begin();
             std::advance(it, index);
             long vertex = *it;
@@ -147,7 +179,7 @@ std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel
             edge_counts[community]++;
         }
         if (edge_counts.empty()) {  // assign random community
-            long community = common::random_longeger(0, sample_blockmodel.getNum_blocks() - 1);
+            long community = common::random_integer(0, sample_blockmodel.getNum_blocks() - 1);
             assignment[vertex] = community;
             continue;
         }
@@ -325,8 +357,10 @@ Sample sample(const Graph &graph) {
         return expansion_snowball(graph);
     else if (args.samplingalg == "degree_product")
         return degree_product(graph);
+    else if (args.samplingalg == "degree_product_snowball")
+        return degree_product_snowball(graph);
     else
-        return random(graph);
+        throw std::invalid_argument(args.samplingalg.append(" is not a valid sampling algorithm!"));
 }
 
 Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
@@ -341,7 +375,7 @@ Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, con
     // Infer membership of remaining vertices
     for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
         if (assignment[vertex] != -1) continue;  // already assigned
-        long random_community = common::random_longeger(0, sample_blockmodel.getNum_blocks() - 1);
+        long random_community = common::random_integer(0, sample_blockmodel.getNum_blocks() - 1);
         // Assign to the same community as only neighbor
         for (long neighbor : graph.out_neighbors(vertex)) {
             long community = assignment[neighbor];

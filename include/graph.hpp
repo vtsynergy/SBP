@@ -89,6 +89,8 @@ public:
     const std::vector<long> &out_neighbors(long v) const { return this->_out_neighbors[v]; }
     /// Sorts the vertices into low and high degree vertices
     void sort_vertices();
+    /// Returns a list of edges, sorted by degree product
+    [[nodiscard]] std::vector<std::pair<std::pair<long, long>, long>> sorted_edge_list() const;
     /// Sorts vertices into low and high influence vertices. Does this via vertex degree products of the graph edges
     void degree_product_sort();
 private:

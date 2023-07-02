@@ -264,18 +264,7 @@ void Graph::sort_vertices() {
 void Graph::degree_product_sort() {
 //    std::cout << "Starting to sort vertices based on influence" << std::endl;
 //    double start_t = MPI_Wtime();
-    std::vector<long> vertex_degrees = this->degrees();
-    std::vector<std::pair<std::pair<long, long>, long>> edge_info;
-    for (long source = 0; source < this->_num_vertices; ++source) {
-        const std::vector<long> &neighbors = this->_out_neighbors[source];
-        for (const long &dest : neighbors) {
-            long information = vertex_degrees[source] * vertex_degrees[dest];
-            edge_info.emplace_back(std::make_pair(source, dest), information);
-        }
-    }
-    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
-        return i1.second > i2.second;
-    });
+    std::vector<std::pair<std::pair<long, long>, long>> edge_info = this->sorted_edge_list();
     MapVector<bool> selected;
     int num_to_select = int(args.mh_percent * this->_num_vertices);
     int edge_index = 0;
@@ -302,4 +291,20 @@ long Graph::num_islands() const {
         if (degree == 0) num_islands++;
     }
     return num_islands;
+}
+
+std::vector<std::pair<std::pair<long, long>, long>> Graph::sorted_edge_list() const {
+    std::vector<long> vertex_degrees = this->degrees();
+    std::vector<std::pair<std::pair<long, long>, long>> edge_info;
+    for (long source = 0; source < this->_num_vertices; ++source) {
+        const std::vector<long> &neighbors = this->_out_neighbors[source];
+        for (const long &dest : neighbors) {
+            long information = vertex_degrees[source] * vertex_degrees[dest];
+            edge_info.emplace_back(std::make_pair(source, dest), information);
+        }
+    }
+    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
+        return i1.second > i2.second;
+    });
+    return edge_info;
 }
