@@ -18,7 +18,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 
 /// Runs one iteration of the asynchronous Gibbs algorithm in a distributed fashion using MPI.
 std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
-                                                     const std::vector<long> &active_set = std::vector<long>());
+                                                     const std::vector<long> &active_set = std::vector<long>(),
+                                                     int batch = 0);
 
 /// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
 bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
@@ -38,7 +39,8 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 
 /// Runs one iteration of the Metropolis-Hastings algorithm. Returns the accepted vertex moves.
 std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
-                                                      const std::vector<long> &active_set = std::vector<long>());
+                                                      const std::vector<long> &active_set = std::vector<long>(),
+                                                      int batch = -1);
 
 /// Proposes an asynchronous Gibbs move in a distributed setting.
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph);
