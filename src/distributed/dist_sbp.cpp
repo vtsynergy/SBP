@@ -182,7 +182,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         iteration++;
     }
-    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
+//    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
     double modularity = -1;
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());

@@ -322,7 +322,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
             if (mpi.rank == 0) std::cout << "communicating for batch = " << batch << std::endl;
-            std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
+            std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, vertices, batch);
             vertex_moves += update_blockmodel(graph, blockmodel, membership_updates);
         }
         MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
@@ -348,8 +348,10 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         }
     }
     blockmodel.setOverall_entropy(new_entropy);
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    if (mpi.rank == 0) {
+        std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+        std::cout << blockmodel.getOverall_entropy() << std::endl;
+    }
     MPI_Type_free(&Membership_t);
     return blockmodel;
 }
