@@ -97,7 +97,7 @@ class Blockmodel {
                                  std::map<long, long> &mapping, double block_reduction_rate);
     /// Returns the normalized difference in block sizes.
     double block_size_variation() const;
-    /// Difficulty score, being the geometric mean between block_size_variation() and longerblock_edges().
+    /// Difficulty score, being the geometric mean between block_size_variation() and interblock_edges().
     double difficulty_score() const;
     /// Fills the blockmodel using the edges in `graph` and the current vertex-to-block `block_assignment`.
     void initialize_edge_counts(const Graph &graph);
@@ -141,7 +141,7 @@ class Blockmodel {
     /// Returns true if `block1` is a neighbor of `block2`.
     bool is_neighbor_of(long block1, long block2) const;
     /// Returns the percentage of edges occurring between blocks.
-    double longerblock_edges() const;
+    double interblock_edges() const;
     /// prints blockmatrix to file (should not be used for large blockmatrices)
     void print_blockmatrix() const;
     /// prints the blockmodel with some additional information.
@@ -173,7 +173,7 @@ class Blockmodel {
     void degrees_out(std::vector<long> block_degrees_out) { this->_block_degrees_out = block_degrees_out; }
     double &getBlock_reduction_rate() { return this->block_reduction_rate; }
     void setBlock_reduction_rate(double block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
-    double &getOverall_entropy() { return this->overall_entropy; }
+    double getOverall_entropy() const { return this->overall_entropy; }
     void setOverall_entropy(double overall_entropy) { this->overall_entropy = overall_entropy; }
     long &getNum_blocks_to_merge() { return this->num_blocks_to_merge; }
     void setNum_blocks_to_merge(long num_blocks_to_merge) { this->num_blocks_to_merge = num_blocks_to_merge; }
