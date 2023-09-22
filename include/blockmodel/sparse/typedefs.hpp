@@ -33,7 +33,7 @@ struct EdgeWeights {
     }
 };
 
-/// Used to hash a pair of longegers. Source: https://codeforces.com/blog/entry/21853
+/// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
 struct longPairHash {
     size_t operator() (const std::pair<long, long> &pair) const {
         return std::hash<long long>() (((long long) pair.first) ^ (((long long) pair.second) << 32));
