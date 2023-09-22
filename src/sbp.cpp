@@ -28,7 +28,7 @@ std::vector<intermediate> get_intermediates() {
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
     file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
     file << entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges()) << ",";
-    file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.longerblock_edges() << ",";
+    file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
     // feenableexcept(FE_INVALID | FE_OVERFLOW);
 }*/

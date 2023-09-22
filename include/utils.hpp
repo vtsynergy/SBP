@@ -304,7 +304,7 @@ template <typename T> inline long argmax(const std::vector<T> &vector) {
     long max_index = 0;
     for (long i = 1; i < (long) vector.size(); ++i) {
         /// The following link can compute this without branching (could be useful for GPUs)
-        /// https://www.geeksforgeeks.org/compute-the-minimum-or-maximum-max-of-two-longegers-without-branching/
+        /// https://www.geeksforgeeks.org/compute-the-minimum-or-maximum-max-of-two-integers-without-branching/
         if (vector[i] > max_value) {
             max_value = vector[i];
             max_index = i;

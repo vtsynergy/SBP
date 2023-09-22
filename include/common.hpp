@@ -103,8 +103,8 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
 /// TODO
 long propose_random_block(long current_block, long num_blocks);
 
-/// Returns a random longeger between low and high
-long random_longeger(long low, long high);
+/// Returns a random integer between low and high
+long random_integer(long low, long high);
 
 namespace directed {
 

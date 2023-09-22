@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <omp.h>
 #include <string>
+#include <unistd.h>
 
 #include "tclap/CmdLine.h"
 
@@ -19,18 +20,21 @@ public:  // Everything in here is public, because why not?
     int batches;
     std::string blocksizevar;
     size_t cachesize;
-    std::string csv;  // TODO: save results in a csv file
+    std::string csv;  // TODO: get rid of this - results now saved to json
     bool degreeproductsort;
     std::string delimiter;
     bool detach;
     std::string distribute;
     std::string directory;
+    bool evaluate;
     std::string filepath;
     bool greedy;
+    std::string json;
     float mh_percent;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     int numvertices;
+    std::string output_file;
     std::string overlap;
     double samplesize;
     std::string samplingalg;
@@ -90,10 +94,14 @@ public:  // Everything in here is public, because why not?
                                 "directory structure:"
                                 "<directory>/<type>/<overlap>Overlap_<blocksizevar>BlockSizeVar/<filename>\n",
                                                    false, "./data", "path", parser);
+            TCLAP::SwitchArg _evaluate("", "evaluate", "If set, will evaluate the results before exiting",
+                                       parser, false);
             TCLAP::ValueArg<std::string> _filepath("f", "filepath", "The filepath for the graph, minus the extension.",
                                                    true, "./data/default_graph", "path", parser);
-            TCLAP::SwitchArg _greedy("", "greedy", "If set, will use a greedy approach; hastings correction will not be computed",
+            TCLAP::SwitchArg _greedy("", "greedy", "If set, will *not* use a greedy approach; hastings correction will not be computed",
                                      parser, true);
+            TCLAP::ValueArg<std::string> _json("j", "json", "The path to the directory containing json output",
+                                               false, "output", "path", parser);
             TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
                                                false, 0.075, "float", parser);
             TCLAP::SwitchArg _modularity("", "modularity", "If set, will compute modularity at the end of execution.",
@@ -102,6 +110,8 @@ public:  // Everything in here is public, because why not?
                                       "entropy calculations.", parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                               "int", parser);
+            TCLAP::ValueArg<std::string> _output_file("", "output_file", "The filename of the json output. Will be stored in <json>/<output_file>",
+                                                      false, "", "string that ends in .json", parser);
             TCLAP::ValueArg<std::string> _overlap("o", "overlap", "The degree of overlap between communities", false,
                                                   "low", "low|high|unk", parser);
             TCLAP::ValueArg<double> _samplesize("", "samplesize", "The percentage of vertices to include in the sample",
@@ -137,12 +147,20 @@ public:  // Everything in here is public, because why not?
             this->detach = _detach.getValue();
             this->distribute = _distribute.getValue();
             this->directory = _directory.getValue();
+            this->evaluate = _evaluate.getValue();
             this->filepath = _filepath.getValue();
             this->greedy = _greedy.getValue();
+            this->json = _json.getValue();
             this->mh_percent = _mh_percent.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->numvertices = _numvertices.getValue();
+            this->output_file = _output_file.getValue();
+            if (this->output_file.empty()) {
+                std::ostringstream output_file_stream;
+                output_file_stream << getpid() << "_" << time(nullptr) << ".json";
+                this->output_file = output_file_stream.str();
+            }
             this->overlap = _overlap.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();

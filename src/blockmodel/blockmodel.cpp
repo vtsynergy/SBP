@@ -50,7 +50,7 @@ std::vector<long> Blockmodel::build_mapping(const std::vector<long> &values) {
 
 double Blockmodel::difficulty_score() const {
     double norm_variance = this->block_size_variation();
-    double longerblock_edges = this->longerblock_edges();
+    double longerblock_edges = this->interblock_edges();
     return (2.0 * norm_variance * longerblock_edges) / (norm_variance + longerblock_edges);
 }
 
@@ -301,7 +301,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
 }
 
-double Blockmodel::longerblock_edges() const {
+double Blockmodel::interblock_edges() const {
     double num_edges = utils::sum<long>(this->_block_degrees_in);
     double longerblock_edges = num_edges - double(this->_blockmatrix->trace());
     return longerblock_edges / num_edges;
