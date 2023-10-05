@@ -4,46 +4,6 @@
 
 namespace utils {
 
-//std::vector<long> argsort(const std::vector<long>& v) {
-//    if (v.empty()) {
-//        return {};
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = *std::max_element(v.begin(), v.end());
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//    std::vector<long> indices(v.size());
-//    std::iota(indices.begin(), indices.end(), 0);
-//
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::fill(counts.begin(), counts.end(), 0); // reset counts
-//
-//        for (size_t i = 0; i < v.size(); i++) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            counts[byte]++;
-//        }
-//
-//        for (long i = 1; i < num_buckets; i++) {
-//            counts[i] += counts[i - 1];
-//        }
-//
-//        std::vector<long> new_indices(v.size());
-//
-//        for (long i = 0; i < v.size(); i++) {
-//            long byte = (v[indices[i]] >> (num_bits * pass)) & mask;
-//            new_indices[--counts[byte] + v.size() - counts[num_buckets - 1]] = indices[i];
-//        }
-//
-//        std::swap(indices, new_indices);
-//    }
-//
-//    return indices;
-//}
-
 std::vector<long> argsort(const std::vector<long> &v) {
     if (v.empty()) {
         return {};
@@ -58,6 +18,8 @@ std::vector<long> argsort(const std::vector<long> &v) {
     std::vector<long> indices(v.size());
     std::iota(indices.begin(), indices.end(), 0);
     std::vector<long> new_indices(v.size());
+    std::vector<long> v_copy(v);
+    std::vector<long> new_v(v.size());
 
     // for each byte in integer (assuming 4-byte int).
     for (size_t i, j = 0; j < sizeof(long); j++) {
@@ -66,8 +28,8 @@ std::vector<long> argsort(const std::vector<long> &v) {
 
         // histogram.
         // count each occurrence of indexed-byte value.
-        for (i = 0; i < v.size(); i++)
-            h[255 - bmask(v[i], j)]++;
+        for (i = 0; i < v_copy.size(); i++)
+            h[255 - bmask(v_copy[i], j)]++;
 
         // accumulate.
         // generate positional offsets. adjust starting point
@@ -80,10 +42,12 @@ std::vector<long> argsort(const std::vector<long> &v) {
         // stable reordering of elements. backward to avoid shifting
         // the counter array.
         for ( i = v.size(); i > 0; i-- ) {
-            new_indices[--h[255 - bmask(v[i-1], j)]] = indices[i-1];
+            size_t k = --h[255 - bmask(v_copy[i-1], j)];
+            new_indices[k] = indices[i-1];
+            new_v[k] = v_copy[i-1];
         }
-
         std::swap(indices, new_indices);
+        std::swap(v_copy, new_v);
     }
     return indices;
 }
