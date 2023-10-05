@@ -50,8 +50,8 @@ std::vector<long> Blockmodel::build_mapping(const std::vector<long> &values) {
 
 double Blockmodel::difficulty_score() const {
     double norm_variance = this->block_size_variation();
-    double longerblock_edges = this->interblock_edges();
-    return (2.0 * norm_variance * longerblock_edges) / (norm_variance + longerblock_edges);
+    double interblockEdges = this->interblock_edges();
+    return (2.0 * norm_variance * interblockEdges) / (norm_variance + interblockEdges);
 }
 
 // TODO: move to block_merge.cpp
@@ -189,48 +189,6 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph* graph, std::vec
     return Blockmodel(num_blocks, graph, block_reduction_rate, _block_assignment);
 }
 
-//void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
-//    double start = omp_get_wtime();
-////    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
-//    /// TODO: this recreates the matrix (possibly unnecessary)
-//    if (args.transpose) {
-//        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
-//    } else {
-//        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
-//    }
-//    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-//    this->_block_degrees_in = utils::constant<long>(this->num_blocks, 0);
-//    this->_block_degrees_out = utils::constant<long>(this->num_blocks, 0);
-//    this->_block_degrees = utils::constant<long>(this->num_blocks, 0);
-//    // Initialize the blockmodel
-//    // TODO: find a way to parallelize the matrix filling step
-//    for (ulong vertex = 0; vertex < neighbors.size(); ++vertex) {
-//        std::vector<long> vertex_neighbors = neighbors[vertex];
-//        if (vertex_neighbors.empty()) {
-//            continue;
-//        }
-//        long block = this->_block_assignment[vertex];
-//        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
-//            // Get count
-//            long neighbor = vertex_neighbors[i];
-//            long neighbor_block = this->_block_assignment[neighbor];
-//            // TODO: change this once code is updated to support weighted graphs
-//            long weight = 1;
-//            // long weight = vertex_neighbors[i];
-//            // Update blockmodel
-//            this->_blockmatrix->add(block, neighbor_block, weight);
-//            // Update degrees
-//            this->_block_degrees_out[block] += weight;
-//            this->_block_degrees_in[neighbor_block] += weight;
-//            this->_block_degrees[block] += weight;
-//            if (block != neighbor_block)
-//                this->_block_degrees[neighbor_block] += weight;
-//        }
-//    }
-//    double end = omp_get_wtime();
-//    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
-//}
-
 void Blockmodel::initialize_edge_counts(const Graph* graph) {  // Parallel version!
     double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
@@ -303,8 +261,8 @@ void Blockmodel::initialize_edge_counts(const Graph* graph) {  // Parallel versi
 
 double Blockmodel::interblock_edges() const {
     double num_edges = utils::sum<long>(this->_block_degrees_in);
-    double longerblock_edges = num_edges - double(this->_blockmatrix->trace());
-    return longerblock_edges / num_edges;
+    double interblock_edges = num_edges - double(this->_blockmatrix->trace());
+    return interblock_edges / num_edges;
 }
 
 bool Blockmodel::is_neighbor_of(long block1, long block2) const {
