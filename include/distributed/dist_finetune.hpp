@@ -11,13 +11,13 @@ extern std::vector<unsigned long> MCMC_BLOCK_DEGREES;
 extern std::vector<unsigned long long> MCMC_AGGREGATE_BLOCK_DEGREES;
 
 /// Updates `blockmodel` for one membership update contained in `membership`.
-void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel);
+void async_move(const Membership &membership, const Graph* graph, TwoHopBlockmodel &blockmodel);
 
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels);
 
 /// Runs one iteration of the asynchronous Gibbs algorithm in a distributed fashion using MPI.
-std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
+std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph* graph,
                                                      const std::vector<long> &active_set = std::vector<long>(),
                                                      int batch = 0);
 
@@ -26,26 +26,26 @@ bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initi
                 std::vector<double> &delta_entropies);
 
 /// Finetunes the partial results on a given graph.
-Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph);
+Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph* graph);
 
 /// Runs the hybrid MCMC algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels);
 
 /// Records metrics that may be causing imbalance.
-void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph);
+void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph* graph);
 
 /// Runs the Metropolis Hastings algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels);
 
 /// Runs one iteration of the Metropolis-Hastings algorithm. Returns the accepted vertex moves.
-std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
+std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph* graph,
                                                       const std::vector<long> &active_set = std::vector<long>(),
                                                       int batch = -1);
 
 /// Proposes an asynchronous Gibbs move in a distributed setting.
-VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph);
+VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph* graph);
 
 /// Proposes a metropolis hastings move in a distributed setting.
-VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph);
+VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph* graph);
 
 }  // namespace finetune::dist

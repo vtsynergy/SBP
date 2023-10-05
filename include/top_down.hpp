@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "blockmodel/blockmodel.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 
 namespace top_down {
 
@@ -38,11 +38,11 @@ void apply_split(const Split &split, Blockmodel &blockmodel);
 
 /// Splits a single community into two. Returns a blockmodel containing just 2 communities that resulted from
 /// splitting community `community`.
-Split propose_split(long community, const Graph &graph, const Blockmodel &blockmodel);
+Split propose_split(long community, const Graph* graph, const Blockmodel &blockmodel);
 
 /// The reverse of block_merge::merge_blocks. Proposes several community splits, and applies the best ones until the
 /// number of communities reaches `target_num_communities`.
-Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, long target_num_communities);
+Blockmodel split_communities(Blockmodel &blockmodel, const Graph* graph, long target_num_communities);
 
 }
 

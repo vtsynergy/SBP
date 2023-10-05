@@ -124,7 +124,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
     this->num_blocks -= this->num_blocks_to_merge;
 }
 
-Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std::vector<long> &true_block_membership) {
+Blockmodel Blockmodel::clone_with_true_block_membership(const Graph* graph, std::vector<long> &true_block_membership) {
     long num_blocks = 0;
     std::vector<long> uniques = utils::constant<long>(true_block_membership.size(), 0);
     for (ulong i = 0; i < true_block_membership.size(); ++i) {
@@ -151,16 +151,16 @@ Blockmodel Blockmodel::copy() {
     return blockmodel_copy;
 }
 
-Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vector<long> &sample_block_membership,
+Blockmodel Blockmodel::from_sample(long num_blocks, const Graph* graph, std::vector<long> &sample_block_membership,
                                  std::map<long, long> &mapping, double block_reduction_rate) {
     // Fill in initial block assignment
-    std::vector<long> _block_assignment = utils::constant<long>(graph.num_vertices(), -1);  // neighbors.size(), -1);
+    std::vector<long> _block_assignment = utils::constant<long>(graph->num_vertices(), -1);  // neighbors.size(), -1);
     for (const auto &item : mapping) {
         _block_assignment[item.first] = sample_block_membership[item.second];
     }
     // Every unassigned block gets assigned to the next block number
     long next_block = num_blocks;
-    for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
+    for (ulong vertex = 0; vertex < graph->num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
         if (_block_assignment[vertex] >= 0) {
             continue;
         }
@@ -168,13 +168,13 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
         next_block++;
     }
     // Every previously unassigned block gets assigned to the block it's most connected to
-    for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
+    for (ulong vertex = 0; vertex < graph->num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
         if (_block_assignment[vertex] < num_blocks) {
             continue;
         }
         std::vector<long> block_counts = utils::constant<long>(num_blocks, 0);
         // TODO: this can only handle unweighted graphs
-        std::vector<long> vertex_neighbors = graph.out_neighbors(vertex);  // [vertex];
+        std::vector<long> vertex_neighbors = graph->out_neighbors(vertex);  // [vertex];
         for (ulong i = 0; i < vertex_neighbors.size(); ++i) {
             long neighbor = vertex_neighbors[i];
             long neighbor_block = _block_assignment[neighbor];
@@ -231,11 +231,11 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
 //    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
 //}
 
-void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
+void Blockmodel::initialize_edge_counts(const Graph* graph) {  // Parallel version!
     double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
-    long num_buckets = graph.num_edges() / graph.num_vertices();
+    long num_buckets = graph->num_edges() / graph->num_vertices();
     if (args.transpose) {
         blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, num_buckets);
     } else {
@@ -254,15 +254,15 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
         long my_num_blocks = ceil(double(this->num_blocks) / double(num_threads));
         long start = my_num_blocks * tid;
         long end = start + my_num_blocks;
-        for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-//            std::vector<long> vertex_neighbors = graph.out_neighbors(vertex);  // neighbors[vertex];
+        for (ulong vertex = 0; vertex < graph->num_vertices(); ++vertex) {
+//            std::vector<long> vertex_neighbors = graph->out_neighbors(vertex);  // neighbors[vertex];
 //            if (vertex_neighbors.empty()) {
 //                continue;
 //            }
             long block = this->_block_assignment[vertex];
             if (block < start || block >= end)  // only modify blocks this thread is responsible for
                 continue;
-            for (long neighbor : graph.out_neighbors(long(vertex))) {  // vertex_neighbors) {
+            for (long neighbor : graph->out_neighbors(long(vertex))) {  // vertex_neighbors) {
 //                size_t i = 0; i < vertex_neighbors.size(); ++i) {
                 // Get count
 //                long neighbor = vertex_neighbors[i];
@@ -277,7 +277,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
                 block_degrees[block] += weight;
 //            }
             }
-            for (long neighbor : graph.in_neighbors(long(vertex))) {
+            for (long neighbor : graph->in_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 long weight = 1;
                 if (args.transpose) {
@@ -482,7 +482,7 @@ void Blockmodel::update_edge_counts(long current_block, long proposed_block, Spa
                                            updates.block_col, updates.proposal_col);
 }
 
-bool Blockmodel::validate(const Graph &graph) const {
+bool Blockmodel::validate(const Graph* graph) const {
     std::cout << "Validating..." << std::endl;
     std::vector<long> assignment(this->_block_assignment);
     Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);

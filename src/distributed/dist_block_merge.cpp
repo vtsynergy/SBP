@@ -28,7 +28,7 @@ std::vector<Merge> mpi_get_best_merges(std::vector<Merge> &merge_buffer, int my_
     return all_best_merges;
 }
 
-TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph) {
+TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph* graph) {
     // MPI Datatype init
     int merge_blocklengths[3] = {1, 1, 1};
     MPI_Aint merge_displacements[3] = {0, sizeof(long), sizeof(long) + sizeof(long)};
@@ -53,7 +53,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
         my_blocks++;
         std::unordered_map<long, bool> past_proposals;
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, graph.num_edges(), blockmodel,
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, graph->num_edges(), blockmodel,
                                                                past_proposals);
             // std::cout << "proposal = " << proposal.proposed_block << " with DE " << proposal.delta_entropy << std::endl;
             // TODO: find a way to do this without having a large merge buffer. Maybe store list of my blocks in

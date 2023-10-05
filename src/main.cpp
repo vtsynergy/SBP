@@ -16,7 +16,7 @@
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "mpi_data.hpp"
 #include "partition.hpp"
 #include "rng.hpp"
@@ -32,7 +32,7 @@ double sample_extend_time = 0.0;
 double finetune_time = 0.0;
 
 struct Partition {
-    Graph graph;
+    Graph* graph;
     Blockmodel blockmodel;
 };
 
@@ -71,7 +71,7 @@ void write_json(const Blockmodel &blockmodel, double runtime) {
     output_file.close();
 }
 
-void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
+void write_results(const Graph *graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::intermediate> intermediate_results;
     if (mpi.num_processes > 1) {
         intermediate_results = sbp::dist::get_intermediates();
@@ -97,11 +97,11 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "sort_time, load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
     }
     for (const sbp::intermediate &temp : intermediate_results) {
-        file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
+        file << args.tag << ", " << graph->num_vertices() << ", " << graph->num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
-             << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
+             << entropy::normalize_mdl_v1(eval.true_mdl, graph->num_edges()) << ", "
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
@@ -114,7 +114,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     file.close();
 }
 
-void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
+void evaluate_partition(const Graph *graph, Blockmodel &blockmodel, double runtime) {
     if (mpi.rank != 0) return;
     write_json(blockmodel, runtime);
     if (!args.evaluate) return;
@@ -128,7 +128,7 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
 }
 
 void run(Partition &partition) {
-    sbp::total_num_islands = partition.graph.num_islands();
+    sbp::total_num_islands = partition.graph->num_islands();
     if (mpi.num_processes > 1) {
         partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args);
     } else {
@@ -152,17 +152,17 @@ int main(int argc, char* argv[]) {
         // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
-    Graph graph = Graph::load();
+    Graph* graph = graph::load();
     sample::Sample detached;
     Partition partition;
     double start = MPI_Wtime();
     if (args.detach) {  // if we're getting rid of vertices with degree < 2
         detached = sample::detach(graph);
-        partition.graph = std::move(detached.graph);
-        std::cout << "detached num vertices: " << partition.graph.num_vertices() << " E: "
-                  << partition.graph.num_edges() << std::endl;
+        partition.graph = detached.graph;
+        std::cout << "detached num vertices: " << partition.graph->num_vertices() << " E: "
+                  << partition.graph->num_edges() << std::endl;
     } else {
-        partition.graph = std::move(graph);
+        partition.graph = graph;
     }
     if (args.samplesize <= 0.0) {
         std::cerr << "ERROR " << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
 //        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
         if (mpi.num_processes > 1) {
-            MPI_Bcast(s.mapping.data(), (int) partition.graph.num_vertices(), MPI_LONG, 0, mpi.comm);
+            MPI_Bcast(s.mapping.data(), (int) partition.graph->num_vertices(), MPI_LONG, 0, mpi.comm);
             if (mpi.rank > 0) {
                 std::vector<long> vertices;
                 for (const long &mapped_id : s.mapping) {
@@ -186,13 +186,13 @@ int main(int argc, char* argv[]) {
             MPI_Barrier(mpi.comm);
         }
         Partition sample_partition;
-        sample_partition.graph = std::move(s.graph);  // s.graph may be empty now
+        sample_partition.graph = s.graph;  // s.graph may be empty now
         // add timer
         double sample_end_t = MPI_Wtime();
         sample_time = sample_end_t - sample_start_t;
         run(sample_partition);
         double extend_start_t = MPI_Wtime();
-        s.graph = std::move(sample_partition.graph);  // refill s.graph
+        s.graph = sample_partition.graph;  // refill s.graph
         // extend sample to full graph
         // TODO: this seems deterministic...
         std::vector<long> assignment = sample::extend(partition.graph, sample_partition.blockmodel, s);
@@ -217,11 +217,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Reattaching island and 1-degree vertices" << std::endl;
         partition.blockmodel = sample::reattach(graph, partition.blockmodel, detached);
     } else {
-        graph = std::move(partition.graph);
+        graph = partition.graph;
     }
     // evaluate
     double end = MPI_Wtime();
     evaluate_partition(graph, partition.blockmodel, end - start);
 
     MPI_Finalize();
+
+    delete graph;
 }

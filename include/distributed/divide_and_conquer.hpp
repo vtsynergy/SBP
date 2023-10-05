@@ -8,7 +8,7 @@
 
 #include "blockmodel.hpp"
 #include "evaluate.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "sample.hpp"
 
 const int NUM_VERTICES_TAG = 0;
@@ -21,16 +21,16 @@ extern double finetune_time;
 
 namespace dnc {
 
-std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vector<std::vector<long>> &vertex_lists,
+std::vector<long> combine_partitions(const Graph* graph, long &offset, std::vector<std::vector<long>> &vertex_lists,
                                      std::vector<std::vector<long>> &assignment_lists);
 
 std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vertices,
                                           const std::vector<long> &assignment_a,
-                                          const std::vector<long> &assignment_b, const Graph &original_graph);
+                                          const std::vector<long> &assignment_b, const Graph* original_graph);
 
-void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runtime);
+void evaluate_partition(const Graph* graph, Blockmodel &blockmodel, double runtime);
 
-Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph);
+Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph* graph);
 
 Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subgraph, long my_num_blocks,
                         long combined_num_blocks);
@@ -42,7 +42,7 @@ void translate_local_partition(std::vector<long> &local_vertices, std::vector<lo
                                const sample::Sample &subgraph, long num_vertices,
                                const std::vector<long> &partition_assignment);
 
-void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime);
+void write_results(const Graph* graph, const evaluate::Eval &eval, double runtime);
 
 }
 

@@ -12,7 +12,7 @@
 #include "blockmodel/blockmodel.hpp"
 #include "common.hpp"
 #include "entropy.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "rng.hpp"
 #include "utils.hpp"
 
@@ -45,12 +45,12 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
     blockmodel.setNum_blocks(num_blocks);
 }
 
-Split propose_split(long community, const Graph &graph, const Blockmodel &blockmodel) {
+Split propose_split(long community, const Graph* graph, const Blockmodel &blockmodel) {
     Split split;
-    std::vector<bool> community_flag = utils::constant<bool>(graph.num_vertices(), false);
+    std::vector<bool> community_flag = utils::constant<bool>(graph->num_vertices(), false);
     std::vector<long> community_vertices;
     long index = 0;
-    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+    for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
         if (blockmodel.block_assignment(vertex) != community) continue;
         community_flag[vertex] = true;
         community_vertices.push_back(vertex);
@@ -58,11 +58,11 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
         index++;
     }
     split.num_vertices = long(community_vertices.size());
-    Graph subgraph(split.num_vertices);
+    Graph* subgraph = graph::make_graph(split.num_vertices);
     for (long vertex : community_vertices) {
-        for (long neighbor : graph.out_neighbors(vertex)) {
+        for (long neighbor : graph->out_neighbors(vertex)) {
             if (!community_flag[neighbor]) continue;
-            subgraph.add_edge(split.translator[vertex], split.translator[neighbor]);
+            subgraph->add_edge(split.translator[vertex], split.translator[neighbor]);
         }
     }
     // TODO: -1s in assignment may screw with blockmodel formation
@@ -73,11 +73,11 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
         split_assignment[vertex] = distribution(rng::generator());
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
-    split.num_edges = subgraph.num_edges();
+    split.num_edges = subgraph->num_edges();
     return split;
 }
 
-Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, long target_num_communities) {
+Blockmodel split_communities(Blockmodel &blockmodel, const Graph* graph, long target_num_communities) {
     long num_blocks = blockmodel.getNum_blocks();
     std::vector<Split> best_split_for_each_block(num_blocks);
     std::vector<double> delta_entropy_for_each_block =

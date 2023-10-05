@@ -1,8 +1,8 @@
 /**
  * Stores the triplet of blockmodels needed for the fibonacci search.
  */
-#ifndef CPPSBP_PARTITION_PARTITION_TRIPLET_HPP
-#define CPPSBP_PARTITION_PARTITION_TRIPLET_HPP
+#ifndef SBP_BLOCKMODEL_TRIPLET_HPP
+#define SBP_BLOCKMODEL_TRIPLET_HPP
 
 #include <iostream>
 #include <limits>
@@ -41,4 +41,4 @@ protected:
     long upper_difference();
 };
 
-#endif // CPPSBP_PARTITION_PARTITION_TRIPLET_HPP
+#endif // SBP_BLOCKMODEL_TRIPLET_HPP

@@ -35,7 +35,7 @@ bool accept(double delta_entropy, double hastings_correction) {
     return random_probability <= accept_probability;
 }
 
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph* graph, BlockmodelTriplet &blockmodels) {
     std::cout << "Asynchronous Gibbs iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
@@ -43,19 +43,19 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long _vertex_moves = 0;
         double num_batches = args.batches;
-        long batch_size = long(ceil(graph.num_vertices() / num_batches));
-        for (long batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
+        long batch_size = long(ceil(graph->num_vertices() / num_batches));
+        for (long batch = 0; batch < graph->num_vertices() / batch_size; ++batch) {
             long start = batch * batch_size;
-            long end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
+            long end = std::min(graph->num_vertices(), (batch + 1) * batch_size);
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
-            std::vector<VertexMove_v2> moves(graph.num_vertices());
+            std::vector<VertexMove_v2> moves(graph->num_vertices());
             double start_t = MPI_Wtime();
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, _vertex_moves, moves)
@@ -74,7 +74,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             }
             MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
         }
-        double entropy = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double entropy = entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
         last_entropy = entropy;
@@ -89,7 +89,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -148,8 +148,8 @@ Delta blockmodel_delta(long vertex, long current_block, long proposed_block, con
     return delta;
 }
 
-std::pair<std::vector<long>, long> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel) {
-    const std::vector<long> &low_degree_vertices = graph.low_degree_vertices();
+std::pair<std::vector<long>, long> count_low_degree_block_neighbors(const Graph* graph, const Blockmodel &blockmodel) {
+    const std::vector<long> &low_degree_vertices = graph->low_degree_vertices();
     std::vector<long> result = utils::constant<long>(blockmodel.getNum_blocks(), 0);
     long total = 0;
     for (long vertex : low_degree_vertices) {
@@ -344,7 +344,7 @@ EdgeWeights edge_weights(const NeighborList &neighbors, long vertex, bool ignore
 }
 
 VertexMove eval_vertex_move(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                            const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                            const Blockmodel &blockmodel, const Graph* graph, EdgeWeights &out_edges,
                             EdgeWeights &in_edges) {
     if (args.nodelta)
         return eval_vertex_move_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
@@ -358,7 +358,7 @@ VertexMove eval_vertex_move(long vertex, long current_block, utils::ProposalAndE
 }
 
 VertexMove_v2 eval_vertex_move_v2(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                                 const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                 const Blockmodel &blockmodel, const Graph* graph, EdgeWeights &out_edges,
                                  EdgeWeights &in_edges) {
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
@@ -369,7 +369,7 @@ VertexMove_v2 eval_vertex_move_v2(long vertex, long current_block, utils::Propos
 }
 
 VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                                    const Blockmodel &blockmodel, const Graph* graph, EdgeWeights &out_edges,
                                     EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
@@ -383,24 +383,24 @@ VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::Prop
             entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
                                          new_block_degrees);
     double delta_entropy =
-            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
+            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph->num_edges(), updates,
                                new_block_degrees);
     if (accept(delta_entropy, hastings))
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph* graph, BlockmodelTriplet &blockmodels) {
         std::cout << "Hybrid MCMC iteration" << std::endl;
         if (blockmodel.getNum_blocks() == 1) {
             return blockmodel;
         }
         std::vector<double> delta_entropies;
         long total_vertex_moves = 0;
-        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
         double initial_entropy = blockmodel.getOverall_entropy();
         double num_batches = args.batches;
-        long num_low_degree_vertices = long(graph.low_degree_vertices().size());
+        long num_low_degree_vertices = long(graph->low_degree_vertices().size());
         long batch_size = long(ceil(num_low_degree_vertices / num_batches));
         std::vector<unsigned long> thread_degrees(omp_get_max_threads());
 //        std::vector<std::pair<long,long>> vertex_properties = sort_vertices_by_degree(graph);
@@ -414,7 +414,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
             long vertex_moves = 0;
             double delta_entropy = 0.0;
             double start_t = MPI_Wtime();
-            for (long vertex : graph.high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
+            for (long vertex : graph->high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
                 VertexMove proposal = propose_move(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     vertex_moves++;
@@ -431,7 +431,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
                 // asynchronous Gibbs sampling
                 std::vector<long> block_assignment(blockmodel.block_assignment());
-                std::vector<VertexMove_v2> moves(graph.num_vertices());
+                std::vector<VertexMove_v2> moves(graph->num_vertices());
 //                omp_set_dynamic(0);
                 start_t = MPI_Wtime();
                 #pragma omp parallel default(none) shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment, moves, thread_degrees, block_neighbors, std::cout)
@@ -446,7 +446,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                     long num_processed = 0;
                     for (long index = start; index < end; ++index) {
                         if (block_neighbors.first[index] != thread_id) continue;
-                        long vertex = graph.low_degree_vertices()[index];
+                        long vertex = graph->low_degree_vertices()[index];
 //                        if (!my_vertices[vertex]) continue;
                         long block = blockmodel.block_assignment(vertex);
 //                        if (!my_blocks[block]) continue;  // Only process the vertices this thread is responsible for
@@ -482,14 +482,14 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 break;
             }
         }
-        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
         std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
         std::cout << blockmodel.getOverall_entropy() << std::endl;
         MCMC_moves += total_vertex_moves;
         return blockmodel;
     }
 
-Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph* graph, BlockmodelTriplet &blockmodels) {
     std::cout << "Hybrid MCMC iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
@@ -497,11 +497,11 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     double num_batches = args.batches;
-    long num_low_degree_vertices = long(graph.low_degree_vertices().size());
+    long num_low_degree_vertices = long(graph->low_degree_vertices().size());
     long batch_size = long(ceil(num_low_degree_vertices / num_batches));
 
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -509,7 +509,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
         num_surrounded = 0;
         long _vertex_moves = 0;
         double start_t = MPI_Wtime();
-        for (long vertex : graph.high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
+        for (long vertex : graph->high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 _vertex_moves++;
@@ -524,11 +524,11 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             long end = std::min(num_low_degree_vertices, (batch + 1) * batch_size);
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
-            std::vector<VertexMove_v2> moves(graph.num_vertices());
+            std::vector<VertexMove_v2> moves(graph->num_vertices());
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, _vertex_moves, moves)
             for (long index = start; index < end; ++index) {
-                long vertex = graph.low_degree_vertices()[index];
+                long vertex = graph->low_degree_vertices()[index];
                 VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     #pragma omp atomic
@@ -545,7 +545,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
 //            assert(blockmodel.validate(graph));
         }
-        double entropy = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double entropy = entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
         last_entropy = entropy;
@@ -559,7 +559,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
@@ -581,11 +581,11 @@ std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<s
     return my_blocks;
 }
 
-std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel,
+std::vector<bool> load_balance_block_neighbors(const Graph* graph, const Blockmodel &blockmodel,
                                                const std::pair<std::vector<long>, long> &block_neighbors) {
     // Decide which blocks each thread is responsible for
     long thread_id = omp_get_thread_num();
-    std::vector<bool> my_vertices = utils::constant<bool>(graph.num_vertices(), false);
+    std::vector<bool> my_vertices = utils::constant<bool>(graph->num_vertices(), false);
     long total_neighbors = block_neighbors.second;
 //    for (long num_neighbors : block_neighbors.first) {
 //        total_neighbors += num_neighbors;
@@ -595,13 +595,13 @@ std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmo
         std::cout << "average neighbors: " << average_neighbors << " total neighbors: " << total_neighbors << std::endl << " threads: " << omp_get_max_threads();
     long thread = 0;
     long current_neighbors = 0;
-    for (long vertex : graph.low_degree_vertices()) {
+    for (long vertex : graph->low_degree_vertices()) {
         long block = blockmodel.block_assignment(vertex);
         current_neighbors += block_neighbors.first[block];
     }
     assert(current_neighbors == total_neighbors);
     current_neighbors = 0;
-    for (long vertex : graph.low_degree_vertices()) {
+    for (long vertex : graph->low_degree_vertices()) {
         long block = blockmodel.block_assignment(vertex);
         long neighbors = block_neighbors.first[block];
         if (thread == thread_id) {
@@ -621,34 +621,34 @@ std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmo
     return my_vertices;
 }
 
-std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<std::pair<long, long>> &vertex_properties) {
+std::vector<bool> load_balance_vertices(const Graph* graph, const std::vector<std::pair<long, long>> &vertex_properties) {
     // Decide which blocks each thread is responsible for
     long thread_id = omp_get_thread_num();
-    std::vector<bool> my_vertices = utils::constant<bool>(graph.num_vertices(), false);
-    for (long i = thread_id; i < graph.num_vertices(); i += 2 * omp_get_max_threads()) {
+    std::vector<bool> my_vertices = utils::constant<bool>(graph->num_vertices(), false);
+    for (long i = thread_id; i < graph->num_vertices(); i += 2 * omp_get_max_threads()) {
         long vertex = vertex_properties[i].first;
         my_vertices[vertex] = true;
     }
-    for (long i = 2 * omp_get_max_threads() - 1 - thread_id; i < graph.num_vertices(); i += 2 * omp_get_max_threads()) {
+    for (long i = 2 * omp_get_max_threads() - 1 - thread_id; i < graph->num_vertices(); i += 2 * omp_get_max_threads()) {
         long vertex = vertex_properties[i].first;
         my_vertices[vertex] = true;
     }
     return my_vertices;
 }
 
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels) {
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph* graph, BlockmodelTriplet &blockmodels) {
     std::cout << "Metropolis hastings iteration" << std::endl;
     if (blockmodel.getNum_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long vertex_moves = 0;
         double delta_entropy = 0.0;
         double start_t = MPI_Wtime();
-        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
@@ -666,7 +666,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, Bloc
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
@@ -674,7 +674,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, Bloc
 }
 
 VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
-                       const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges) {
+                       const Graph* graph, EdgeWeights &out_edges, EdgeWeights &in_edges) {
     if (args.nodelta)
         return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
@@ -691,7 +691,7 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
 }
 
 VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+                               Blockmodel &blockmodel, const Graph* graph, EdgeWeights &out_edges,
                                EdgeWeights &in_edges) {
     EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
     EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
@@ -705,7 +705,7 @@ VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalA
             entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
                                          new_block_degrees);
     double delta_entropy =
-            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
+            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph->num_edges(), updates,
                                new_block_degrees);
     if (accept(delta_entropy, hastings)) {
         blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
@@ -715,11 +715,11 @@ VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalA
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph* graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), vertex, true);
 
     MapVector<long> neighbor_blocks;
     for (long neighbor : out_edges.indices) {
@@ -741,12 +741,12 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const Graph* graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
 
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), vertex, true);
 
     utils::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, out_edges, in_edges,
                                                                       blockmodel.block_assignment(), blockmodel,
@@ -757,12 +757,12 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const G
     return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, const Graph* graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
 
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), vertex, true);
 
     MapVector<long> neighbor_blocks;
     for (long neighbor : out_edges.indices) {
@@ -784,16 +784,16 @@ VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, c
     return eval_vertex_move_v2(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-[[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {
+[[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph* graph) {
     std::cout << "Fine-tuning partition results after sample results have been extended to full graph" << std::endl;
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long vertex_moves = 0;
         double delta_entropy = 0.0;
-        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
@@ -809,7 +809,7 @@ VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, c
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -842,10 +842,10 @@ std::vector<std::pair<long, long>> sort_blocks_by_size(const Blockmodel &blockmo
     return block_sizes;
 }
 
-std::vector<std::pair<long,long>> sort_vertices_by_degree(const Graph &graph) {
+std::vector<std::pair<long,long>> sort_vertices_by_degree(const Graph* graph) {
     std::vector<std::pair<long,long>> vertex_degrees;
-    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
-        long degree = (long)(graph.out_neighbors(vertex).size() + graph.in_neighbors(vertex).size());
+    for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
+        long degree = (long)(graph->out_neighbors(vertex).size() + graph->in_neighbors(vertex).size());
         vertex_degrees.emplace_back(std::make_pair(vertex, degree));
     }
     utils::radix_sort(vertex_degrees);

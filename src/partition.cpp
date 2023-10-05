@@ -1,9 +1,11 @@
 #include "partition.hpp"
 
-Graph partition::partition(const Graph &graph, long rank, long num_processes, Args &args) {
-    long target_num_vertices = graph.num_vertices() / num_processes;
+#include "graph/graph.hpp"
+
+Graph* partition::partition(Graph* graph, long rank, long num_processes, Args &args) {
+    long target_num_vertices = graph->num_vertices() / num_processes;
     std::cout << "target num vertices = " << target_num_vertices << std::endl;
-    if (target_num_vertices == graph.num_vertices())
+    if (target_num_vertices == graph->num_vertices())
         return graph;
     if (args.subgraphpartition == "round_robin")
         return partition_round_robin(graph, rank, num_processes, target_num_vertices);
@@ -15,17 +17,17 @@ Graph partition::partition(const Graph &graph, long rank, long num_processes, Ar
     return partition_round_robin(graph, rank, num_processes, target_num_vertices);
 }
 
-Graph partition::partition_round_robin(const Graph &graph, long rank, long num_processes, long target_num_vertices) {
+Graph* partition::partition_round_robin(Graph* graph, long rank, long num_processes, long target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     long num_vertices = 0, num_edges = 0;
     std::unordered_map<long, long> translator;
     std::vector<bool> self_edges;
-    for (long i = rank; i < (long) graph.out_neighbors().size(); i += num_processes) {
+    for (long i = rank; i < (long) graph->out_neighbors().size(); i += num_processes) {
         if (utils::insert(translator, i, num_vertices))
             num_vertices++;
         long from = translator[i];  // TODO: can avoid additional lookups by returning the inserted element in insert
-        for (long neighbor : graph.out_neighbors(i)) {
+        for (long neighbor : graph->out_neighbors(i)) {
             if ((neighbor % num_processes) - rank == 0) {
                 if (utils::insert(translator, neighbor, num_vertices))
                     num_vertices++;
@@ -44,34 +46,36 @@ Graph partition::partition_round_robin(const Graph &graph, long rank, long num_p
     }
     std::vector<long> assignment(num_vertices, -1);
     for (const std::pair<const long, long> &element : translator) {
-        assignment[element.second] = graph.assignment(element.first);
+        assignment[element.second] = graph->assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";
     std::cout << num_edges << std::endl;
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+    Graph* subgraph = graph::package(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
+    graph->assignment(assignment);
+    return subgraph;
 }
 
-Graph partition::partition_random(const Graph &graph, long rank, long num_processes, long target_num_vertices) {
+Graph* partition::partition_random(Graph* graph, long rank, long num_processes, long target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     long num_vertices = 0, num_edges = 0;
     std::unordered_map<long, long> translator;
     std::vector<bool> self_edges;
     long seed = 1234;  // TODO: make this a command-line argument
-    std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+    std::vector<long> vertices = utils::range<long>(0, graph->num_vertices());
     std::shuffle(vertices.begin(), vertices.end(), std::default_random_engine(seed));
-    std::vector<bool> sampled(graph.num_vertices(), false);
+    std::vector<bool> sampled(graph->num_vertices(), false);
     for (long i = 0; i < target_num_vertices; ++i) {
         long index = (rank * target_num_vertices) + i;
-        if (index >= graph.num_vertices()) break;
+        if (index >= graph->num_vertices()) break;
         sampled[vertices[index]] = true;
         translator[vertices[index]] = num_vertices;
         num_vertices++;
     }
-    for (long i = 0; i < (long) graph.out_neighbors().size(); ++i) {
+    for (long i = 0; i < (long) graph->out_neighbors().size(); ++i) {
         if (!sampled[i]) continue;
         long from = translator[i];
-        for (long neighbor : graph.out_neighbors(i)) {
+        for (long neighbor : graph->out_neighbors(i)) {
             if (!sampled[neighbor]) continue;
             long to = translator[neighbor];
             utils::insert(out_neighbors, from, to);
@@ -87,14 +91,16 @@ Graph partition::partition_random(const Graph &graph, long rank, long num_proces
     }
     std::vector<long> assignment(num_vertices, -1);
     for (const std::pair<const long, long> &element : translator) {
-        assignment[element.second] = graph.assignment(element.first);
+        assignment[element.second] = graph->assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";
     std::cout << num_edges << std::endl;
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+    Graph* subgraph = graph::package(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
+    graph->assignment(assignment);
+    return subgraph;
 }
 
-Graph partition::partition_snowball(const Graph &graph, long rank, long num_processes, long target_num_vertices) {
+Graph* partition::partition_snowball(Graph* graph, long rank, long num_processes, long target_num_vertices) {
     NeighborList in_neighbors(target_num_vertices);
     NeighborList out_neighbors(target_num_vertices);
     long num_vertices = 0, num_edges = 0;
@@ -102,9 +108,9 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
     std::vector<bool> self_edges;
     // Set up random number generator
     std::default_random_engine generator;
-    std::uniform_int_distribution<long> distribution(0, graph.num_vertices() - 1);
-    std::vector<bool> sampled(graph.num_vertices(), false);
-    std::vector<bool> neighborhood(graph.num_vertices(), false);
+    std::uniform_int_distribution<long> distribution(0, graph->num_vertices() - 1);
+    std::vector<bool> sampled(graph->num_vertices(), false);
+    std::vector<bool> neighborhood(graph->num_vertices(), false);
     std::vector<long> neighbors;
     std::vector<long> new_neighbors;
     long start;
@@ -119,7 +125,7 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
             neighborhood[start] = false;  // this is just a precaution, shouldn't need to be set
             translator[start] = num_vertices;
             num_vertices++;
-            for (long neighbor : graph.out_neighbors(start)) {
+            for (long neighbor : graph->out_neighbors(start)) {
                 if (!sampled[neighbor] && !neighborhood[neighbor]) {
                     neighborhood[neighbor] = true;
                     neighbors.push_back(neighbor);
@@ -133,7 +139,7 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
                 neighborhood[neighbor] = false;
                 translator[neighbor] = num_vertices;
                 num_vertices++;
-                for (long new_neighbor : graph.out_neighbors(neighbor)) {
+                for (long new_neighbor : graph->out_neighbors(neighbor)) {
                     if (!sampled[new_neighbor] && !neighborhood[new_neighbor]) {
                         neighborhood[new_neighbor] = true;
                         new_neighbors.push_back(new_neighbor);
@@ -144,10 +150,10 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
         neighbors = std::vector<long>(new_neighbors);
         new_neighbors = std::vector<long>();
     }
-    for (long i = 0; i < (long) graph.out_neighbors().size(); ++i) {
+    for (long i = 0; i < (long) graph->out_neighbors().size(); ++i) {
         if (!sampled[i]) continue;
         long from = translator[i];
-        for (long neighbor : graph.out_neighbors(i)) {
+        for (long neighbor : graph->out_neighbors(i)) {
             if (!sampled[neighbor]) continue;
             long to = translator[neighbor];
             utils::insert(out_neighbors, from, to);
@@ -163,9 +169,16 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
     }
     std::vector<long> assignment(num_vertices, -1);
     for (const std::pair<const long, long> &element : translator) {
-        assignment[element.second] = graph.assignment(element.first);
+        assignment[element.second] = graph->assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";
     std::cout << num_edges << std::endl;
-    return Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+    Graph* subgraph = graph::package(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
+    graph->assignment(assignment);
+    return subgraph;
+//    if (args.undirected) {
+//        return new UndirectedGraph(out_neighbors, num_vertices, num_edges, self_edges, assignment);
+//    } else {
+//        return new DirectedGraph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+//    }
 }

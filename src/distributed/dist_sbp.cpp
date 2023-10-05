@@ -21,11 +21,11 @@ std::vector<intermediate> get_intermediates() {
     return intermediate_results;
 }
 
-void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
-    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
+void add_intermediate(double iteration, const Graph* graph, double modularity, double mdl) {
+    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph->num_edges());
 //    double modularity = -1;
 //    if (iteration == -1)
-//        modularity = graph.modularity(blockmodel.block_assignment());
+//        modularity = graph->modularity(blockmodel.block_assignment());
     intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
@@ -139,19 +139,19 @@ void record_runtime_imbalance() {
     file.close();
 }
 
-// Blockmodel stochastic_block_partition(Graph &graph, MPI &mpi, Args &args) {
-Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
+// Blockmodel stochastic_block_partition(Graph* graph, MPI &mpi, Args &args) {
+Blockmodel stochastic_block_partition(Graph* graph, Args &args, bool divide_and_conquer) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     // DistBlockmodel blockmodel(graph, args, mpi);
-    TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
+    TwoHopBlockmodel blockmodel(graph->num_vertices(), graph, BLOCK_REDUCTION_RATE);
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
-    // Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
+    // Blockmodel blockmodel(graph->num_vertices(), graph->out_neighbors(), BLOCK_REDUCTION_RATE);
     if (mpi.rank == 0)
-        std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
+        std::cout << "Performing stochastic block blockmodeling on graph with " << graph->num_vertices() << " vertices "
                   << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
     long iteration = 0;
@@ -185,7 +185,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
 //    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
     double modularity = -1;
     if (args.modularity)
-        modularity = graph.modularity(blockmodel.block_assignment());
+        modularity = graph->modularity(blockmodel.block_assignment());
     add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
 //    record_runtime_imbalance();
     return blockmodel;

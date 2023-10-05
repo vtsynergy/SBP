@@ -194,8 +194,8 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, long current_block, lo
     updates.proposal_col[proposed_block] += count_out;
 }
 
-Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_edges) {
-    assert(blockmodel.blockmatrix()->edges() == graph.num_edges());
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph* graph, long num_edges) {
+    assert(blockmodel.blockmatrix()->edges() == graph->num_edges());
     // TODO: add block merge timings to evaluation
     long num_blocks = blockmodel.getNum_blocks();
     std::vector<long> best_merge_for_each_block = utils::constant<long>(num_blocks, -1);

@@ -95,36 +95,36 @@ double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table) {
     return nmi;
 }
 
-Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
+Eval evaluate_blockmodel(const Graph* graph, Blockmodel &blockmodel) {
     Hungarian::Matrix contingency_table = hungarian(graph, blockmodel);
-    double f1_score = calculate_f1_score(graph.num_vertices(), contingency_table);
-    double nmi = calculate_nmi(graph.num_vertices(), contingency_table);
-    std::vector<long> true_assignment(graph.assignment());
+    double f1_score = calculate_f1_score(graph->num_vertices(), contingency_table);
+    double nmi = calculate_nmi(graph->num_vertices(), contingency_table);
+    std::vector<long> true_assignment(graph->assignment());
     long true_num_blocks = 1 + *std::max_element(true_assignment.begin(), true_assignment.end());
     Blockmodel true_blockmodel(true_num_blocks, graph, 0.5, true_assignment);
-    double true_entropy = entropy::mdl(true_blockmodel, graph.num_vertices(), graph.num_edges());
+    double true_entropy = entropy::mdl(true_blockmodel, graph->num_vertices(), graph->num_edges());
     std::cout << "true entropy = " << true_entropy << std::endl;
     return Eval { f1_score, nmi, true_entropy };
 }
 
-Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
+Hungarian::Matrix hungarian(const Graph* graph, Blockmodel &blockmodel) {
     // Create contingency table
     long num_true_communities = 0;
     std::unordered_map<long, long> translator;  // TODO: add some kind of if statement for whether to use this or not
     translator[-1] = -1;
-    for (long community: graph.assignment()) {
+    for (long community: graph->assignment()) {
         if (community > -1) {
             if (translator.insert(std::unordered_map<long, long>::value_type(community, num_true_communities)).second) {
                 num_true_communities++;
             };
         }
     }
-    std::vector<long> true_assignment(graph.assignment());
+    std::vector<long> true_assignment(graph->assignment());
     for (size_t i = 0; i < true_assignment.size(); ++i) {
         true_assignment[i] = translator[true_assignment[i]];
     }
     std::cout << "Blockmodel correctness evaluation" << std::endl;
-    std::cout << "Number of vertices: " << graph.num_vertices() << std::endl;
+    std::cout << "Number of vertices: " << graph->num_vertices() << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
     std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
     std::vector<long> rows, cols;
@@ -141,7 +141,7 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
-    for (long i = 0; i < graph.num_vertices(); ++i) {
+    for (long i = 0; i < graph->num_vertices(); ++i) {
         long row_block = rows[i];
         long col_block = cols[i];
         if (true_assignment[i] > -1) {

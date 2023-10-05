@@ -4,6 +4,7 @@
 #include "entropy.hpp"
 #include "finetune.hpp"
 #include "fs.hpp"
+#include "graph/graph.hpp"
 #include "mpi_data.hpp"
 
 #include "assert.h"
@@ -22,22 +23,22 @@ std::vector<intermediate> get_intermediates() {
     return intermediate_results;
 }
 
-/*void write_results(double iteration, std::ofstream &file, const Graph &graph, const Blockmodel &blockmodel, double mdl) {
+/*void write_results(double iteration, std::ofstream &file, const Graph* graph, const Blockmodel &blockmodel, double mdl) {
     // fedisableexcept(FE_INVALID | FE_OVERFLOW);
-    file << args.tag << "," << graph.num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
+    file << args.tag << "," << graph->num_vertices() << "," << args.overlap << "," << args.blocksizevar << ",";
     file << args.undirected << "," << args.algorithm << "," << iteration << ",";
-    file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph.num_edges()) << ",";
-    file << entropy::normalize_mdl_v2(mdl, graph.num_vertices(), graph.num_edges()) << ",";
-    file << graph.modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
+    file << mdl << ","  << entropy::normalize_mdl_v1(mdl, graph->num_edges()) << ",";
+    file << entropy::normalize_mdl_v2(mdl, graph->num_vertices(), graph->num_edges()) << ",";
+    file << graph->modularity(blockmodel.block_assignment()) << "," << blockmodel.interblock_edges() << ",";
     file << blockmodel.block_size_variation() << std::endl;
     // feenableexcept(FE_INVALID | FE_OVERFLOW);
 }*/
 
-void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
-    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
+void add_intermediate(double iteration, const Graph* graph, double modularity, double mdl) {
+    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph->num_edges());
 //    double modularity = -1;
 //    if (iteration == -1)
-//        modularity = graph.modularity(blockmodel.block_assignment());
+//        modularity = graph->modularity(blockmodel.block_assignment());
     intermediate intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
@@ -65,17 +66,17 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
                   << total_time << std::endl;
 }
 
-Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
+Blockmodel stochastic_block_partition(Graph* graph, Args &args, bool divide_and_conquer) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices(), graph, double(BLOCK_REDUCTION_RATE));
+    Blockmodel blockmodel(graph->num_vertices(), graph, double(BLOCK_REDUCTION_RATE));
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
 //    Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
     BLOCKMODEL_BUILD_TIME = 0.0;
-    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double initial_mdl = entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
     add_intermediate(0, graph, -1, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     double iteration = 0;
@@ -93,10 +94,10 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         double start_bm = MPI_Wtime();
-        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
+        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph->num_edges());
         block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
         if (iteration < 1) {
-            double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+            double mdl = entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
             add_intermediate(0.5, graph, -1, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
@@ -119,7 +120,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     // only last iteration result will calculate expensive modularity
     double modularity = -1;
     if (args.modularity)
-        modularity = graph.modularity(blockmodel.block_assignment());
+        modularity = graph->modularity(blockmodel.block_assignment());
     add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
     return blockmodel;
 }

@@ -15,7 +15,7 @@
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "mpi_data.hpp"
 #include "partition.hpp"
 #include "rng.hpp"
@@ -27,7 +27,7 @@ MPI_t mpi;
 Args args;
 
 struct Partition {
-    Graph graph;
+    Graph* graph;
     Blockmodel blockmodel;
 };
 
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
         // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
-    Graph graph = Graph::load();
+    Graph* graph = graph::load();
     sample::Sample subgraph;
     if (args.subgraphpartition == "snowball") {
         std::cout << "Running snowball partitioning" << std::endl;
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 //    sample::Sample subgraph = sample::round_robin(graph, color, args.subgraphs);
     long num_islands = 0;
     if (mpi.rank == 0) {
-        num_islands = subgraph.graph.num_islands();
+        num_islands = subgraph.graph->num_islands();
         std::cout << "Global Rank " << GlobalRank << "'s graph has " << num_islands << " island vertices." << std::endl;
     }
     MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -107,13 +107,13 @@ int main(int argc, char* argv[]) {
         std::cout << "====== Total island vertices = " << sbp::total_num_islands << std::endl;
     }
 
-    std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << subgraph.graph.num_vertices() << " V and E = " << subgraph.graph.num_edges() << std::endl;
+    std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << subgraph.graph->num_vertices() << " V and E = " << subgraph.graph->num_edges() << std::endl;
 
-    std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << mpi.num_processes << " processes and is processing G with size: " << subgraph.graph.num_vertices() << std::endl;
+    std::cout << "G" << GlobalRank << " L" << mpi.rank << " (" << color << ") | can see " << mpi.num_processes << " processes and is processing G with size: " << subgraph.graph->num_vertices() << std::endl;
 
     Partition partition;
     double start = MPI_Wtime();
-    partition.graph = std::move(subgraph.graph);
+    partition.graph = subgraph.graph;
     // TODO: add stopping at golden ratio
 //    partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args, true);
     partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args, true);
@@ -126,9 +126,9 @@ int main(int argc, char* argv[]) {
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
     std::vector<long> local_vertices, local_assignment;
-    dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph.num_vertices(),
+    dnc::translate_local_partition(local_vertices, local_assignment, subgraph, graph->num_vertices(),
                                    partition.blockmodel.block_assignment());
-    int local_num_vertices = subgraph.graph.num_vertices();
+    int local_num_vertices = subgraph.graph->num_vertices();
 
     if (GlobalRank == 0) {
         rank_vertices.push_back(local_vertices);
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)
-            modularity = graph.modularity(blockmodel.block_assignment());
+            modularity = graph->modularity(blockmodel.block_assignment());
         sbp::add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
         // Evaluate finetuned assignment
         double end = MPI_Wtime();

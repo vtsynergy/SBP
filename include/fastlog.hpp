@@ -4,8 +4,8 @@
 // (see https://git.skewed.de/count0/graph-tool/-/tree/master/src/graph/inference/support)
 //
 
-#ifndef DISTRIBUTEDSBP_FASTLOG_HPP
-#define DISTRIBUTEDSBP_FASTLOG_HPP
+#ifndef SBP_FASTLOG_HPP
+#define SBP_FASTLOG_HPP
 
 #include <cmath>
 #include <vector>

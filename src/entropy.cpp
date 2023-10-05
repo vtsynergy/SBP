@@ -492,18 +492,18 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
     return p_backward / p_forward;
 }
 
-double hastings_correction(long vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
+double hastings_correction(long vertex, const Graph* graph, const Blockmodel &blockmodel, const Delta &delta,
                            long current_block, const utils::ProposalAndEdgeCounts &proposal) {
     if (proposal.num_neighbor_edges == 0 || args.greedy) {  // No correction needed with greedy proposals
         return 1.0;
     }
     // Compute block weights
     MapVector<long> block_counts;
-    for (const long neighbor: graph.out_neighbors(vertex)) {
+    for (const long neighbor: graph->out_neighbors(vertex)) {
         long neighbor_block = blockmodel.block_assignment(neighbor);
         block_counts[neighbor_block] += 1;
     }
-    for (const long neighbor: graph.in_neighbors(vertex)) {
+    for (const long neighbor: graph->in_neighbors(vertex)) {
         if (neighbor == vertex) continue;
         long neighbor_block = blockmodel.block_assignment(neighbor);
         block_counts[neighbor_block] += 1;

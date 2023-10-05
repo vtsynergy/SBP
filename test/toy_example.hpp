@@ -8,7 +8,7 @@
 #include "args.hpp"
 #include "blockmodel.hpp"
 #include "finetune.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "mpi_data.hpp"
 #include "rng.hpp"
 #include "utils.hpp"
@@ -23,7 +23,7 @@ protected:
     std::vector<bool> self_edges;
     Blockmodel B, B2, B3;
     utils::ProposalAndEdgeCounts Proposal;
-    Graph graph;
+    Graph* graph;
     common::NewBlockDegrees  new_block_degrees;
     EdgeCountUpdates Updates;
     SparseEdgeCountUpdates SparseUpdates;
@@ -76,7 +76,8 @@ protected:
             utils::insert_nodup(out_neighbors, from , to);
             utils::insert_nodup(in_neighbors, to, from);
         }
-        graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
+        graph = graph::package(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges);
+        graph->assignment(assignment);
         B = Blockmodel(3, graph, 0.5, assignment);
         new_block_degrees.block_degrees_out = { 10, 7, 6 };
         new_block_degrees.block_degrees_in = { 12, 7, 4 };

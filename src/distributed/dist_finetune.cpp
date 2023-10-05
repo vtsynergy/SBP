@@ -51,16 +51,16 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     return collected_membership_updates;
 }
 
-void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), membership.vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), membership.vertex, true);
+void async_move(const Membership &membership, const Graph* graph, TwoHopBlockmodel &blockmodel) {
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), membership.vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), membership.vertex, true);
     VertexMove_v2 move {
             0.0, true, membership.vertex, membership.block, out_edges, in_edges
     };
     blockmodel.move_vertex(move);
 }
 
-size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
+size_t update_blockmodel(const Graph* graph, TwoHopBlockmodel &blockmodel,
                          const std::vector<Membership> &membership_updates) {
     std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
     for (const Membership &membership: collected_membership_updates) {
@@ -71,7 +71,7 @@ size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
     return vertex_moves;
 }
 
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
@@ -80,7 +80,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     }
     std::vector<double> delta_entropies;
     long total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -103,9 +103,9 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         }
 //            blockmodel.validate(graph);
 //            blockmodel.set_block_assignment(block_assignment);
-//            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
+//            blockmodel.build_two_hop_blockmodel(graph->out_neighbors());
 //            blockmodel.initialize_edge_counts(graph);
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -128,12 +128,12 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     return blockmodel;
 }
 
-std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
+std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph* graph,
                                                      const std::vector<long> &active_set, int batch) {
     std::vector<Membership> membership_updates;
     std::vector<long> vertices;
     if (active_set.empty())
-        vertices = utils::range<long>(0, graph.num_vertices());
+        vertices = utils::range<long>(0, graph->num_vertices());
     else
         vertices = active_set;
     long batch_size = long(ceil(double(vertices.size()) / args.batches));
@@ -174,7 +174,7 @@ bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initi
     return average < threshold;
 }
 
-Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
+Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph* graph) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     if (mpi.rank == 0)
@@ -182,14 +182,14 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     long total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
 //        measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
 //        std::vector<long> block_assignment(blockmodel.block_assignment());
-        std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+        std::vector<long> vertices = utils::range<long>(0, graph->num_vertices());
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
             std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
@@ -204,7 +204,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -219,14 +219,14 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
     return blockmodel;
 }
 
-TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
+TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
@@ -235,20 +235,20 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     }
     std::vector<double> delta_entropies;
     size_t total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
         std::vector<long> block_assignment(blockmodel.block_assignment());
-        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph.high_degree_vertices(), -1);
+        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph->high_degree_vertices(), -1);
         size_t vertex_moves = update_blockmodel(graph, blockmodel, membership_updates);
         for (int batch = 0; batch < args.batches; ++batch) {
-            std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices(), batch);
+            std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph->low_degree_vertices(), batch);
             vertex_moves += update_blockmodel(graph, blockmodel, async_updates);
         }
-//        std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices());
+//        std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph->low_degree_vertices());
 //        utils::extend<Membership>(membership_updates, async_updates);
 //        assert(membership_updates.size() >= async_updates.size());
         MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
@@ -258,7 +258,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -279,12 +279,12 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     return blockmodel;
 }
 
-void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph) {
-    std::vector<long> degrees = graph.degrees();
+void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph* graph) {
+    std::vector<long> degrees = graph->degrees();
     MapVector<bool> block_count;
     unsigned long num_degrees = 0;
     unsigned long long num_aggregate_block_degrees = 0;
-    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+    for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
         if (!blockmodel.owns_vertex(vertex)) continue;
         num_degrees += degrees[vertex];
         long block = blockmodel.block_assignment(vertex);
@@ -302,7 +302,7 @@ void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &
     MCMC_AGGREGATE_BLOCK_DEGREES.push_back(num_aggregate_block_degrees);
 }
 
-TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
+TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph* graph, DistBlockmodelTriplet &blockmodels) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
@@ -311,14 +311,14 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     }
     std::vector<double> delta_entropies;
     size_t total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
         std::vector<long> block_assignment(blockmodel.block_assignment());
-        std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+        std::vector<long> vertices = utils::range<long>(0, graph->num_vertices());
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
             if (mpi.rank == 0) std::cout << "communicating for batch = " << batch << std::endl;
@@ -333,7 +333,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = entropy::dist::mdl(blockmodel, graph->num_vertices(), graph->num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -356,12 +356,12 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     return blockmodel;
 }
 
-std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
+std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph* graph,
                                                       const std::vector<long> &active_set, int batch) {
     std::vector<Membership> membership_updates;
     std::vector<long> vertices;
     if (active_set.empty())
-        vertices = utils::range<long>(0, graph.num_vertices());
+        vertices = utils::range<long>(0, graph->num_vertices());
     else
         vertices = active_set;
     long batch_size = long(ceil(double(vertices.size()) / args.batches));
@@ -384,12 +384,12 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
     return membership_updates;
 }
 
-VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph* graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
 
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), vertex, true);
 
     utils::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(
             current_block, out_edges, in_edges, blockmodel.block_assignment(), blockmodel, false);
@@ -404,11 +404,11 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, c
     return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph* graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+    EdgeWeights out_edges = edge_weights(graph->out_neighbors(), vertex, false);
+    EdgeWeights in_edges = edge_weights(graph->in_neighbors(), vertex, true);
 
 //    blockmodel.validate(graph);
     utils::ProposalAndEdgeCounts proposal = common::dist::propose_new_block(

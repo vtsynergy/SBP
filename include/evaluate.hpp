@@ -8,7 +8,7 @@
 
 #include "hungarian.hpp"
 
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "blockmodel/blockmodel.hpp"
 
 namespace evaluate {
@@ -23,9 +23,9 @@ double calculate_f1_score(long num_vertices, Hungarian::Matrix &contingency_tabl
 
 double calculate_nmi(long num_vertices, Hungarian::Matrix &contingency_table);
 
-Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel);
+Eval evaluate_blockmodel(const Graph* graph, Blockmodel &blockmodel);
 
-Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel);
+Hungarian::Matrix hungarian(const Graph* graph, Blockmodel &blockmodel);
 
 }
 

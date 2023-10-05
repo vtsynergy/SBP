@@ -1,8 +1,8 @@
 /***
  * Stores the current graph blockmodeling results.
  */
-#ifndef SBP_DELTA_HPP
-#define SBP_DELTA_HPP
+#ifndef SBP_BLOCKMODEL_HPP
+#define SBP_BLOCKMODEL_HPP
 
 #include <iostream>
 #include <limits>
@@ -17,7 +17,7 @@
 #include "delta.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "../graph.hpp"
+#include "graph/graph.hpp"
 #include "sparse/typedefs.hpp"
 #include "../utils.hpp"
 #include "typedefs.hpp"
@@ -71,11 +71,11 @@ class Blockmodel {
         // Number of blocks to merge
         this->num_blocks_to_merge = (long)(this->num_blocks * this->block_reduction_rate);
     }
-    Blockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
+    Blockmodel(long num_blocks, const Graph* graph, double block_reduction_rate)
         : Blockmodel(num_blocks, block_reduction_rate) {
         this->initialize_edge_counts(graph);
     }
-    Blockmodel(long num_blocks, const Graph &graph, double block_reduction_rate,
+    Blockmodel(long num_blocks, const Graph* graph, double block_reduction_rate,
                std::vector<long> &block_assignment) : Blockmodel(num_blocks, block_reduction_rate) {
         // Set the block assignment
         this->_block_assignment = block_assignment;
@@ -88,19 +88,19 @@ class Blockmodel {
     void carry_out_best_merges(const std::vector<double> &delta_entropy_for_each_block,
                                const std::vector<long> &best_merge_for_each_block);
     /// TODO
-    Blockmodel clone_with_true_block_membership(const Graph &graph, std::vector<long> &true_block_membership);
+    Blockmodel clone_with_true_block_membership(const Graph* graph, std::vector<long> &true_block_membership);
     /// Returns a copy of the current Blockmodel
     Blockmodel copy();
     /// TODO documentation
     // TODO: move block_reduction_rate to some constants file
-    static Blockmodel from_sample(long num_blocks, const Graph &graph, std::vector<long> &sample_block_membership,
+    static Blockmodel from_sample(long num_blocks, const Graph* graph, std::vector<long> &sample_block_membership,
                                  std::map<long, long> &mapping, double block_reduction_rate);
     /// Returns the normalized difference in block sizes.
     double block_size_variation() const;
     /// Difficulty score, being the geometric mean between block_size_variation() and interblock_edges().
     double difficulty_score() const;
     /// Fills the blockmodel using the edges in `graph` and the current vertex-to-block `block_assignment`.
-    void initialize_edge_counts(const Graph &graph);
+    void initialize_edge_counts(const Graph* graph);
     /// TODO
     double log_posterior_probability() const;
     /// TODO
@@ -155,7 +155,7 @@ class Blockmodel {
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
     void update_edge_counts(long current_block, long proposed_block, SparseEdgeCountUpdates &updates);
     /// Validates the blockmatrix entries given the current block assignment.
-    bool validate(const Graph &graph) const;
+    bool validate(const Graph* graph) const;
     /// Sets the block assignment for this `vertex` to `block`.
     void set_block_assignment(long vertex, long block) { this->_block_assignment[vertex] = block; }
     void set_block_assignment(std::vector<long> block_assignment) { this->_block_assignment = block_assignment; }
@@ -198,4 +198,4 @@ class Blockmodel {
     long num_blocks_to_merge;
 };
 
-#endif // SBP_DELTA_HPP
+#endif // SBP_BLOCKMODEL_HPP

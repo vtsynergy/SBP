@@ -14,7 +14,7 @@
 // #include "blockmodel/sparse/boost_mapped_matrix.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
 #include "blockmodel/sparse/typedefs.hpp"
-#include "graph.hpp"
+#include "graph/graph.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -55,7 +55,7 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, long current_block, lo
                                EdgeWeights &out_blocks, EdgeWeights &in_blocks, SparseEdgeCountUpdates &updates);
 
 /// Merges entire blocks (communities) in blockmodel together
-Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_edges);
+Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph* graph, long num_edges);
 
 /// Proposes a merge for current_block based on the current blockmodel state
 ProposalEvaluation propose_merge(long current_block, long num_edges, Blockmodel &blockmodel,

@@ -8,6 +8,7 @@
 #include "blockmodel_triplet.hpp"
 #include "entropy.hpp"
 #include "finetune.hpp"
+#include "graph/graph.hpp"
 #include "sbp.hpp"
 
 #include <mpi.h>
@@ -18,7 +19,7 @@ double finetune_time = 0.0;
 
 namespace dnc {
 
-std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vector<std::vector<long>> &vertex_lists,
+std::vector<long> combine_partitions(const Graph* graph, long &offset, std::vector<std::vector<long>> &vertex_lists,
                                      std::vector<std::vector<long>> &assignment_lists) {
     // Iteratively merge blockmodels together until at most 4 are left
     while (vertex_lists.size() > 4) {  // Magic number = 4 taken from iHeartGraph code
@@ -44,7 +45,7 @@ std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vect
         assignment_lists = std::move(new_rank_assignment);
     }
     // Merge remaining blockmodels together
-    std::vector<long> combined_assignment = utils::constant<long>(graph.num_vertices(), -1);
+    std::vector<long> combined_assignment = utils::constant<long>(graph->num_vertices(), -1);
     for (int piece = 0; piece < vertex_lists.size(); ++piece) {
         for (int index = 0; index < vertex_lists[piece].size(); ++index) {
             long vertex_index = vertex_lists[piece][index];
@@ -58,8 +59,8 @@ std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vect
 
 std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vertices,
                                           const std::vector<long> &assignment_a,
-                                          const std::vector<long> &assignment_b, const Graph &original_graph) {
-    std::vector<long> combined_mapping = utils::constant<long>(original_graph.num_vertices(), -1);
+                                          const std::vector<long> &assignment_b, const Graph* original_graph) {
+    std::vector<long> combined_mapping = utils::constant<long>(original_graph->num_vertices(), -1);
     for (int index = 0; index < combined_vertices.size(); ++index) {
         long true_vertex_index = combined_vertices[index];
         combined_mapping[true_vertex_index] = index;
@@ -77,7 +78,7 @@ std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vert
     return merged_blockmodel.block_assignment();
 }
 
-void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runtime) {
+void evaluate_partition(const Graph* graph, Blockmodel &blockmodel, double runtime) {
     if (mpi.rank != 0) return;
     evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
     std::cout << "Final F1 score = " << result.f1_score << std::endl;
@@ -88,9 +89,9 @@ void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runti
     write_results(graph, result, runtime);
 }
 
-Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
+Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph* graph) {
     // Finetune final assignment
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph->num_vertices(), graph->num_edges()));
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     double iteration = sbp::get_intermediates().size();
@@ -100,7 +101,7 @@ Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
                       << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         double start_bm = MPI_Wtime();
-        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
+        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph->num_edges());
         block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
@@ -153,7 +154,7 @@ Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subg
         }
     }
     std::vector<long> assignment = blockmodel.block_assignment();
-    for (long i = 0; i < subgraph.graph.num_vertices(); ++i) {
+    for (long i = 0; i < subgraph.graph->num_vertices(); ++i) {
         assignment[i] = block_map[assignment[i]];
     }
     std::vector<long> mapping = Blockmodel::build_mapping(assignment);
@@ -183,8 +184,8 @@ void receive_partition(int src, std::vector<std::vector<long>> &src_vertices,
 void translate_local_partition(std::vector<long> &local_vertices, std::vector<long> &local_assignment,
                                const sample::Sample &subgraph, long num_vertices,
                                const std::vector<long> &partition_assignment) {
-    local_vertices = utils::constant<long>(subgraph.graph.num_vertices(), -1);
-    local_assignment = utils::constant<long>(subgraph.graph.num_vertices(), -1);
+    local_vertices = utils::constant<long>(subgraph.graph->num_vertices(), -1);
+    local_assignment = utils::constant<long>(subgraph.graph->num_vertices(), -1);
     #pragma omp parallel for schedule(dynamic) default(none) \
             shared(num_vertices, subgraph, partition_assignment, local_vertices, local_assignment)
     for (long vertex = 0; vertex < num_vertices; ++vertex) {
@@ -199,7 +200,7 @@ void translate_local_partition(std::vector<long> &local_vertices, std::vector<lo
 //    std::cout << "========= vertices from rank " << mpi.rank << " ===================" << std::endl;
 }
 
-void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
+void write_results(const Graph* graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::intermediate> intermediate_results;
     intermediate_results = sbp::get_intermediates();
     std::ostringstream filepath_stream;
@@ -221,11 +222,11 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "sort_time, load_balancing_time, access_time, update_assignment, total_time" << std::endl;
     }
     for (const sbp::intermediate &temp : intermediate_results) {
-        file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
+        file << args.tag << ", " << graph->num_vertices() << ", " << graph->num_edges() << ", " << args.overlap << ", "
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
-             << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
+             << entropy::normalize_mdl_v1(eval.true_mdl, graph->num_edges()) << ", "
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "

@@ -53,7 +53,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
                            common::NewBlockDegrees &new_block_degrees);
 
 /// Computes the hastings correction using the blockmodel deltas under the proposed vertex move.
-double hastings_correction(long vertex, const Graph &graph, const Blockmodel &blockmodel, const Delta &delta,
+double hastings_correction(long vertex, const Graph* graph, const Blockmodel &blockmodel, const Delta &delta,
                            long current_block, const utils::ProposalAndEdgeCounts &proposal);
 
 /// Calculates the minimum description length of `blockmodel` for a directed graph with `num_vertices` vertices and

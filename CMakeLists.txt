@@ -14,7 +14,7 @@ else (SCOREP)
 endif (SCOREP)
 
 # set the project name
-project(DistributedSBP VERSION 2022.02.04)
+project(AcceleratedSBP VERSION 2023.10.04)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -29,6 +29,7 @@ set(INCLUDE_DIRS
         include/blockmodel
         include/blockmodel/sparse
         include/distributed
+        include/graph
         extern/tclap-1.2.2/include
         extern/json/include
         extern/pcg-cpp/include
@@ -40,7 +41,7 @@ set(INCLUDE_DIRS
 
 # add the executable
 add_library(SBP STATIC
-        src/graph.cpp
+#        src/graph.cpp
         src/utils.cpp
         src/sbp.cpp
         src/entropy.cpp
@@ -62,15 +63,18 @@ add_library(SBP STATIC
         src/distributed/dist_sbp.cpp
         src/distributed/divide_and_conquer.cpp
         src/distributed/two_hop_blockmodel.cpp
-        #    blockmodel/sparse/dist_dict_matrix.cpp
+        src/graph/graph.cpp
+        src/graph/graph_interface.cpp
+        src/graph/directed_graph.cpp
+        src/graph/undirected_graph.cpp
         src/fastlog.cpp
         src/rng.cpp)
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DistributedSBP src/main.cpp)
+add_executable(DistributedSBP src/main.cpp include/graph/graph.hpp src/graph/graph.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp)
+add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp include/graph/graph.hpp src/graph/graph.cpp)
 target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(ladis src/LayerDistributedSBP.cpp)

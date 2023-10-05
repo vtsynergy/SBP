@@ -2,6 +2,8 @@
 
 #include <unordered_set>
 
+#include "graph/graph.hpp"
+
 double Load_balancing_time = 0.0;
 
 std::vector<long> Rank_indices;
@@ -61,16 +63,16 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
     return blockmodel_copy;
 }
 
-void TwoHopBlockmodel::distribute(const Graph &graph) {
+void TwoHopBlockmodel::distribute(const Graph* graph) {
     double start = MPI_Wtime();
     if (args.distribute == "none")
         distribute_none();
     else if (args.distribute == "2hop-round-robin")
-        distribute_2hop_round_robin(graph.out_neighbors());
+        distribute_2hop_round_robin(graph->out_neighbors());
     else if (args.distribute == "2hop-size-balanced")
-        distribute_2hop_size_balanced(graph.out_neighbors());
+        distribute_2hop_size_balanced(graph->out_neighbors());
     else if (args.distribute == "2hop-snowball")
-        distribute_2hop_snowball(graph.out_neighbors());
+        distribute_2hop_snowball(graph->out_neighbors());
     else if (args.distribute == "none-edge-balanced")
         distribute_none_edge_balanced(graph);
     else if (args.distribute == "none-block-degree-balanced")
@@ -95,18 +97,18 @@ void TwoHopBlockmodel::distribute_none() {
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
 }
 
-void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
+void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph* graph) {
     if (Rank_indices.empty()) {
         std::cout << mpi.rank << " | rebuilding rank indices! =============" << std::endl;
-        Rank_indices = utils::constant<long>(graph.num_vertices(), 0);
-        std::vector<long> vertex_degrees = graph.degrees();
+        Rank_indices = utils::constant<long>(graph->num_vertices(), 0);
+        std::vector<long> vertex_degrees = graph->degrees();
 	    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
         // std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
-        for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+        for (long i = mpi.rank; i < graph->num_vertices(); i += 2 * mpi.num_processes) {
             long vertex = sorted_indices[i];
             Rank_indices[vertex] = 1;
         }
-        for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+        for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph->num_vertices(); i += 2 * mpi.num_processes) {
             long vertex = sorted_indices[i];
             Rank_indices[vertex] = 1;
         }
@@ -135,7 +137,7 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
 }
 
-void TwoHopBlockmodel::distribute_none_block_degree_balanced(const Graph &graph) {
+void TwoHopBlockmodel::distribute_none_block_degree_balanced(const Graph* graph) {
     this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
     std::vector<long> approximate_block_degrees;
     for (long i = 0; i < this->num_blocks; ++i) {
@@ -162,20 +164,20 @@ void TwoHopBlockmodel::distribute_none_block_degree_balanced(const Graph &graph)
     this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);
 }
 
-void TwoHopBlockmodel::distribute_none_agg_block_degree_balanced(const Graph &graph) {
+void TwoHopBlockmodel::distribute_none_agg_block_degree_balanced(const Graph* graph) {
     this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-    this->_my_vertices = utils::constant<long>(graph.num_vertices(), 0);
-    std::vector<long> block_degrees = utils::constant<long>(graph.num_vertices(), 0);
-    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+    this->_my_vertices = utils::constant<long>(graph->num_vertices(), 0);
+    std::vector<long> block_degrees = utils::constant<long>(graph->num_vertices(), 0);
+    for (long vertex = 0; vertex < graph->num_vertices(); ++vertex) {
         long block = this->_block_assignment[vertex];
         block_degrees[vertex] = this->_block_degrees[block];
     }
     std::vector<long> sorted_indices = utils::argsort(block_degrees);
-    for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+    for (long i = mpi.rank; i < graph->num_vertices(); i += 2 * mpi.num_processes) {
         long vertex = sorted_indices[i];
         this->_my_vertices[vertex] = 1;
     }
-    for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+    for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph->num_vertices(); i += 2 * mpi.num_processes) {
         long vertex = sorted_indices[i];
         this->_my_vertices[vertex] = 1;
     }
@@ -302,10 +304,10 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
     this->build_two_hop_blockmodel(neighbors);
 }
 
-void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
+void TwoHopBlockmodel::initialize_edge_counts(const Graph* graph) {
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
-    long num_buckets = graph.num_edges() / graph.num_vertices();
+    long num_buckets = graph->num_edges() / graph->num_vertices();
     if (args.transpose) {
         blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, num_buckets);
     } else {
@@ -324,11 +326,11 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
         long my_num_blocks = ceil(double(this->num_blocks) / double(num_threads));
         long start = my_num_blocks * tid;
         long end = start + my_num_blocks;
-        for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (ulong vertex = 0; vertex < graph->num_vertices(); ++vertex) {
             long block = this->_block_assignment[vertex];
             if (block < start || block >= end || !this->_in_two_hop_radius[block])  // only modify blocks this thread is responsible for
                 continue;
-            for (long neighbor : graph.out_neighbors(long(vertex))) {
+            for (long neighbor : graph->out_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 if (!this->_in_two_hop_radius[neighbor_block]) {
                     continue;
@@ -338,7 +340,7 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
                 block_degrees_out[block] += weight;
                 block_degrees[block] += weight;
             }
-            for (long neighbor : graph.in_neighbors(long(vertex))) {
+            for (long neighbor : graph->in_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 if (!this->_in_two_hop_radius[neighbor_block]) {
                     continue;
@@ -447,7 +449,7 @@ bool TwoHopBlockmodel::stores(long block) const {
     return this->_in_two_hop_radius[block];
 }
 
-bool TwoHopBlockmodel::validate(const Graph &graph) const {
+bool TwoHopBlockmodel::validate(const Graph* graph) const {
     std::cout << "Validating..." << std::endl;
     std::vector<long> assignment(this->_block_assignment);
     Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);

@@ -115,6 +115,13 @@ TEST_F(UtilsTest, ArgsortIsCorrect) {
     std::vector<long> to_sort = { 0, 10303412354341, 5342, 64545323, 34234324, 43343, 23, 25234 };
     std::vector<long> indices = utils::argsort(to_sort);
     EXPECT_EQ(indices.size(), to_sort.size());
+    std::cout << "Sorted indices: ";
+    utils::print(indices);
+    std::cout << "Sorted list: [ ";
+    for (const auto &index : indices) {
+        std::cout << to_sort[index] << ", ";
+    }
+    std::cout << "]" << std::endl;
     EXPECT_EQ(*std::max_element(to_sort.begin(), to_sort.end()), to_sort[indices[0]]);
     EXPECT_EQ(*std::min_element(to_sort.begin(), to_sort.end()), to_sort[indices[indices.size() - 1]]);
     for (int i = 0; i < indices.size() - 1; ++i) {
