@@ -90,17 +90,21 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         std::vector<long> block_assignment(blockmodel.block_assignment());
-        std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph);
+        size_t vertex_moves = 0;
+        std::vector<long> active_set = utils::range<long>(0, graph.num_vertices());
+        for (int batch = 0; batch < args.batches; ++batch) {
+            std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph, active_set, batch);
+            vertex_moves += update_blockmodel(graph, blockmodel, membership_updates);
+        }
         MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
         // START MPI COMMUNICATION
-        std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
+//        std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         // END MPI COMMUNICATION
-        long vertex_moves = 0;
-        for (const Membership &membership: collected_membership_updates) {
-            if (block_assignment[membership.vertex] == membership.block) continue;
-            vertex_moves++;
-            async_move(membership, graph, blockmodel);
-        }
+//        for (const Membership &membership: collected_membership_updates) {
+//            if (block_assignment[membership.vertex] == membership.block) continue;
+//            vertex_moves++;
+//            async_move(membership, graph, blockmodel);
+//        }
 //            blockmodel.validate(graph);
 //            blockmodel.set_block_assignment(block_assignment);
 //            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
