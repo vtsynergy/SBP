@@ -92,6 +92,10 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         std::vector<long> block_assignment(blockmodel.block_assignment());
         size_t vertex_moves = 0;
         std::vector<long> active_set = utils::range<long>(0, graph.num_vertices());
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(active_set.begin(), active_set.end(), std::mt19937_64(seed));
+        }
         for (int batch = 0; batch < args.batches; ++batch) {
             std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph, active_set, batch);
             vertex_moves += update_blockmodel(graph, blockmodel, membership_updates);
@@ -184,7 +188,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     if (mpi.rank == 0)
         std::cout << "Fine-tuning partition results after sample results have been extended to full graph" << std::endl;
     std::vector<double> delta_entropies;
-    // TODO: Add number of finetuning iterations to evaluation
+    // TODO: Add number of fine-tuning iterations to evaluation
     long total_vertex_moves = 0;
     double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
@@ -194,9 +198,13 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
         double start_t = MPI_Wtime();
 //        std::vector<long> block_assignment(blockmodel.block_assignment());
         std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(vertices.begin(), vertices.end(), std::mt19937_64(seed));
+        }
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
-            std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
+            std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, vertices);
             vertex_moves += update_blockmodel(graph, blockmodel, membership_updates);
         }
 //        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph);
@@ -246,10 +254,17 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
         measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
         std::vector<long> block_assignment(blockmodel.block_assignment());
-        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, graph.high_degree_vertices(), -1);
+        std::vector<long> hdv = graph.high_degree_vertices();
+        std::vector<long> ldv = graph.low_degree_vertices();
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(hdv.begin(), hdv.end(), std::mt19937_64(seed));
+            std::shuffle(ldv.begin(), ldv.end(), std::mt19937_64(seed));
+        }
+        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, hdv, -1);
         size_t vertex_moves = update_blockmodel(graph, blockmodel, membership_updates);
         for (int batch = 0; batch < args.batches; ++batch) {
-            std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices(), batch);
+            std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, ldv, batch);
             vertex_moves += update_blockmodel(graph, blockmodel, async_updates);
         }
 //        std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, graph.low_degree_vertices());
@@ -323,6 +338,10 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         double start_t = MPI_Wtime();
         std::vector<long> block_assignment(blockmodel.block_assignment());
         std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(vertices.begin(), vertices.end(), std::mt19937_64(seed));
+        }
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
             if (mpi.rank == 0) std::cout << "communicating for batch = " << batch << std::endl;
