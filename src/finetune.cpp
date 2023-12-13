@@ -9,8 +9,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <fenv.h>
 #include <iostream>
+#include <random>
 
 namespace finetune {
 
@@ -46,7 +48,15 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
+    std::vector<long> shuffled_vertices;
+    if (!args.ordered) {
+        shuffled_vertices = utils::range<long>(0, graph.num_vertices());
+    }
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(shuffled_vertices.begin(), shuffled_vertices.end(), std::mt19937_64(seed));
+        }
         long _vertex_moves = 0;
         double num_batches = args.batches;
         long batch_size = long(ceil(graph.num_vertices() / num_batches));
@@ -58,8 +68,12 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             std::vector<VertexMove_v2> moves(graph.num_vertices());
             double start_t = MPI_Wtime();
             #pragma omp parallel for schedule(dynamic) default(none) \
-            shared(start, end, blockmodel, graph, _vertex_moves, moves)
-            for (long vertex = start; vertex < end; ++vertex) {
+            shared(start, end, blockmodel, graph, _vertex_moves, moves, args, shuffled_vertices)
+            for (long index = start; index < end; ++index) {
+                long vertex = index;
+                if (!args.ordered) {
+                    vertex = shuffled_vertices[index];
+                }
                 VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     _vertex_moves++;
@@ -503,13 +517,19 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
     double num_batches = args.batches;
     long num_low_degree_vertices = long(graph.low_degree_vertices().size());
     long batch_size = long(ceil(num_low_degree_vertices / num_batches));
-
+    std::vector<long> hdv = graph.high_degree_vertices();
+    std::vector<long> ldv = graph.low_degree_vertices();
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
 //        std::cout << "thread_limit: " << omp_get_max_threads() << std::endl;
         num_surrounded = 0;
         long _vertex_moves = 0;
         double start_t = MPI_Wtime();
-        for (long vertex : graph.high_degree_vertices()) {  // Only run Metropolis-Hastings on high-degree vertices
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(hdv.begin(), hdv.end(), std::mt19937_64(seed));
+            std::shuffle(ldv.begin(), ldv.end(), std::mt19937_64(seed));
+        }
+        for (long vertex : hdv) {  // Only run Metropolis-Hastings on high-degree vertices
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 _vertex_moves++;
@@ -526,9 +546,9 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             // asynchronous Gibbs sampling
             std::vector<VertexMove_v2> moves(graph.num_vertices());
             #pragma omp parallel for schedule(dynamic) default(none) \
-            shared(start, end, blockmodel, graph, _vertex_moves, moves)
+            shared(start, end, blockmodel, graph, _vertex_moves, moves, ldv)
             for (long index = start; index < end; ++index) {
-                long vertex = graph.low_degree_vertices()[index];
+                long vertex = ldv[index];
                 VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     #pragma omp atomic
@@ -644,11 +664,23 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, Bloc
     std::vector<double> delta_entropies;
     long total_vertex_moves = 0;
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    std::vector<long> shuffled_vertices;
+    if (!args.ordered) {
+        shuffled_vertices = utils::range<long>(0, graph.num_vertices());
+    }
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        if (!args.ordered) {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(shuffled_vertices.begin(), shuffled_vertices.end(), std::mt19937_64(seed));
+        }
         long vertex_moves = 0;
         double delta_entropy = 0.0;
         double start_t = MPI_Wtime();
-        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (long index = 0; index < graph.num_vertices(); ++index) {
+            long vertex = index;
+            if (!args.ordered) {
+                vertex = shuffled_vertices[index];
+            }
             VertexMove proposal = propose_move(blockmodel, vertex, graph);
             if (proposal.did_move) {
                 vertex_moves++;
