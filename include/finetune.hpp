@@ -141,6 +141,10 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const G
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, const Graph &graph);
 
+/// Proposes a new Asynchronous Gibbs vertex move. Contains additional information needed for nonparametric entropy
+/// computations. Should be preferred over _v2.
+VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph);
+
 /// Sorts blocks in order of number of neighbors - used for load balancing.
 std::vector<std::pair<long,long>> sort_blocks_by_neighbors(const Blockmodel &blockmodel);
 

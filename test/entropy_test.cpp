@@ -60,7 +60,7 @@ TEST_F(EntropyTest, DenseDeltaMDLGivesCorrectAnswer) {
     double delta_entropy =
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
     std::cout << "dE using updates = " << delta_entropy;
-    B.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
+    B.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before)
@@ -75,7 +75,7 @@ TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), SparseUpdates,
                                new_block_degrees);
     std::cout << "dE using sparse updates = " << delta_entropy;
-    B.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
+    B.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before)
@@ -87,7 +87,7 @@ TEST_F(EntropyTest, DeltaMDLUsingBlockmodelDeltasGivesCorrectAnswer) {
     long vertex = 7;
     double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
     double delta_entropy = entropy::delta_mdl(B, Deltas, Proposal);
-    B.move_vertex(vertex, Deltas, Proposal);
+    B.move_vertex(V7, Deltas, Proposal);
     long blockmodel_edges = utils::sum<long>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges())
                         << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
@@ -164,7 +164,7 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     std::cout << "before move_vertex_nodelta" << std::endl;
     VertexMove result = finetune::move_vertex_nodelta(6, 3, proposal, B4, graph, out_edges, in_edges);
     std::cout << "before move_vertex" << std::endl;
-    B5.move_vertex(vertex, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
+    B5.move_vertex(V6, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
                    new_block_degrees.block_degrees);
     std::cout << "before mdl" << std::endl;
     double E_before = entropy::mdl(B3, 11, 23);

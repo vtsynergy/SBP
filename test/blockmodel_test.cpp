@@ -35,7 +35,7 @@ TEST_F(BlockmodelTest, BlockDegreesAreCorrectlyInstantiated) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(7, 2, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V7, 2, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -49,7 +49,7 @@ TEST_F(BlockmodelTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(7, 2, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V7, 2, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -63,7 +63,7 @@ TEST_F(BlockmodelTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
-    B.move_vertex(7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -77,7 +77,7 @@ TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasDynamicBlockDegreesIsCorrect) {
-    B.move_vertex(7, Deltas, Proposal);
+    B.move_vertex(V7, Deltas, Proposal);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -125,7 +125,7 @@ TEST_F(BlockmodelTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(6, 3, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V6, 3, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -139,7 +139,7 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(6, 3, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V6, 3, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -153,7 +153,7 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
-    B.move_vertex(6, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    B.move_vertex(V6, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
@@ -167,7 +167,7 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasAndOnTheFlyBlockDegreesIsCorrect) {
-    B.move_vertex(6, Deltas, Proposal);
+    B.move_vertex(V6, Deltas, Proposal);
     for (long row = 0; row < B.getNum_blocks(); ++row) {
         for (long col = 0; col < B.getNum_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);

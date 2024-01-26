@@ -132,11 +132,11 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     B.print_blockmatrix();
     Blockmodel B1 = B.copy();
-    B1.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
+    B1.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B1.print_blockmatrix();
     Blockmodel B2 = B.copy();
-    B2.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
+    B2.move_vertex(V7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
                    new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B2.print_blockmatrix();
     for (long row = 0; row < B.getNum_blocks(); ++row) {

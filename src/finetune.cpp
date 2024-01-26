@@ -55,12 +55,12 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             long end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
-            std::vector<VertexMove_v2> moves(graph.num_vertices());
+            std::vector<VertexMove_v3> moves(graph.num_vertices());
             double start_t = MPI_Wtime();
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, _vertex_moves, moves)
             for (long vertex = start; vertex < end; ++vertex) {
-                VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
+                VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     _vertex_moves++;
                 }
@@ -68,7 +68,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             }
             double parallel_t = MPI_Wtime();
             MCMC_parallel_time += parallel_t - start_t;
-            for (const VertexMove_v2 &move : moves) {
+            for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
                 blockmodel.move_vertex(move);
             }
@@ -357,15 +357,20 @@ VertexMove eval_vertex_move(long vertex, long current_block, utils::ProposalAndE
     return VertexMove{delta_entropy, false, -1, -1};
 }
 
-VertexMove_v2 eval_vertex_move_v2(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
+VertexMove_v3 eval_vertex_move_v3(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
                                  const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
                                  EdgeWeights &in_edges) {
+    // TODO: things like size and such should be ulong/size_t, not long.
+    Vertex v = { vertex, long(graph.out_neighbors(vertex).size()), long(graph.in_neighbors(vertex).size()) };
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
     if (accept(delta_entropy, hastings))
-        return VertexMove_v2{delta_entropy, true, vertex, proposal.proposal, out_edges, in_edges};
-    return VertexMove_v2{delta_entropy, false, -1, -1, out_edges, in_edges};
+        return VertexMove_v3{delta_entropy, true, v, proposal.proposal, out_edges, in_edges};
+//        return VertexMove_v2{delta_entropy, true, vertex, proposal.proposal, out_edges, in_edges};
+    return VertexMove_v3{delta_entropy, false, InvalidVertex, -1, out_edges, in_edges};
+//    return VertexMove_v2{delta_entropy, false, -1, -1, out_edges, in_edges};
+
 }
 
 VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
@@ -431,7 +436,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
                 // asynchronous Gibbs sampling
                 std::vector<long> block_assignment(blockmodel.block_assignment());
-                std::vector<VertexMove_v2> moves(graph.num_vertices());
+                std::vector<VertexMove_v3> moves(graph.num_vertices());
 //                omp_set_dynamic(0);
                 start_t = MPI_Wtime();
                 #pragma omp parallel default(none) shared(start, end, blockmodel, graph, vertex_moves, delta_entropy, block_assignment, moves, thread_degrees, block_neighbors, std::cout)
@@ -452,7 +457,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
 //                        if (!my_blocks[block]) continue;  // Only process the vertices this thread is responsible for
                         unsigned long num_neighbors = blockmodel.blockmatrix()->distinct_edges(block);
                         thread_degrees[thread_id] += num_neighbors;
-                        VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
+                        VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
                         if (proposal.did_move) {
                             #pragma omp atomic
                             vertex_moves++;
@@ -466,7 +471,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 }
                 double parallel_t = MPI_Wtime();
                 MCMC_parallel_time += parallel_t - start_t;
-                for (const VertexMove_v2 &move : moves) {
+                for (const VertexMove_v3 &move : moves) {
                     if (!move.did_move) continue;
                     blockmodel.move_vertex(move);
                 }
@@ -524,12 +529,12 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             long end = std::min(num_low_degree_vertices, (batch + 1) * batch_size);
             // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
             // asynchronous Gibbs sampling
-            std::vector<VertexMove_v2> moves(graph.num_vertices());
+            std::vector<VertexMove_v3> moves(graph.num_vertices());
             #pragma omp parallel for schedule(dynamic) default(none) \
             shared(start, end, blockmodel, graph, _vertex_moves, moves)
             for (long index = start; index < end; ++index) {
                 long vertex = graph.low_degree_vertices()[index];
-                VertexMove_v2 proposal = propose_gibbs_move_v2(blockmodel, vertex, graph);
+                VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     #pragma omp atomic
                     _vertex_moves++;
@@ -538,7 +543,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             }
             double parallel_t = MPI_Wtime();
             MCMC_parallel_time += parallel_t - start_t;
-            for (const VertexMove_v2 &move : moves) {
+            for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
                 blockmodel.move_vertex(move);
             }
@@ -684,7 +689,8 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
     double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
     if (accept(delta_entropy, hastings)) {
-        blockmodel.move_vertex(vertex, delta, proposal);
+        Vertex v = { vertex, (long) graph.out_neighbors(vertex).size(), (long) graph.in_neighbors(vertex).size() };
+        blockmodel.move_vertex(v, delta, proposal);
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     }
     return VertexMove{delta_entropy, false, vertex, proposal.proposal};
@@ -708,7 +714,8 @@ VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalA
             entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
                                new_block_degrees);
     if (accept(delta_entropy, hastings)) {
-        blockmodel.move_vertex(vertex, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
+        Vertex v = { vertex, (long) graph.out_neighbors(vertex).size(), (long) graph.in_neighbors(vertex).size() };
+        blockmodel.move_vertex(v, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
                                new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     }
@@ -757,7 +764,7 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const G
     return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
+VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
 
@@ -779,9 +786,9 @@ VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, c
                                                                       blockmodel.block_assignment(), blockmodel,
                                                                       false);
     if (proposal.proposal == current_block) {
-        return VertexMove_v2{0.0, did_move, -1, -1, out_edges, in_edges};
+        return VertexMove_v3{0.0, did_move, {-1, -1, -1 }, -1, out_edges, in_edges};
     }
-    return eval_vertex_move_v2(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
+    return eval_vertex_move_v3(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph) {

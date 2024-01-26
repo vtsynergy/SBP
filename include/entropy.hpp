@@ -10,6 +10,8 @@
 
 namespace entropy {
 
+const double BETA_DL = 1.0;
+
 /// Computes the change in entropy under a proposed block merge.
 double block_merge_delta_mdl(long current_block, long proposal, long num_edges, const Blockmodel &blockmodel,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);

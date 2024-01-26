@@ -54,8 +54,11 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
 void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), membership.vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), membership.vertex, true);
-    VertexMove_v2 move {
-            0.0, true, membership.vertex, membership.block, out_edges, in_edges
+    Vertex v = { membership.vertex,
+                 (long) graph.out_neighbors(membership.vertex).size(),
+                 (long) graph.in_neighbors(membership.vertex).size() };
+    VertexMove_v3 move {
+            0.0, true, v, membership.block, out_edges, in_edges
     };
     blockmodel.move_vertex(move);
 }

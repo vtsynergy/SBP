@@ -84,6 +84,14 @@ struct Membership {
     long block = -1;
 };
 
+struct Vertex {
+    long id;
+    long out_degree;
+    long in_degree;  // maybe add self-edge? that way, degree = out_degree + in_degree - self_edge..., but I don't think that we need total degree
+};
+
+static Vertex InvalidVertex { -1, 0, 0 };
+
 struct VertexMove {
     double delta_entropy;
     bool did_move;
@@ -95,6 +103,15 @@ struct VertexMove_v2 {
     double delta_entropy;
     bool did_move;
     long vertex;
+    long proposed_block;
+    EdgeWeights out_edges;
+    EdgeWeights in_edges;
+};
+
+struct VertexMove_v3 {
+    double delta_entropy;
+    bool did_move;
+    Vertex vertex;
     long proposed_block;
     EdgeWeights out_edges;
     EdgeWeights in_edges;

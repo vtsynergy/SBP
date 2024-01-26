@@ -64,7 +64,9 @@ add_library(SBP STATIC
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp
-        src/rng.cpp)
+        src/rng.cpp
+        src/fastlgamma.cpp
+        src/spence.cpp)
 target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 
 add_executable(DistributedSBP src/main.cpp)
