@@ -33,6 +33,7 @@ public:  // Everything in here is public, because why not?
     float mh_percent;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
+    bool nonparametric;
     int numvertices;
     std::string output_file;
     std::string overlap;
@@ -108,6 +109,8 @@ public:  // Everything in here is public, because why not?
                                          parser, false);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
                                       "entropy calculations.", parser, false);
+            TCLAP::SwitchArg _nonparametric("", "nonparametric", "If set, will use the nonparametric blockmodel entropy computations.",
+                                            parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                               "int", parser);
             TCLAP::ValueArg<std::string> _output_file("", "output_file", "The filename of the json output. Will be stored in <json>/<output_file>",
@@ -154,6 +157,7 @@ public:  // Everything in here is public, because why not?
             this->mh_percent = _mh_percent.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
+            this->nonparametric = _nonparametric.getValue();
             this->numvertices = _numvertices.getValue();
             this->output_file = _output_file.getValue();
             if (this->output_file.empty()) {

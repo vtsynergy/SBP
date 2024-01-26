@@ -48,28 +48,28 @@ TEST_F(EntropyTest, SetUpWorksCorrectly) {
 }
 
 TEST_F(EntropyTest, MDLGivesCorrectAnswer) {
-    double E = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E = entropy::mdl(B, graph);  // graph.num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(E, ENTROPY) << "Calculated entropy = " << E << " but was expecting " << ENTROPY;
 }
 
 /// TODO: same test but using a vertex with a self edge
 TEST_F(EntropyTest, DenseDeltaMDLGivesCorrectAnswer) {
     long vertex = 7;
-    double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_before = entropy::mdl(B, graph);  // graph.num_vertices(), graph.num_edges());
     long current_block = B.block_assignment(vertex);
     double delta_entropy =
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), Updates, new_block_degrees);
     std::cout << "dE using updates = " << delta_entropy;
     B.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_after = entropy::mdl(B, graph);  // graph.num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before)
                         << "calculated dE was " << delta_entropy << " but actual dE was " << E_after - E_before;
 }
 
 TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
     long vertex = 7;
-    double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_before = entropy::mdl(B, graph);  // graph.num_vertices(), graph.num_edges());
     long current_block = B.block_assignment(vertex);
     double delta_entropy =
             entropy::delta_mdl(current_block, Proposal.proposal, B, graph.num_edges(), SparseUpdates,
@@ -77,7 +77,7 @@ TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
     std::cout << "dE using sparse updates = " << delta_entropy;
     B.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_after = entropy::mdl(B, graph);  // .num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before)
                         << "calculated dE was " << delta_entropy << " but actual dE was " << E_after - E_before;
 }
@@ -85,13 +85,13 @@ TEST_F(EntropyTest, SparseDeltaMDLGivesCorrectAnswer) {
 /// TODO: same test but using a vertex with a self edge
 TEST_F(EntropyTest, DeltaMDLUsingBlockmodelDeltasGivesCorrectAnswer) {
     long vertex = 7;
-    double E_before = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_before = entropy::mdl(B, graph);  // .num_vertices(), graph.num_edges());
     double delta_entropy = entropy::delta_mdl(B, Deltas, Proposal);
     B.move_vertex(V7, Deltas, Proposal);
     long blockmodel_edges = utils::sum<long>(B.blockmatrix()->values());
     EXPECT_EQ(blockmodel_edges, graph.num_edges())
                         << "edges in blockmodel = " << blockmodel_edges << " edges in graph = " << graph.num_edges();
-    double E_after = entropy::mdl(B, graph.num_vertices(), graph.num_edges());
+    double E_after = entropy::mdl(B, graph);  // .num_vertices(), graph.num_edges());
     EXPECT_FLOAT_EQ(delta_entropy, E_after - E_before) << "calculated dE was " << delta_entropy
                                                        << " but actual dE was " << E_after << " - " << E_before << " = "
                                                        << E_after - E_before;
@@ -167,8 +167,8 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     B5.move_vertex(V6, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
                    new_block_degrees.block_degrees);
     std::cout << "before mdl" << std::endl;
-    double E_before = entropy::mdl(B3, 11, 23);
-    double dE = entropy::mdl(B5, 11, 23) - E_before;
+    double E_before = entropy::mdl(B3, graph);  // 11, 23);
+    double dE = entropy::mdl(B5, graph) - E_before;  // 11, 23) - E_before;
     std::cout << "======== Before move ========" << std::endl;
     B3.print_blockmodel();
     std::cout << "======== After move =======" << std::endl;
@@ -219,30 +219,30 @@ TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForLargeGraph) {
 }
 
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithDenseUpdates) {
-    double E_before = entropy::mdl(B, 11, 23);
+    double E_before = entropy::mdl(B, graph);  // 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, 1, 23, B, Updates, new_block_degrees);
-    double E_after = entropy::mdl(B2, 11, 23);
+    double E_after = entropy::mdl(B2, graph);  // 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithSparseUpdates) {
-    double E_before = entropy::mdl(B, 11, 23);
+    double E_before = entropy::mdl(B, graph);  // 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, 1, 23, B, SparseUpdates, new_block_degrees);
-    double E_after = entropy::mdl(B2, 11, 23);
+    double E_after = entropy::mdl(B2, graph);  // 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithBlockmodelDeltas) {
-    double E_before = entropy::mdl(B, 11, 23);
+    double E_before = entropy::mdl(B, graph);  // 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, B, Deltas, new_block_degrees);
-    double E_after = entropy::mdl(B2, 11, 23);
+    double E_after = entropy::mdl(B2, graph);  // 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }
 
 TEST_F(BlockMergeEntropyTest, BlockmodelDeltaMDLIsCorrectlyComputeWithBlockmodelDeltasSansBlockDegrees) {
-    double E_before = entropy::mdl(B, 11, 23);
+    double E_before = entropy::mdl(B, graph);  // 11, 23);
     double dE = entropy::block_merge_delta_mdl(0, {1, B.degrees_out(0),
                                                        B.degrees_in(0), B.degrees(0)}, B, Deltas);
-    double E_after = entropy::mdl(B2, 11, 23);
+    double E_after = entropy::mdl(B2, graph);  // 11, 23);
     EXPECT_FLOAT_EQ(E_after - E_before, dE);
 }

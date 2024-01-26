@@ -569,6 +569,7 @@ double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
 }
 
 double null_mdl_v1(long num_edges) {
+    // TODO: not sure how this works in nonparametric version
     double log_posterior_p = num_edges * log(1.0 / num_edges);
     double x = 1.0 / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
@@ -577,6 +578,7 @@ double null_mdl_v1(long num_edges) {
 }
 
 double null_mdl_v2(long num_vertices, long num_edges) {
+    // TODO: not sure how this works in nonparametric version
     double log_posterior_p = num_edges * log(1.0 / num_edges);
     // done calculating log_posterior_probability
     double x = pow(num_vertices, 2) / num_edges;
@@ -585,11 +587,13 @@ double null_mdl_v2(long num_vertices, long num_edges) {
     return (num_edges * h) + (num_vertices * log(num_vertices)) - log_posterior_p;
 }
 
-double mdl(const Blockmodel &blockmodel, long num_vertices, long num_edges) {
+double mdl(const Blockmodel &blockmodel, const Graph &graph) {
+    if (args.nonparametric)
+        return nonparametric::mdl(blockmodel, graph);
     double log_posterior_p = blockmodel.log_posterior_probability();
-    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
+    double x = pow(blockmodel.getNum_blocks(), 2) / graph.num_edges();
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+    return (graph.num_edges() * h) + (graph.num_vertices() * log(blockmodel.getNum_blocks())) - log_posterior_p;
 }
 
 namespace dist {
@@ -605,34 +609,34 @@ double mdl(const TwoHopBlockmodel &blockmodel, long num_vertices, long num_edges
 
 namespace nonparametric {
 
-inline double eterm_exact(long source, long destination, long weight) {
-    double val = fastlgamma(weight + 1);
-
-    if (args.undirected && source == destination) {
-        double log_2 = log(2);
-        return -val - weight * log_2;
-    } else {
-        return -val;
-    }
-}
-
-inline double vterm_exact(long out_degree, long in_degree) { // out_degree, in_degree, wr=size of community, true? meh?
-//    if (deg_corr)
-//    {
-//    if constexpr (is_directed_::apply<Graph>::type::value)
-//        return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
-    if (args.undirected)
-        return fastlgamma(out_degree + 1);
-    return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+//inline double eterm_exact(long source, long destination, long weight) {
+//    double val = fastlgamma(weight + 1);
+//
+//    if (args.undirected && source == destination) {
+//        double log_2 = log(2);
+//        return -val - weight * log_2;
+//    } else {
+//        return -val;
 //    }
-//    else
-//    {
-//        if constexpr (is_directed_::apply<Graph>::type::value)
-//            return (out_degree + in_degree) * safelog_fast(wr);
-//        else
-//            return out_degree * safelog_fast(wr);
-//    }
-}
+//}
+//
+//inline double vterm_exact(long out_degree, long in_degree) { // out_degree, in_degree, wr=size of community, true? meh?
+////    if (deg_corr)
+////    {
+////    if constexpr (is_directed_::apply<Graph>::type::value)
+////        return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+//    if (args.undirected)
+//        return fastlgamma(out_degree + 1);
+//    return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+////    }
+////    else
+////    {
+////        if constexpr (is_directed_::apply<Graph>::type::value)
+////            return (out_degree + in_degree) * safelog_fast(wr);
+////        else
+////            return out_degree * safelog_fast(wr);
+////    }
+//}
 
 double get_deg_entropy(const Graph &graph, long vertex) {  // , const simple_degs_t&) {
     long k_in = (long) graph.in_neighbors(vertex).size();
@@ -677,11 +681,11 @@ double sparse_entropy(const Blockmodel &blockmodel, const Graph &graph) {
     return S;
 }
 
-inline double fastlbinom(long N, long k) {
-    if (N == 0 || k == 0 || k > N)
-        return 0;
-    return ((fastlgamma(N + 1) - fastlgamma(k + 1)) - fastlgamma(N - k + 1));
-}
+//inline double fastlbinom(long N, long k) {
+//    if (N == 0 || k == 0 || k > N)
+//        return 0;
+//    return ((fastlgamma(N + 1) - fastlgamma(k + 1)) - fastlgamma(N - k + 1));
+//}
 
 double get_partition_dl(long N, const Blockmodel &blockmodel) { // _N = number of vertices, _actual_B = nonzero blocks, _total = vector of block sizes
     double S = 0;
@@ -711,7 +715,7 @@ double get_partition_dl(long N, const Blockmodel &blockmodel) { // _N = number o
 //}
 
 /// No idea what this function does. See int_part.cc in https://git.skewed.de/count0/graph-tool
-double get_v(double u, double epsilon=1e-8) {
+double get_v(double u, double epsilon) {
     double v = u;
     double delta = 1;
     while (delta > epsilon) {

@@ -22,6 +22,8 @@ struct Split {
     long num_edges;
     /// Translates full graph vertex IDs to subgraph vertex IDs
     MapVector<long> translator;
+    /// The subgraph containing the vertices in the original block
+    Graph subgraph;
 };
 
 static const long NUM_AGG_PROPOSALS_PER_BLOCK = 10;  // Proposals per block

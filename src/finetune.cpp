@@ -43,7 +43,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -74,7 +74,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             }
             MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
         }
-        double entropy = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double entropy = entropy::mdl(blockmodel, graph);
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
         last_entropy = entropy;
@@ -89,7 +89,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, Block
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -402,7 +402,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
         }
         std::vector<double> delta_entropies;
         long total_vertex_moves = 0;
-        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
         double initial_entropy = blockmodel.getOverall_entropy();
         double num_batches = args.batches;
         long num_low_degree_vertices = long(graph.low_degree_vertices().size());
@@ -487,7 +487,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 break;
             }
         }
-        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+        blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
         std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
         std::cout << blockmodel.getOverall_entropy() << std::endl;
         MCMC_moves += total_vertex_moves;
@@ -502,7 +502,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     double num_batches = args.batches;
@@ -550,7 +550,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
 //            assert(blockmodel.validate(graph));
         }
-        double entropy = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        double entropy = entropy::mdl(blockmodel, graph);
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
         last_entropy = entropy;
@@ -564,7 +564,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTr
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
@@ -648,7 +648,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, Bloc
     }
     std::vector<double> delta_entropies;
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long vertex_moves = 0;
         double delta_entropy = 0.0;
@@ -671,7 +671,7 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, Bloc
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
@@ -796,7 +796,7 @@ VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, c
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     long total_vertex_moves = 0;
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long vertex_moves = 0;
         double delta_entropy = 0.0;
@@ -816,7 +816,7 @@ VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, c
             break;
         }
     }
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;

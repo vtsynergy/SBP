@@ -90,7 +90,7 @@ void evaluate_partition(const Graph &graph, Blockmodel &blockmodel, double runti
 
 Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
     // Finetune final assignment
-    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     double iteration = sbp::get_intermediates().size();

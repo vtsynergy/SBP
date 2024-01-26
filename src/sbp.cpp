@@ -75,7 +75,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
 //    Blockmodel_first_build_time = BLOCKMODEL_BUILD_TIME;
     BLOCKMODEL_BUILD_TIME = 0.0;
-    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double initial_mdl = entropy::mdl(blockmodel, graph);
     add_intermediate(0, graph, -1, initial_mdl);
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     double iteration = 0;
@@ -96,7 +96,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
         block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
         if (iteration < 1) {
-            double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+            double mdl = entropy::mdl(blockmodel, graph);
             add_intermediate(0.5, graph, -1, mdl);
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;

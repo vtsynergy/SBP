@@ -6,6 +6,7 @@
 #include "distributed/two_hop_blockmodel.hpp"
 #include "common.hpp"
 #include "delta.hpp"
+#include "fastlgamma.hpp"
 #include "utils.hpp"
 
 namespace entropy {
@@ -60,7 +61,7 @@ double hastings_correction(long vertex, const Graph &graph, const Blockmodel &bl
 
 /// Calculates the minimum description length of `blockmodel` for a directed graph with `num_vertices` vertices and
 /// `num_edges` edges.
-double mdl(const Blockmodel &blockmodel, long num_vertices, long num_edges);
+double mdl(const Blockmodel &blockmodel, const Graph &graph);
 
 /// Computes the normalized minimum description length using `null_mdl_v1`.
 double normalize_mdl_v1(double mdl, long num_edges);
@@ -85,6 +86,71 @@ double mdl(const TwoHopBlockmodel &blockmodel, long num_vertices, long num_edges
 // TODO: add an undirected distributed mdl
 
 // TODO: handle case when number of edges/vertices >= 2.15 billion (long --> long)
+
+}
+
+namespace nonparametric {
+
+inline double eterm_exact(long source, long destination, long weight) {
+    double val = fastlgamma(weight + 1);
+
+    if (args.undirected && source == destination) {
+        double log_2 = log(2);
+        return -val - weight * log_2;
+    } else {
+        return -val;
+    }
+}
+
+inline double vterm_exact(long out_degree, long in_degree) { // out_degree, in_degree, wr=size of community, true? meh?
+//    if (deg_corr)
+//    {
+//    if constexpr (is_directed_::apply<Graph>::type::value)
+//        return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+    if (args.undirected)
+        return fastlgamma(out_degree + 1);
+    return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+//    }
+//    else
+//    {
+//        if constexpr (is_directed_::apply<Graph>::type::value)
+//            return (out_degree + in_degree) * safelog_fast(wr);
+//        else
+//            return out_degree * safelog_fast(wr);
+//    }
+}
+
+double get_deg_entropy(const Graph &graph, long vertex);
+
+double sparse_entropy(const Blockmodel &blockmodel, const Graph &graph);
+
+inline double fastlbinom(long N, long k) {
+    if (N == 0 || k == 0 || k > N)
+        return 0;
+    return ((fastlgamma(N + 1) - fastlgamma(k + 1)) - fastlgamma(N - k + 1));
+}
+
+double get_partition_dl(long N, const Blockmodel &blockmodel);
+
+/// No idea what this function does. See int_part.cc in https://git.skewed.de/count0/graph-tool
+double get_v(double u, double epsilon=1e-8);
+
+double log_q_approx_small(size_t n, size_t k);
+
+/// Computes the number of restricted of integer n into at most m parts. This is part of teh prior for the
+/// degree-corrected SBM.
+/// TO-DO: the current function contains only the approximation of log_q. If it becomes a bottleneck, you'll want to
+/// compute a cache of log_q(n, m) for ~20k n and maybe a few hundred m? I feel like for larger graphs, the cache
+/// will be a waste of time.
+/// See int_part.cc in https://git.skewed.de/count0/graph-tool
+double log_q(size_t n, size_t k);
+
+double get_deg_dl_dist(const Blockmodel &blockmodel);
+
+double get_edges_dl(size_t B, size_t E);
+
+/// Computes the nonparametric description length of `blockmodel` given `graph`.
+double mdl(const Blockmodel &blockmodel, const Graph &graph);
 
 }
 

@@ -102,7 +102,7 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
     std::vector<long> true_assignment(graph.assignment());
     long true_num_blocks = 1 + *std::max_element(true_assignment.begin(), true_assignment.end());
     Blockmodel true_blockmodel(true_num_blocks, graph, 0.5, true_assignment);
-    double true_entropy = entropy::mdl(true_blockmodel, graph.num_vertices(), graph.num_edges());
+    double true_entropy = entropy::mdl(true_blockmodel, graph);  // .num_vertices(), graph.num_edges());
     std::cout << "true entropy = " << true_entropy << std::endl;
     return Eval { f1_score, nmi, true_entropy };
 }

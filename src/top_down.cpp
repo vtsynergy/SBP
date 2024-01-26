@@ -74,6 +74,7 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
     split.num_edges = subgraph.num_edges();
+    split.subgraph = subgraph;
     return split;
 }
 
@@ -87,7 +88,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, long ta
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             Split split = propose_split(current_block, graph, blockmodel);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::mdl(*(split.blockmodel), split.num_vertices, split.num_edges);
+            double new_entropy = entropy::mdl(*(split.blockmodel), split.subgraph);  // split.num_vertices, split.num_edges);
             double old_entropy = entropy::null_mdl_v1(split.num_edges);
             double delta_entropy = new_entropy - old_entropy;
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {
