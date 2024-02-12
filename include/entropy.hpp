@@ -152,6 +152,28 @@ double get_edges_dl(size_t B, size_t E);
 /// Computes the nonparametric description length of `blockmodel` given `graph`.
 double mdl(const Blockmodel &blockmodel, const Graph &graph);
 
+/// Obtain the entropy difference given a set of entries in the blockmodel matrix
+double entries_dS(const Blockmodel &blockmodel, const Delta &delta);
+
+/// Compute the entropy difference of a virtual move of vertex from one block to another
+double virtual_move_sparse(const Blockmodel &blockmodel, const Delta &delta,
+                           const utils::ProposalAndEdgeCounts &proposal);
+
+double get_delta_partition_dl(long num_vertices, const Blockmodel &blockmodel, const Delta &delta, long weight);
+
+double get_delta_deg_dl_dist_change(const Blockmodel &blockmodel, long block, long vkin, long vkout, long vweight,
+                                    int diff);
+
+double get_delta_deg_dl(long vertex, const Blockmodel &blockmodel, const Delta &delta, const Graph &graph);
+
+double get_delta_edges_dl(const Blockmodel &blockmodel, const Delta &delta, long weight, long num_edges);
+
+double delta_mdl(const Blockmodel &blockmodel, const Graph &graph, long vertex, const Delta &delta,
+                 const utils::ProposalAndEdgeCounts &proposal);
+
+double block_merge_delta_mdl(const Blockmodel &blockmodel, const utils::ProposalAndEdgeCounts &proposal,
+                             const Graph &graph, const Delta &delta);
+
 }
 
 }

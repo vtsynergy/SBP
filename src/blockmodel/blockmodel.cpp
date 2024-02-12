@@ -233,6 +233,7 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
 //}
 
 void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
+    this->_num_nonempty_blocks = 0;
     double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
@@ -267,7 +268,10 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
             if (block < start || block >= end)  // only modify blocks this thread is responsible for
                 continue;
             /// TODO: in distributed version, may need to communicate this value at the end
-            if (this->block_size(block) == 0) this->_num_nonempty_blocks++;
+            if (block_sizes[block] == 0) {
+                #pragma omp atomic
+                this->_num_nonempty_blocks++;
+            }
             block_sizes[block]++;
             out_degree_histogram[block][graph.out_neighbors(long(vertex)).size()]++;
             in_degree_histogram[block][graph.in_neighbors(long(vertex)).size()]++;

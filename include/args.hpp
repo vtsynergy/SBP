@@ -175,6 +175,10 @@ public:  // Everything in here is public, because why not?
             this->transpose = _transpose.getValue();
             this->type = _type.getValue();
             this->undirected = _undirected.getValue();
+            if (this->nonparametric) {
+                std::cout << "NOTE: using nonparametric entropy, setting greedy to false" << std::endl;
+                this->greedy = false;
+            }
         } catch (TCLAP::ArgException &exception) {
             std::cerr << "ERROR " << "ERROR: " << exception.error() << " for argument " << exception.argId() << std::endl;
             exit(-1);

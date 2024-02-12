@@ -13,7 +13,8 @@ void init_fastlgamma(size_t x) {
     {
         if (x >= fastlgamma_cache.size()) {
             fastlgamma_cache.resize(x + 1);
-            for (size_t i = 0; i < fastlgamma_cache.size(); ++i) {
+            fastlgamma_cache[0] = std::numeric_limits<double>::infinity();
+            for (size_t i = 1; i < fastlgamma_cache.size(); ++i) {
                 fastlgamma_cache[i] = lgamma(double(i));
             }
         }

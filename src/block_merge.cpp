@@ -210,7 +210,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
     for (long current_block = 0; current_block < num_blocks; ++current_block) {
         std::unordered_map<long, bool> past_proposals;
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, num_edges, blockmodel, past_proposals);
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, graph, past_proposals);
             if (proposal.delta_entropy == 0.0) {
 //                std::cout << current_block << " --> " << proposal.proposed_block << " == " << proposal.delta_entropy << std::endl;
                 int numvertices = 0;
@@ -267,10 +267,8 @@ ProposalEvaluation propose_merge(long current_block, long num_edges, Blockmodel 
     return ProposalEvaluation{proposal.proposal, delta_entropy};
 }
 
-// TODO: get rid of block_assignment (block_assignment), just use blockmodel
-ProposalEvaluation
-propose_merge_sparse(long current_block, long num_edges, const Blockmodel &blockmodel,
-                                        std::unordered_map<long, bool> &past_proposals) {
+ProposalEvaluation propose_merge_sparse(long current_block, const Blockmodel &blockmodel,
+                                        const Graph &graph, std::unordered_map<long, bool> &past_proposals) {
     EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
     EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
     utils::ProposalAndEdgeCounts proposal =
@@ -279,7 +277,9 @@ propose_merge_sparse(long current_block, long num_edges, const Blockmodel &block
         return ProposalEvaluation{proposal.proposal, std::numeric_limits<double>::max()};
     Delta delta = blockmodel_delta(current_block, proposal.proposal, blockmodel);
     //==========NEW==============
-    double delta_entropy = entropy::block_merge_delta_mdl(current_block, proposal, blockmodel, delta);
+    double delta_entropy = args.nonparametric ?
+            entropy::nonparametric::block_merge_delta_mdl(blockmodel, proposal, graph, delta) :
+            entropy::block_merge_delta_mdl(current_block, proposal, blockmodel, delta);
     //==========OLD==============
 //     SparseEdgeCountUpdates updates;
 //        // edge_count_updates_sparse(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks,

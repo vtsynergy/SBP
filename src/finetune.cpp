@@ -350,8 +350,9 @@ VertexMove eval_vertex_move(long vertex, long current_block, utils::ProposalAndE
         return eval_vertex_move_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
-    double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
-
+    double delta_entropy = args.nonparametric ?
+            entropy::nonparametric::delta_mdl(blockmodel, graph, vertex, delta, proposal) :
+            entropy::delta_mdl(blockmodel, delta, proposal);
     if (accept(delta_entropy, hastings))
         return VertexMove{delta_entropy, true, vertex, proposal.proposal};
     return VertexMove{delta_entropy, false, -1, -1};
@@ -364,7 +365,9 @@ VertexMove_v3 eval_vertex_move_v3(long vertex, long current_block, utils::Propos
     Vertex v = { vertex, long(graph.out_neighbors(vertex).size()), long(graph.in_neighbors(vertex).size()) };
     const Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges, blockmodel);
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
-    double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
+    double delta_entropy = args.nonparametric ?
+                           entropy::nonparametric::delta_mdl(blockmodel, graph, vertex, delta, proposal) :
+                           entropy::delta_mdl(blockmodel, delta, proposal);
     if (accept(delta_entropy, hastings))
         return VertexMove_v3{delta_entropy, true, v, proposal.proposal, out_edges, in_edges};
 //        return VertexMove_v2{delta_entropy, true, vertex, proposal.proposal, out_edges, in_edges};

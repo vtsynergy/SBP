@@ -53,8 +53,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
         my_blocks++;
         std::unordered_map<long, bool> past_proposals;
         for (long i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
-            ProposalEvaluation proposal = propose_merge_sparse(current_block, graph.num_edges(), blockmodel,
-                                                               past_proposals);
+            ProposalEvaluation proposal = propose_merge_sparse(current_block, blockmodel, graph,past_proposals);
             // std::cout << "proposal = " << proposal.proposed_block << " with DE " << proposal.delta_entropy << std::endl;
             // TODO: find a way to do this without having a large merge buffer. Maybe store list of my blocks in
             // TwoHopBlockmodel?
