@@ -293,7 +293,11 @@ template <typename T> inline std::vector<long> to_long(const std::vector<T> &vec
 template <typename T> inline std::vector<T> nat_log(const std::vector<T> &vector) {
     std::vector<T> result;
     for (const T &value : vector) {
-        result.push_back(logf(value));
+        double temp = logf(value);
+        assert(!std::isnan(temp));
+        assert(!std::isinf(temp));
+        result.push_back(temp);
+//        result.push_back(logf(value));
     }
     return result;
 }

@@ -90,7 +90,7 @@ struct Vertex {
     long in_degree;  // maybe add self-edge? that way, degree = out_degree + in_degree - self_edge..., but I don't think that we need total degree
 };
 
-static Vertex InvalidVertex { -1, 0, 0 };
+const Vertex InvalidVertex { -1, 0, 0 };
 
 struct VertexMove {
     double delta_entropy;

@@ -731,6 +731,9 @@ VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalA
 VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove{0.0, did_move, -1, -1 };
+    }
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
@@ -773,6 +776,9 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const G
 VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove_v3{ 0.0, did_move, InvalidVertex, -1 };
+    }
 
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
