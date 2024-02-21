@@ -689,7 +689,10 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
                                    blockmodel);
 
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
-    double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
+    double delta_entropy = args.nonparametric ?
+                           entropy::nonparametric::delta_mdl(blockmodel, graph, vertex, delta, proposal) :
+                           entropy::delta_mdl(blockmodel, delta, proposal);
+//    double delta_entropy = entropy::delta_mdl(blockmodel, delta, proposal);
 
     if (accept(delta_entropy, hastings)) {
         Vertex v = { vertex, (long) graph.out_neighbors(vertex).size(), (long) graph.in_neighbors(vertex).size() };

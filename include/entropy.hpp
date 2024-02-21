@@ -102,14 +102,22 @@ inline double eterm_exact(long source, long destination, long weight) {
     }
 }
 
-inline double vterm_exact(long out_degree, long in_degree) { // out_degree, in_degree, wr=size of community, true? meh?
+inline double vterm_exact(long out_degree, long in_degree, long weight) { // out_degree, in_degree, wr=size of community, true? meh?
 //    if (deg_corr)
 //    {
 //    if constexpr (is_directed_::apply<Graph>::type::value)
 //        return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+
+    if (args.degreecorrected) {
+        if (args.undirected)
+            return fastlgamma(out_degree + 1);
+        return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+    }
+
+    if (weight == 0) return 0.0;
     if (args.undirected)
-        return fastlgamma(out_degree + 1);
-    return fastlgamma(out_degree + 1) + fastlgamma(in_degree + 1);
+        return out_degree * fastlog(weight);
+    return (out_degree + in_degree) * fastlog(weight);
 //    }
 //    else
 //    {

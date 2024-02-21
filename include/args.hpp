@@ -21,6 +21,7 @@ public:  // Everything in here is public, because why not?
     std::string blocksizevar;
     size_t cachesize;
     std::string csv;  // TODO: get rid of this - results now saved to json
+    bool degreecorrected;
     bool degreeproductsort;
     std::string delimiter;
     bool detach;
@@ -77,6 +78,8 @@ public:  // Everything in here is public, because why not?
                                               "without the suffix, e.g.:\n"
                                               "if --csv=eval/test, results will be stored in eval/test.csv.",
                                               false, "./eval/test", "path", parser);
+            TCLAP::SwitchArg _degreecorrected("", "degreecorrected", "If set, will compute the degree-corrected description length.",
+                                              parser, false);
             TCLAP::SwitchArg _degreeproductsort("", "degreeproductsort", "If set, will use edge degree products to split vertices "
                                                 "into high and low influence sets.", parser, false);
             TCLAP::ValueArg<std::string> _delimiter("", "delimiter", "The delimiter used in the file storing the graph",
@@ -145,6 +148,7 @@ public:  // Everything in here is public, because why not?
             this->blocksizevar = _blocksizevar.getValue();
             this->cachesize = _cachesize.getValue();
             this->csv = _csv.getValue();
+            this->degreecorrected = _degreecorrected.getValue();
             this->degreeproductsort = _degreeproductsort.getValue();
             this->delimiter = _delimiter.getValue();
             this->detach = _detach.getValue();

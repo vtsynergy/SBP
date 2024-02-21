@@ -18,6 +18,7 @@ extern std::vector<double> fastlog_cache;
 void init_fastlog(size_t x);
 
 inline double fastlog(size_t x) {
+    if (x == 0) return 0.0;
     if (fastlog_cache.size() < args.cachesize) {
         init_fastlog(args.cachesize);
     }

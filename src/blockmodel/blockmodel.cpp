@@ -147,6 +147,9 @@ Blockmodel Blockmodel::copy() {
     blockmodel_copy._block_degrees = std::vector<long>(this->_block_degrees);
     blockmodel_copy._block_degrees_out = std::vector<long>(this->_block_degrees_out);
     blockmodel_copy._block_degrees_in = std::vector<long>(this->_block_degrees_in);
+    blockmodel_copy._block_sizes = std::vector<long>(this->_block_sizes);
+    blockmodel_copy._in_degree_histogram = std::vector<MapVector<long>>(this->_in_degree_histogram);
+    blockmodel_copy._out_degree_histogram = std::vector<MapVector<long>>(this->_out_degree_histogram);
     blockmodel_copy._num_nonempty_blocks = this->_num_nonempty_blocks;
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
@@ -421,7 +424,10 @@ void Blockmodel::move_vertex(Vertex vertex, long new_block, const Delta &delta,
 }
 
 void Blockmodel::move_vertex(Vertex vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal) {
+//    std::cout << "vID = " << vertex.id << " proposal.proposal = " << proposal.proposal;
+//    utils::print(this->_block_assignment);
     this->_block_assignment[vertex.id] = proposal.proposal;
+//    utils::print(this->_block_assignment);
     this->_blockmatrix->update_edge_counts(delta);
     long current_block = delta.current_block();
     long current_block_self_edges = this->_blockmatrix->get(current_block, current_block);
@@ -440,6 +446,10 @@ void Blockmodel::move_vertex(Vertex vertex, const Delta &delta, utils::ProposalA
     this->_block_sizes[proposal.proposal]++;
     if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
     if (this->_block_sizes[proposal.proposal] == 1) this->_num_nonempty_blocks++;
+    this->_out_degree_histogram[delta.current_block()][proposal.num_out_neighbor_edges]--;
+    this->_in_degree_histogram[delta.current_block()][proposal.num_in_neighbor_edges]--;
+    this->_out_degree_histogram[delta.proposed_block()][proposal.num_out_neighbor_edges]++;
+    this->_in_degree_histogram[delta.proposed_block()][proposal.num_in_neighbor_edges]++;
 }
 
 void Blockmodel::move_vertex(const VertexMove_v3 &move) {
@@ -565,29 +575,69 @@ bool Blockmodel::validate(const Graph &graph) const {
             valid = false;
         }
         if (!valid) {
-            std::cout << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
+            std::cerr << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
                       this->_block_degrees_in[block] << " d: " << this->_block_degrees[block] <<
                       " self_edges: " << this->blockmatrix()->get(block, block) << " block size: " <<
                       this->_block_sizes[block] << std::endl;
-            std::cout << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
+            std::cerr << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
                       correct.degrees_in(block) << " d: " << correct.degrees(block) <<
                       " self_edges: " << correct.blockmatrix()->get(block, block) << " block size: " <<
                       correct.block_size(block) << std::endl;
-            std::cout << "ERROR::Checking matrix for errors..." << std::endl;
+            std::cerr << "ERROR::Checking matrix for errors..." << std::endl;
             for (long row = 0; row < this->num_blocks; ++row) {
                 for (long col = 0; col < this->num_blocks; ++col) {
         //            long this_val = this->blockmatrix()->get(row, col);
                     long correct_val = correct.blockmatrix()->get(row, col);
                     if (!this->blockmatrix()->validate(row, col, correct_val)) {
-                        std::cout << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                        std::cerr << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
                         " but should be " << correct_val << std::endl;
                         return false;
                     }
         //            if (this_val != correct_val) return false;
                 }
             }
-            std::cout << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
+            std::cerr << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
             return false;
+        }
+    }
+    if (this->_in_degree_histogram.size() != correct._in_degree_histogram.size()) {
+        std::cerr << "ERROR::in degree histogram sizes don't match: " << this->_in_degree_histogram.size() << " != "
+        << correct._in_degree_histogram.size() << std::endl;
+        return false;
+    }
+    if (this->_out_degree_histogram.size() != correct._out_degree_histogram.size()) {
+        std::cerr << "ERROR::out degree histogram sizes don't match: " << this->_out_degree_histogram.size() << " != "
+                  << correct._out_degree_histogram.size() << std::endl;
+        return false;
+    }
+    for (long block = 0; block < this->num_blocks; ++block) {
+        if (this->_in_degree_histogram[block].size() != correct._in_degree_histogram[block].size()) {
+            std::cerr << "ERROR::in degree histogram[" << block << "] sizes don't match: "
+                      << this->_in_degree_histogram[block].size() << " != "
+                      << correct._in_degree_histogram[block].size() << std::endl;
+            return false;
+        }
+        if (this->_out_degree_histogram[block].size() != correct._out_degree_histogram[block].size()) {
+            std::cerr << "ERROR::out degree histogram[" << block << "] sizes don't match: "
+                      << this->_out_degree_histogram[block].size() << " != "
+                      << correct._out_degree_histogram[block].size() << std::endl;
+            return false;
+        }
+        for (const std::pair<long, long> &bar : this->_in_degree_histogram[block]) {
+            if (bar.second != correct._in_degree_histogram[block][bar.first]) {
+                std::cerr << "ERROR: in_degree histogram does not match at [" << block << "][" << bar.first << "]: "
+                          << "expected value = " << correct._in_degree_histogram[block][bar.first] << " but got: "
+                          << bar.second << std::endl;
+                return false;
+            }
+        }
+        for (const std::pair<long, long> &bar : this->_out_degree_histogram[block]) {
+            if (bar.second != correct._out_degree_histogram[block][bar.first]) {
+                std::cerr << "ERROR: out_degree histogram does not match at [" << block << "][" << bar.first << "]: "
+                          << "expected value = " << correct._out_degree_histogram[block][bar.first] << " but got: "
+                          << bar.second << std::endl;
+                return false;
+            }
         }
     }
     return true;

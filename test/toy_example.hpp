@@ -66,6 +66,7 @@ protected:
                 {10, 10}
         };
         V5 = { 5, 4, 3 };
+        V6 = { 6, 1, 2 };
         V7 = { 7, 2, 3 };
         long num_vertices = 11;
         long num_edges = (long) edges.size();
