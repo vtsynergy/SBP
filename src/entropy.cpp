@@ -560,21 +560,24 @@ double hastings_correction(long vertex, const Graph &graph, const Blockmodel &bl
     return p_backward / p_forward;
 }
 
-double normalize_mdl_v1(double mdl, long num_edges) {
-    return mdl / null_mdl_v1(num_edges);
+double normalize_mdl_v1(double mdl, const Graph &graph) {
+    return mdl / null_mdl_v1(graph);
 }
 
 double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
     return mdl / null_mdl_v2(num_vertices, num_edges);
 }
 
-double null_mdl_v1(long num_edges) {
+double null_mdl_v1(const Graph &graph) {
+    std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), 0);
+    Blockmodel null_model(1, graph, 0.5, assignment);
+    return mdl(null_model, graph);
     // TODO: not sure how this works in nonparametric version
-    double log_posterior_p = num_edges * log(1.0 / num_edges);
-    double x = 1.0 / num_edges;
-    double h = ((1 + x) * log(1 + x)) - (x * log(x));
+//    double log_posterior_p = num_edges * log(1.0 / num_edges);
+//    double x = 1.0 / num_edges;
+//    double h = ((1 + x) * log(1 + x)) - (x * log(x));
 //    std::cout << "log posterior = " << log_posterior_p << " blockmodel = " << (num_edges * h) << std::endl;
-    return (num_edges * h) - log_posterior_p;
+//    return (num_edges * h) - log_posterior_p;
 }
 
 double null_mdl_v2(long num_vertices, long num_edges) {
@@ -1070,12 +1073,12 @@ double get_delta_deg_dl(long vertex, const Blockmodel &blockmodel, const Delta &
 //    if (nr != null_group)
 //        nr = get_r(nr);
 
-    auto dop = [&](auto&& f) {
-        long kin = graph.in_neighbors(vertex).size();
-        long kout = graph.out_neighbors(vertex).size();
-//        auto [kin, kout] = get_deg(v, eweight, degs, g);
-        f(kin, kout, 1);  // for block merge, it's size(block) instead of 1 | vweight[v]);
-    };
+//    auto dop = [&](auto&& f) {
+//        long kin = graph.in_neighbors(vertex).size();
+//        long kout = graph.out_neighbors(vertex).size();
+////        auto [kin, kout] = get_deg(v, eweight, degs, g);
+//        f(kin, kout, 1);  // for block merge, it's size(block) instead of 1 | vweight[v]);
+//    };
 
     long vkin = graph.in_neighbors(vertex).size();
     long vkout = graph.out_neighbors(vertex).size();
@@ -1106,7 +1109,7 @@ double get_delta_edges_dl(const Blockmodel &blockmodel, const Delta &delta, long
 
     double S_b = 0, S_a = 0;
 
-    int n = weight;  // vweight[v];
+//    int n = weight;  // vweight[v];
 
 //    if (n == 0)
 //    {

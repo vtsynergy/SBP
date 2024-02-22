@@ -22,7 +22,7 @@ std::vector<intermediate> get_intermediates() {
 }
 
 void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
-    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
+    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph);
 //    double modularity = -1;
 //    if (iteration == -1)
 //        modularity = graph.modularity(blockmodel.block_assignment());

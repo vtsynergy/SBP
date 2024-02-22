@@ -247,25 +247,25 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
 }
 
 // TODO: get rid of block_assignment (block_assignment), just use blockmodel
-ProposalEvaluation propose_merge(long current_block, long num_edges, Blockmodel &blockmodel,
-                                 std::vector<long> &block_assignment) {
-    EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
-    EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
-    utils::ProposalAndEdgeCounts proposal =
-            common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
-    EdgeCountUpdates updates =
-            edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks);
-    long current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
-                                   + updates.block_row[current_block];
-    long proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
-                                    + updates.proposal_row[proposal.proposal];
-    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-    double delta_entropy =
-            entropy::block_merge_delta_mdl(current_block, proposal.proposal, num_edges, blockmodel, updates,
-                                  new_block_degrees);
-    return ProposalEvaluation{proposal.proposal, delta_entropy};
-}
+//ProposalEvaluation propose_merge(long current_block, long num_edges, Blockmodel &blockmodel,
+//                                 std::vector<long> &block_assignment) {
+//    EdgeWeights out_blocks = blockmodel.blockmatrix()->outgoing_edges(current_block);
+//    EdgeWeights in_blocks = blockmodel.blockmatrix()->incoming_edges(current_block);
+//    utils::ProposalAndEdgeCounts proposal =
+//            common::propose_new_block(current_block, out_blocks, in_blocks, block_assignment, blockmodel, true);
+//    EdgeCountUpdates updates =
+//            edge_count_updates(blockmodel.blockmatrix(), current_block, proposal.proposal, out_blocks, in_blocks);
+//    long current_block_self_edges = blockmodel.blockmatrix()->get(current_block, current_block)
+//                                   + updates.block_row[current_block];
+//    long proposed_block_self_edges = blockmodel.blockmatrix()->get(proposal.proposal, proposal.proposal)
+//                                    + updates.proposal_row[proposal.proposal];
+//    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
+//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
+//    double delta_entropy =
+//            entropy::block_merge_delta_mdl(current_block, proposal.proposal, num_edges, blockmodel, updates,
+//                                  new_block_degrees);
+//    return ProposalEvaluation{proposal.proposal, delta_entropy};
+//}
 
 ProposalEvaluation propose_merge_sparse(long current_block, const Blockmodel &blockmodel,
                                         const Graph &graph, std::unordered_map<long, bool> &past_proposals) {

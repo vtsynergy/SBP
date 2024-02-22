@@ -14,14 +14,17 @@ namespace entropy {
 const double BETA_DL = 1.0;
 
 /// Computes the change in entropy under a proposed block merge.
+[[deprecated("use blockmodel deltas without block degrees instead")]]
 double block_merge_delta_mdl(long current_block, long proposal, long num_edges, const Blockmodel &blockmodel,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
+[[deprecated("use blockmodel deltas without block degrees instead")]]
 double block_merge_delta_mdl(long current_block, long proposal, long num_edges, const Blockmodel &blockmodel,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in entropy under a proposed block merge using changes to the blockmodel.
+[[deprecated("use blockmodel deltas without block degrees instead")]]
 double block_merge_delta_mdl(long current_block, const Blockmodel &blockmodel, const Delta &delta,
                              common::NewBlockDegrees &block_degrees);
 
@@ -32,11 +35,13 @@ double block_merge_delta_mdl(long current_block, utils::ProposalAndEdgeCounts pr
 
 /// Computes the change in blockmodel minimum description length when a vertex moves from `current_block` to `proposal`.
 /// Uses a dense version of `updates` to the blockmodel, and requires pre-calculated updated `block_degrees`.
+[[deprecated("use blockmodel deltas instead")]]
 double delta_mdl(long current_block, long proposal, const Blockmodel &blockmodel, long num_edges,
                  EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
 /// Computes the change in blockmodel minimum description length when a vertex moves from `current_block` to `proposal`.
 /// Uses a sparse version of `updates` to the blockmodel, and requires pre-calculated updated `block_degrees`.
+[[deprecated("use blockmodel deltas instead")]]
 double delta_mdl(long current_block, long proposal, const Blockmodel &blockmodel, long num_edges,
                  SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
@@ -46,11 +51,13 @@ double delta_mdl(long current_block, long proposal, const Blockmodel &blockmodel
 double delta_mdl(const Blockmodel &blockmodel, const Delta &delta, const utils::ProposalAndEdgeCounts &proposal);
 
 /// Computes the Hastings correction using dense vectors.
+[[deprecated("use blockmodel deltas instead")]]
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, EdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
 
 /// Computes the Hastings correction using sparse vectors.
+[[deprecated("use blockmodel deltas instead")]]
 double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks, EdgeWeights &in_blocks,
                            utils::ProposalAndEdgeCounts &proposal, SparseEdgeCountUpdates &updates,
                            common::NewBlockDegrees &new_block_degrees);
@@ -64,15 +71,17 @@ double hastings_correction(long vertex, const Graph &graph, const Blockmodel &bl
 double mdl(const Blockmodel &blockmodel, const Graph &graph);
 
 /// Computes the normalized minimum description length using `null_mdl_v1`.
-double normalize_mdl_v1(double mdl, long num_edges);
+double normalize_mdl_v1(double mdl, const Graph &graph);
 
 /// Computes the normalized minimum description length using `null_mdl_v2`.
+[[deprecated("use normalize_mdl_v1 instead")]]
 double normalize_mdl_v2(double mdl, long num_vertices, long num_edges);
 
 /// Computes the minimum description length of the null model with only one block.
-double null_mdl_v1(long num_edges);
+double null_mdl_v1(const Graph &graph);
 
 /// Computes the minimum description length of the null model with as many blocks as there are vertices.
+[[deprecated("use null_mdl_v1 instead")]]
 double null_mdl_v2(long num_vertices, long num_edges);
 
 // TODO: add an undirected mdl

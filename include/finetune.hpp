@@ -93,9 +93,9 @@ VertexMove_v2 eval_vertex_move_v2(long vertex, long current_block, utils::Propos
 
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
 /// blockmodel deltas.
-VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                                    EdgeWeights &in_edges);
+//VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
+//                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+//                                    EdgeWeights &in_edges);
 
 /// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
 /// Asynchronous Gibbs on the rest.
@@ -125,9 +125,9 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
                        const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges);
 
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
-VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                               EdgeWeights &in_edges);
+//VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
+//                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+//                               EdgeWeights &in_edges);
 
 /// Computes the overall entropy of the given blockmodel.
 //double mdl(const Blockmodel &blockmodel, long num_vertices, long num_edges);

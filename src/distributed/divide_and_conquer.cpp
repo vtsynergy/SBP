@@ -225,7 +225,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
              << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
              << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
-             << entropy::normalize_mdl_v1(eval.true_mdl, graph.num_edges()) << ", "
+             << entropy::normalize_mdl_v1(eval.true_mdl, graph) << ", "
              << args.samplingalg << ", " << runtime << ", " << sample_time << ", " << sample_extend_time << ", "
              << finetune_time << ", " << temp.mcmc_iterations << ", " << temp.mcmc_time << ", "
              << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "

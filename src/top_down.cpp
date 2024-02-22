@@ -89,7 +89,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, long ta
             Split split = propose_split(current_block, graph, blockmodel);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
             double new_entropy = entropy::mdl(*(split.blockmodel), split.subgraph);  // split.num_vertices, split.num_edges);
-            double old_entropy = entropy::null_mdl_v1(split.num_edges);
+            double old_entropy = entropy::null_mdl_v1(split.subgraph);
             double delta_entropy = new_entropy - old_entropy;
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {
                 delta_entropy_for_each_block[current_block] = delta_entropy;

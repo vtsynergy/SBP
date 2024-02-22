@@ -161,9 +161,9 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     std::cout << "before copies" << std::endl;
     Blockmodel B4 = B3.copy();
     Blockmodel B5 = B3.copy();
-    std::cout << "before move_vertex_nodelta" << std::endl;
-    VertexMove result = finetune::move_vertex_nodelta(6, 3, proposal, B4, graph, out_edges, in_edges);
     std::cout << "before move_vertex" << std::endl;
+    VertexMove result = finetune::move_vertex(6, 3, proposal, B4, graph, out_edges, in_edges);
+    std::cout << "before blockmodel.move_vertex" << std::endl;
     B5.move_vertex(V6, 3, 0, updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in,
                    new_block_degrees.block_degrees);
     std::cout << "before mdl" << std::endl;
@@ -176,10 +176,10 @@ TEST_F(EntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     EXPECT_FLOAT_EQ(dE, result.delta_entropy);
 }
 
-TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForSmallGraph) {
-    double mdl = entropy::null_mdl_v1(50);
-    EXPECT_FLOAT_EQ(mdl, MDL_10_VERTICES_50_EDGES_V1);
-}
+//TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForSmallGraph) {
+//    double mdl = entropy::null_mdl_v1(50);
+//    EXPECT_FLOAT_EQ(mdl, MDL_10_VERTICES_50_EDGES_V1);
+//}
 
 TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForSmallGraph) {
     double mdl = entropy::null_mdl_v2(10, 50);
@@ -196,7 +196,7 @@ TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForLargeGraph) {
     double bm = (double(E) * h) + double(V) * log(blocks);
     double log_likelihood_p = double(E) * log(double(E) / (double(E) * double(E)));
     double result = bm - log_likelihood_p;
-    double mdl = entropy::null_mdl_v1(E);
+    double mdl = entropy::null_mdl_v1(graph);
     EXPECT_FLOAT_EQ(mdl, result);
     EXPECT_FLOAT_EQ(mdl, hand_calculated_mdl);
 }

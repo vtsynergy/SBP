@@ -189,7 +189,7 @@ TEST_F(NonparametricEntropyTest, SpecialCaseShouldGiveCorrectDeltaMDL) {
     Blockmodel B4 = B3.copy();
     utils::print<long>(B4.block_assignment());
     Blockmodel B5 = B3.copy();
-    std::cout << "before move_vertex_nodelta" << std::endl;
+    std::cout << "before move_vertex" << std::endl;
     args.nonparametric = true;
     VertexMove result = finetune::move_vertex(6, 3, proposal, B4, graph, out_edges, in_edges);
     std::cout << "============ B5.move_vertex()" << std::endl;
