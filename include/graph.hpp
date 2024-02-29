@@ -78,7 +78,7 @@ public:
     /// repeated.
     [[nodiscard]] std::vector<long> neighbors(long vertex) const;
     /// Returns the number of edges in this graph
-    long num_edges() const { return this->_num_edges; }
+    virtual long num_edges() const { return this->_num_edges; }
     /// Counts the number of island vertices in this graph
     long num_islands() const;
     /// Returns the number of vertices in this graph
@@ -93,7 +93,7 @@ public:
     [[nodiscard]] std::vector<std::pair<std::pair<long, long>, long>> sorted_edge_list() const;
     /// Sorts vertices into low and high influence vertices. Does this via vertex degree products of the graph edges
     void degree_product_sort();
-private:
+protected:
     /// For every vertex, stores the community they belong to.
     /// If assignment[v] = -1, then the community of v is not known
     std::vector<long> _assignment;

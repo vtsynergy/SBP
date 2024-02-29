@@ -116,6 +116,8 @@ class Blockmodel {
     double log_posterior_probability() const;
     /// TODO
     double log_posterior_probability(long num_edges) const;
+    /// Merges block `merge_from` into block `merge_to`
+    void merge_block(long merge_from, long merge_to, const Delta &delta, utils::ProposalAndEdgeCounts proposal);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.

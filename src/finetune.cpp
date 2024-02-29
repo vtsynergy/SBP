@@ -373,7 +373,6 @@ VertexMove_v3 eval_vertex_move_v3(long vertex, long current_block, utils::Propos
 //        return VertexMove_v2{delta_entropy, true, vertex, proposal.proposal, out_edges, in_edges};
     return VertexMove_v3{delta_entropy, false, InvalidVertex, -1, out_edges, in_edges};
 //    return VertexMove_v2{delta_entropy, false, -1, -1, out_edges, in_edges};
-
 }
 
 //VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
@@ -702,32 +701,6 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
     return VertexMove{delta_entropy, false, vertex, proposal.proposal};
 }
 
-//VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-//                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-//                               EdgeWeights &in_edges) {
-//    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
-//    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-//    SparseEdgeCountUpdates updates;
-//    edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
-//    long current_block_self_edges = updates.block_row[current_block];
-//    long proposed_block_self_edges = updates.proposal_row[proposal.proposal];
-//    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-//    double hastings =
-//            entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
-//                                         new_block_degrees);
-//    double delta_entropy =
-//            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-//                               new_block_degrees);
-//    if (accept(delta_entropy, hastings)) {
-//        Vertex v = { vertex, (long) graph.out_neighbors(vertex).size(), (long) graph.in_neighbors(vertex).size() };
-//        blockmodel.move_vertex(v, current_block, proposal.proposal, updates, new_block_degrees.block_degrees_out,
-//                               new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-//        return VertexMove{delta_entropy, true, vertex, proposal.proposal};
-//    }
-//    return VertexMove{delta_entropy, false, -1, -1};
-//}
-
 VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
@@ -757,21 +730,21 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
-    bool did_move = false;
-    long current_block = blockmodel.block_assignment(vertex);
-
-    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
-
-    utils::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, out_edges, in_edges,
-                                                                      blockmodel.block_assignment(), blockmodel,
-                                                                      false);
-    if (proposal.proposal == current_block) {
-        return VertexMove{0.0, did_move, -1, -1};
-    }
-    return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
-}
+//VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
+//    bool did_move = false;
+//    long current_block = blockmodel.block_assignment(vertex);
+//
+//    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
+//    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
+//
+//    utils::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, out_edges, in_edges,
+//                                                                      blockmodel.block_assignment(), blockmodel,
+//                                                                      false);
+//    if (proposal.proposal == current_block) {
+//        return VertexMove{0.0, did_move, -1, -1};
+//    }
+//    return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
+//}
 
 VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;

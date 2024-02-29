@@ -379,6 +379,34 @@ void Blockmodel::update_block_assignment(long from_block, long to_block) {
     Blockmodel_update_assignment += MPI_Wtime() - start_t;
 }
 
+void Blockmodel::merge_block(long merge_from, long merge_to, const Delta &delta,
+                             utils::ProposalAndEdgeCounts proposal) {
+    long proposed_block_self_edges = this->blockmatrix()->get(merge_to, merge_to)
+                                     + delta.get(merge_to, merge_to);
+    this->update_block_assignment(merge_from, merge_to);
+    // 2. Update the matrix
+    this->blockmatrix()->update_edge_counts(delta);
+//            blockmodel.degrees_out(new_block_degrees._block_degrees_out);
+//            blockmodel.degrees_in(new_block_degrees._block_degrees_in);
+//            blockmodel.degrees(new_block_degrees._block_degrees);
+    this->degrees_out(merge_from, 0);
+    this->degrees_out(merge_to, this->degrees_out(merge_to) + proposal.num_out_neighbor_edges);
+    this->degrees_in(merge_from, 0);
+    this->degrees_in(merge_to, this->degrees_in(merge_to) + proposal.num_in_neighbor_edges);
+    this->degrees(merge_from, 0);
+    this->degrees(merge_to, this->degrees_out(merge_to) + this->degrees_in(merge_to)
+                                 - proposed_block_self_edges);
+    this->_block_sizes[merge_to] += this->_block_sizes[merge_from];
+    this->_block_sizes[merge_from] = 0;
+    this->_num_nonempty_blocks--;
+    for (const std::pair<long, long> &entry : this->_in_degree_histogram[merge_from]) {
+        this->_in_degree_histogram[merge_to][entry.first] += entry.second;
+    }
+    for (const std::pair<long, long> &entry : this->_out_degree_histogram[merge_from]) {
+        this->_out_degree_histogram[merge_to][entry.first] += entry.second;
+    }
+}
+
 void Blockmodel::move_vertex(Vertex vertex, long current_block, long new_block, EdgeCountUpdates &updates,
                              std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                              std::vector<long> &new_block_degrees) {

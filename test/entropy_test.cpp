@@ -1,6 +1,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+//#include <gmock/gmock.h>
 
 #include "blockmodel.hpp"
 #include "blockmodel/sparse/delta.hpp"
@@ -18,6 +19,14 @@
 
 const double MDL_10_VERTICES_50_EDGES_V1 = 200.5231073;
 const double MDL_10_VERTICES_50_EDGES_V2 = 314.1041264;
+
+const long E = 5E12;
+const long V = 1E12;
+
+class MockGraph : public Graph {
+public:
+    long num_edges() const override { return E; }
+};
 
 class EntropyTest : public ToyExample {
 protected:
@@ -188,15 +197,21 @@ TEST_F(EntropyTest, NullModelMDLv2ShouldGiveCorrectMDLForSmallGraph) {
 
 TEST_F(EntropyTest, NullModelMDLv1ShouldGiveCorrectMDLForLargeGraph) {
     double hand_calculated_mdl = 1.462023E14;
-    long E = 5E12;
-    long V = 1E12;
     double blocks = 1.0;
     double x = (blocks * blocks) / double(E);
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
     double bm = (double(E) * h) + double(V) * log(blocks);
     double log_likelihood_p = double(E) * log(double(E) / (double(E) * double(E)));
     double result = bm - log_likelihood_p;
-    double mdl = entropy::null_mdl_v1(graph);
+//    Graph largeGraph;
+    MockGraph LargeGraph;
+//    EXPECT_CALL(LargeGraph, num_edges()).Times(::testing::AtLeast(4));
+//    std::cout << "E: " << LargeGraph.num_edges() << std::endl;
+//    EXPECT_CALL(LargeGraph, num_edges()).WillRepeatedly(::testing::Return(E));
+//    EXPECT_EQ(LargeGraph.num_edges(), E);
+//    largeGraph.num_vertices = V;
+//    largeGraph.num_edges = E;
+    double mdl = entropy::null_mdl_v1(LargeGraph);
     EXPECT_FLOAT_EQ(mdl, result);
     EXPECT_FLOAT_EQ(mdl, hand_calculated_mdl);
 }

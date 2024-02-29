@@ -114,5 +114,5 @@ add_executable(Test
         test/nonparametric_entropy_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
-target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
+target_link_libraries(Test SBP gtest_main gmock hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
 gtest_discover_tests(Test)
