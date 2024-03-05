@@ -77,9 +77,10 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     }
     // std::cout << mpi.rank << " best merges";
     // utils::print<long>(best_merge_for_each_block);
-    blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
-    // else
-    // carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, num_edges);
+    if (args.approximate)
+        blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
+    else
+        carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, graph);
     blockmodel.distribute(graph);
     blockmodel.initialize_edge_counts(graph);
     MPI_Type_free(&Merge_t);
