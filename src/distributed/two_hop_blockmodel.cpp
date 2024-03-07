@@ -54,6 +54,10 @@ TwoHopBlockmodel TwoHopBlockmodel::copy() {
     blockmodel_copy._block_degrees = std::vector<long>(this->_block_degrees);
     blockmodel_copy._block_degrees_out = std::vector<long>(this->_block_degrees_out);
     blockmodel_copy._block_degrees_in = std::vector<long>(this->_block_degrees_in);
+    blockmodel_copy._block_sizes = std::vector<long>(this->_block_sizes);
+    blockmodel_copy._in_degree_histogram = std::vector<MapVector<long>>(this->_in_degree_histogram);
+    blockmodel_copy._out_degree_histogram = std::vector<MapVector<long>>(this->_out_degree_histogram);
+    blockmodel_copy._num_nonempty_blocks = this->_num_nonempty_blocks;
     blockmodel_copy._in_two_hop_radius = std::vector<bool>(this->_in_two_hop_radius);
     blockmodel_copy.num_blocks_to_merge = 0;
     blockmodel_copy._my_blocks = std::vector<bool>(this->_my_blocks);
@@ -304,6 +308,7 @@ void TwoHopBlockmodel::distribute_2hop_snowball(const NeighborList &neighbors) {
 
 void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
     /// TODO: this recreates the matrix (possibly unnecessary)
+    this->_num_nonempty_blocks = 0;
     std::shared_ptr<ISparseMatrix> blockmatrix;
     long num_buckets = graph.num_edges() / graph.num_vertices();
     if (args.transpose) {
@@ -315,9 +320,12 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
     std::vector<long> block_degrees_in = utils::constant<long>(this->num_blocks, 0);
     std::vector<long> block_degrees_out = utils::constant<long>(this->num_blocks, 0);
     std::vector<long> block_degrees = utils::constant<long>(this->num_blocks, 0);
+    std::vector<long> block_sizes = utils::constant<long>(this->num_blocks, 0);
+    std::vector<MapVector<long>> out_degree_histogram(this->num_blocks);
+    std::vector<MapVector<long>> in_degree_histogram(this->num_blocks);
     // Initialize the blockmodel in parallel
     #pragma omp parallel default(none) \
-    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, args)
+    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, block_sizes, out_degree_histogram, in_degree_histogram, graph, args)
     {
         long tid = omp_get_thread_num();
         long num_threads = omp_get_num_threads();
@@ -328,6 +336,13 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
             long block = this->_block_assignment[vertex];
             if (block < start || block >= end || !this->_in_two_hop_radius[block])  // only modify blocks this thread is responsible for
                 continue;
+            if (block_sizes[block] == 0) {
+                #pragma omp atomic
+                this->_num_nonempty_blocks++;
+            }
+            block_sizes[block]++;
+            out_degree_histogram[block][graph.out_neighbors(long(vertex)).size()]++;
+            in_degree_histogram[block][graph.in_neighbors(long(vertex)).size()]++;
             for (long neighbor : graph.out_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 if (!this->_in_two_hop_radius[neighbor_block]) {
@@ -360,6 +375,9 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
     this->_block_degrees_out = std::move(block_degrees_out);
     this->_block_degrees_in = std::move(block_degrees_in);
     this->_block_degrees = std::move(block_degrees);
+    this->_block_sizes = std::move(block_sizes);
+    this->_out_degree_histogram = std::move(out_degree_histogram);
+    this->_in_degree_histogram = std::move(in_degree_histogram);
 }
 
 double TwoHopBlockmodel::log_posterior_probability() const {
