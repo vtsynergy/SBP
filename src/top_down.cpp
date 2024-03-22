@@ -13,6 +13,7 @@
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/blockmodel_triplet.hpp"
 #include "common.hpp"
 #include "entropy.hpp"
 #include "graph.hpp"
@@ -78,6 +79,43 @@ Split propose_split(int community, const Graph &graph, const Blockmodel &blockmo
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
     split.num_edges = subgraph.num_edges();
     return split;
+}
+
+Blockmodel run(const Graph &graph) {
+    if (args.threads > 0)
+        omp_set_num_threads(args.threads);
+    else
+        omp_set_num_threads(omp_get_num_procs());
+    std::cout << "num threads: " << omp_get_max_threads() << std::endl;
+    Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
+    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    add_intermediate(0, graph, blockmodel, initial_mdl);
+    BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
+    float iteration = 0;
+    while (!done_blockmodeling(blockmodel, blockmodel_triplet)) {
+        if (blockmodel.getNum_blocks_to_merge() != 0) {
+            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
+                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+        }
+        blockmodel = split_communities(blockmodel, graph, blockmodel.getNum_blocks() * 2);
+        if (iteration < 1) {
+            double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+            add_intermediate(0.5, graph, blockmodel, mdl);
+        }
+        std::cout << "Starting MCMC vertex moves" << std::endl;
+        double start = MPI_Wtime();
+        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
+            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
+        else if (args.algorithm == "hybrid_mcmc")
+            blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet);
+        else // args.algorithm == "metropolis_hastings"
+            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
+//        iteration++;
+        finetune::MCMC_time += MPI_Wtime() - start;
+        add_intermediate(++iteration, graph, blockmodel, blockmodel.getOverall_entropy());
+        blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+    }
+    return blockmodel;
 }
 
 Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities) {

@@ -40,6 +40,9 @@ void apply_split(const Split &split, Blockmodel &blockmodel);
 /// splitting community `community`.
 Split propose_split(int community, const Graph &graph, const Blockmodel &blockmodel);
 
+/// Runs the top-down community detection algorithm.
+Blockmodel run(const Graph &graph);
+
 /// The reverse of block_merge::merge_blocks. Proposes several community splits, and applies the best ones until the
 /// number of communities reaches `target_num_communities`.
 Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities);
