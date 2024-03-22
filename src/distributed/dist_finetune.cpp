@@ -83,7 +83,9 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     }
     std::vector<double> delta_entropies;
     long total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = args.nonparametric ?
+            entropy::nonparametric::mdl(blockmodel, graph) :
+            entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -108,7 +110,9 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
 //            blockmodel.set_block_assignment(block_assignment);
 //            blockmodel.build_two_hop_blockmodel(graph.out_neighbors());
 //            blockmodel.initialize_edge_counts(graph);
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = args.nonparametric ?
+                entropy::nonparametric::mdl(blockmodel, graph) :
+                entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -185,7 +189,10 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     std::vector<double> delta_entropies;
     // TODO: Add number of finetuning iterations to evaluation
     long total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+//    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = args.nonparametric ?
+                  entropy::nonparametric::mdl(blockmodel, graph) :
+                  entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -207,7 +214,10 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+//        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = args.nonparametric ?
+                      entropy::nonparametric::mdl(blockmodel, graph) :
+                      entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -238,7 +248,9 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
     }
     std::vector<double> delta_entropies;
     size_t total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = args.nonparametric ?
+            entropy::nonparametric::mdl(blockmodel, graph) :
+            entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -261,7 +273,9 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = args.nonparametric ?
+                entropy::nonparametric::mdl(blockmodel, graph) :
+                entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -314,7 +328,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     }
     std::vector<double> delta_entropies;
     size_t total_vertex_moves = 0;
-    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double old_entropy = args.nonparametric ?
+            entropy::nonparametric::mdl(blockmodel, graph) :
+            entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
@@ -336,7 +352,9 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
 //            async_move(membership, graph, blockmodel);
 //        }
 //        size_t vertex_moves = collected_membership_updates.size();
-        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+        new_entropy = args.nonparametric ?
+                entropy::nonparametric::mdl(blockmodel, graph) :
+                entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
         double delta_entropy = new_entropy - old_entropy;
         old_entropy = new_entropy;
         delta_entropies.push_back(delta_entropy);
