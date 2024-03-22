@@ -85,7 +85,7 @@ elseif (DEBUG)
     set(COMPILE_OPTS -g3 -fsanitize=address)
     message("Compiling with -g3 and -fsanitize=address. Valgrind will not work with these executables")
 else()
-    set(COMPILE_OPTS "")
+    set(COMPILE_OPTS -O3)
     message("Compiling without debug options")
 endif()
 
