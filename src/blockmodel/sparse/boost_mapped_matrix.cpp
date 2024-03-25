@@ -1,19 +1,19 @@
 #include "boost_mapped_matrix.hpp"
 
-void BoostMappedMatrix::add(int row, int col, int val) {
+void BoostMappedMatrix::add(long row, long col, long val) {
     // TODO: bound checking includes branching, may get rid of it for performance
     check_row_bounds(row);
     check_col_bounds(col);
     matrix(row, col) += val;
 }
 
-void BoostMappedMatrix::check_row_bounds(int row) {
+void BoostMappedMatrix::check_row_bounds(long row) {
     if (row < 0 || row >= this->nrows) {
         throw IndexOutOfBoundsException(row, this->nrows);
     }
 }
 
-void BoostMappedMatrix::check_col_bounds(int col) {
+void BoostMappedMatrix::check_col_bounds(long col) {
     if (col < 0 || col >= this->ncols) {
         throw IndexOutOfBoundsException(col, this->ncols);
     }
@@ -21,43 +21,43 @@ void BoostMappedMatrix::check_col_bounds(int col) {
 
 BoostMappedMatrix BoostMappedMatrix::copy() {
     BoostMappedMatrix boost_mapped_matrix(this->nrows, this->ncols);
-    boost_mapped_matrix.matrix = boost::numeric::ublas::mapped_matrix<int>(this->matrix);
+    boost_mapped_matrix.matrix = boost::numeric::ublas::mapped_matrix<long>(this->matrix);
     return boost_mapped_matrix;
 }
 
-int BoostMappedMatrix::get(int row, int col) {
+long BoostMappedMatrix::get(long row, long col) {
     check_row_bounds(row);
     check_col_bounds(col);
     return matrix(row, col);
 }
 
-std::vector<int> BoostMappedMatrix::getrow(int row) {
+std::vector<long> BoostMappedMatrix::getrow(long row) {
     check_row_bounds(row);
-    std::vector<int> row_values = utils::constant<int>(this->ncols, 0);
-    // int row_values [this->ncols];
-    for (int col = 0; col < ncols; ++col) {
+    std::vector<long> row_values = utils::constant<long>(this->ncols, 0);
+    // long row_values [this->ncols];
+    for (long col = 0; col < ncols; ++col) {
         row_values[col] = matrix(row, col);
     }
-    return row_values;  // py::array_t<int>(this->ncols, row_values);
+    return row_values;  // py::array_t<long>(this->ncols, row_values);
 }
 
-std::vector<int> BoostMappedMatrix::getcol(int col) {
+std::vector<long> BoostMappedMatrix::getcol(long col) {
     // check_col_bounds(col);
-    // std::vector<int> col_values = utils::constant<int>(this->nrows, 0);
-    std::vector<int> col_values(this->nrows, 0);
-    // int col_values [this->nrows];
-    for (int row = 0; row < nrows; ++row) {
+    // std::vector<long> col_values = utils::constant<long>(this->nrows, 0);
+    std::vector<long> col_values(this->nrows, 0);
+    // long col_values [this->nrows];
+    for (long row = 0; row < nrows; ++row) {
         col_values[row] = matrix(row, col);
     }
-    return col_values;  // py::array_t<int>(this->nrows, col_values);
+    return col_values;  // py::array_t<long>(this->nrows, col_values);
 }
 
-EdgeWeights BoostMappedMatrix::incoming_edges(int block) {
+EdgeWeights BoostMappedMatrix::incoming_edges(long block) {
     check_col_bounds(block);
-    std::vector<int> indices;
-    std::vector<int> values;
-    for (int row = 0; row < this->nrows; ++row) {
-        int value = this->matrix(row, block);
+    std::vector<long> indices;
+    std::vector<long> values;
+    for (long row = 0; row < this->nrows; ++row) {
+        long value = this->matrix(row, block);
         if (value != 0) {
             indices.push_back(row);
             values.push_back(value);
@@ -69,10 +69,10 @@ EdgeWeights BoostMappedMatrix::incoming_edges(int block) {
 }
 
 Indices BoostMappedMatrix::nonzero() {
-    std::vector<int> row_vector;
-    std::vector<int> col_vector;
-    for (int row = 0; row < nrows; ++row) {
-        for (int col = 0; col < ncols; ++col) {
+    std::vector<long> row_vector;
+    std::vector<long> col_vector;
+    for (long row = 0; row < nrows; ++row) {
+        for (long col = 0; col < ncols; ++col) {
             if (matrix(row, col) != 0) {
                 row_vector.push_back(row);
                 col_vector.push_back(col);
@@ -82,38 +82,38 @@ Indices BoostMappedMatrix::nonzero() {
     return Indices{row_vector, col_vector};
 }
 
-void BoostMappedMatrix::sub(int row, int col, int val) {
+void BoostMappedMatrix::sub(long row, long col, long val) {
     check_row_bounds(row);
     check_col_bounds(col);
     matrix(row, col) -= val;
 }
 
-int BoostMappedMatrix::sum() {
-    int total = 0;
-    for (int row = 0; row < nrows; ++row) {
-        for (int col = 0; col < ncols; ++col) {
+long BoostMappedMatrix::sum() {
+    long total = 0;
+    for (long row = 0; row < nrows; ++row) {
+        for (long col = 0; col < ncols; ++col) {
             total += matrix(row, col);
         }
     }
     return total;
 }
 
-std::vector<int> BoostMappedMatrix::sum(int axis) {
+std::vector<long> BoostMappedMatrix::sum(long axis) {
     if (axis < 0 || axis > 1) {
         throw IndexOutOfBoundsException(axis, 2);
     }
     if (axis == 0) {  // sum across columns
-        std::vector<int> totals = utils::constant<int>(this->ncols, 0);
-        for (int row = 0; row < this->nrows; ++row) {
-            for (int col = 0; col < this->ncols; ++col) {
+        std::vector<long> totals = utils::constant<long>(this->ncols, 0);
+        for (long row = 0; row < this->nrows; ++row) {
+            for (long col = 0; col < this->ncols; ++col) {
                 totals[col] += this->matrix(row, col);
             }
         }
-        return totals;  // py::array_t<int>(this->ncols, totals);
+        return totals;  // py::array_t<long>(this->ncols, totals);
     } else {  // (axis == 1) sum across rows
-        std::vector<int> totals = utils::constant<int>(this->nrows, 0);
-        for (int row = 0; row < this->nrows; ++row) {
-            for (int col = 0; col < this->ncols; ++col) {
+        std::vector<long> totals = utils::constant<long>(this->nrows, 0);
+        for (long row = 0; row < this->nrows; ++row) {
+            for (long col = 0; col < this->ncols; ++col) {
                 totals[row] += this->matrix(row, col);
             }
         }
@@ -121,29 +121,29 @@ std::vector<int> BoostMappedMatrix::sum(int axis) {
     }
 }
 
-int BoostMappedMatrix::trace() {
-    int total = 0;
+long BoostMappedMatrix::trace() {
+    long total = 0;
     // Assumes that the matrix is square (which it should be in this case)
-    for (int index = 0; index < this->nrows; ++index) {
+    for (long index = 0; index < this->nrows; ++index) {
         total += this->matrix(index, index);
     }
     return total;
 }
 
-// int BoostMappedMatrix::operator[] (py::tuple index) {
-//     py::array_t<int> tuple_array(index);
+// long BoostMappedMatrix::operator[] (py::tuple index) {
+//     py::array_t<long> tuple_array(index);
 //     auto tuple_vals = tuple_array.mutable_unchecked<1>();
-//     int row = tuple_vals(0);
-//     int col = tuple_vals(1);
+//     long row = tuple_vals(0);
+//     long col = tuple_vals(1);
 //     return this->matrix(row, col);
 // }
 
-EdgeWeights BoostMappedMatrix::outgoing_edges(int block) {
+EdgeWeights BoostMappedMatrix::outgoing_edges(long block) {
     check_row_bounds(block);
-    std::vector<int> indices;
-    std::vector<int> values;
-    for (int col = 0; col < this->ncols; ++col) {
-        int value = this->matrix(block, col);
+    std::vector<long> indices;
+    std::vector<long> values;
+    for (long col = 0; col < this->ncols; ++col) {
+        long value = this->matrix(block, col);
         if (value != 0) {
             indices.push_back(col);
             values.push_back(value);
@@ -154,31 +154,31 @@ EdgeWeights BoostMappedMatrix::outgoing_edges(int block) {
     return EdgeWeights {indices, values};
 }
 
-void BoostMappedMatrix::update_edge_counts(int current_block, int proposed_block, std::vector<int> current_row,
-    std::vector<int> proposed_row, std::vector<int> current_col, std::vector<int> proposed_col) {
+void BoostMappedMatrix::update_edge_counts(long current_block, long proposed_block, std::vector<long> current_row,
+    std::vector<long> proposed_row, std::vector<long> current_col, std::vector<long> proposed_col) {
     check_row_bounds(current_block);
     check_col_bounds(current_block);
     check_row_bounds(proposed_block);
     check_col_bounds(proposed_block);
-    for (int col = 0; col < ncols; ++col) {
-        int current_val = current_row[col];
+    for (long col = 0; col < ncols; ++col) {
+        long current_val = current_row[col];
         if (current_val == 0)
             this->matrix.erase_element(current_block, col);
         else
             this->matrix(current_block, col) = current_val;
-        int proposed_val = proposed_row[col];
+        long proposed_val = proposed_row[col];
         if (proposed_val == 0)
             this->matrix.erase_element(proposed_block, col);
         else
             this->matrix(proposed_block, col) = proposed_val;
     }
-    for (int row = 0; row < nrows; ++row) {
-        int current_val = current_col[row];
+    for (long row = 0; row < nrows; ++row) {
+        long current_val = current_col[row];
         if (current_val == 0)
             this->matrix.erase_element(row, current_block);
         else
             this->matrix(row, current_block) = current_val;
-        int proposed_val = proposed_col[row];
+        long proposed_val = proposed_col[row];
         if (proposed_val == 0)
             this->matrix.erase_element(row, proposed_block);
         else
@@ -186,12 +186,12 @@ void BoostMappedMatrix::update_edge_counts(int current_block, int proposed_block
     }
 }
 
-std::vector<int> BoostMappedMatrix::values() {
+std::vector<long> BoostMappedMatrix::values() {
     // TODO: maybe return a sparse vector every time?
-    std::vector<int> values;
-    for (int row = 0; row < nrows; ++row) {
-        for (int col = 0; col < ncols; ++col) {
-            int value = matrix(row, col);
+    std::vector<long> values;
+    for (long row = 0; row < nrows; ++row) {
+        for (long col = 0; col < ncols; ++col) {
+            long value = matrix(row, col);
             if (value != 0) {
                 values.push_back(value);
             }

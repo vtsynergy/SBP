@@ -25,7 +25,7 @@ MPI_t mpi;
 Args args;
 
 struct Result {
-    std::vector<int> membership;
+    std::vector<long> membership;
     std::vector<std::vector<double>> matrix;
     double max_influence;
     double avg_influence;
@@ -33,51 +33,51 @@ struct Result {
 
 double stop = false;
 
-std::vector<std::vector<int>> Graph1 { {0, 0}, {0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 1}, {3, 2}, {3, 5}, {4, 1}, {4, 6},
+std::vector<std::vector<long>> Graph1 { {0, 0}, {0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 1}, {3, 2}, {3, 5}, {4, 1}, {4, 6},
                                        {5, 4}, {5, 5}, {5, 6}, {5, 7}, {6, 4}, {7, 3}, {7, 9}, {8, 5}, {8, 7}, {9, 10},
                                        {10, 7}, {10, 8}, {10, 10}
 };
 
-std::vector<std::vector<int>> Graph2 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
+std::vector<std::vector<long>> Graph2 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
                                        {5, 6}, {5, 7}, {5, 8}, {5, 9}, {6, 7}, {6, 8}, {6, 9}, {7, 8}, {7, 9}, {8, 9},
                                        {2, 6}
 };
 
-std::vector<std::vector<int>> Graph3 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
+std::vector<std::vector<long>> Graph3 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
                                        {5, 6}, {5, 7}, {5, 8}, {5, 9}, {6, 7}, {6, 8}, {6, 9}, {7, 8}, {7, 9}, {8, 9},
                                        {2, 6}, {2, 5}, {4, 8}
 };
 
-std::vector<std::vector<int>> Graph4 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
+std::vector<std::vector<long>> Graph4 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
                                        {5, 6}, {5, 7}, {5, 8}, {5, 9}, {6, 7}, {6, 8}, {6, 9}, {7, 8}, {7, 9}, {8, 9},
                                        {2, 6}, {2, 5}, {4, 8}, {0, 5}, {4, 6}
 };
 
-std::vector<std::vector<int>> Graph5 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
+std::vector<std::vector<long>> Graph5 { {0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4},
                                        {5, 6}, {5, 7}, {5, 8}, {5, 9}, {6, 7}, {6, 8}, {6, 9}, {7, 8}, {7, 9}, {8, 9},
                                        {2, 6}, {2, 5}, {4, 8}, {0, 5}, {4, 6}, {6, 0}, {5, 4}
 };
 
-std::vector<std::vector<int>> Graph6 { {0, 1}, {2, 0}, {0, 3}, {4, 0}, {5, 0}, {0, 6}, {2, 1}, {2, 3}, {5, 4}, {6, 5},
+std::vector<std::vector<long>> Graph6 { {0, 1}, {2, 0}, {0, 3}, {4, 0}, {5, 0}, {0, 6}, {2, 1}, {2, 3}, {5, 4}, {6, 5},
                                        {6, 1}, {3, 8}, {7, 9}, {8, 7}, {9, 8}
 };
 
-std::vector<std::vector<int>> Graph7 { {0, 1}, {2, 0}, {0, 3}, {4, 0}, {5, 0}, {0, 6}, {2, 1}, {2, 3}, {5, 4}, {6, 5},
+std::vector<std::vector<long>> Graph7 { {0, 1}, {2, 0}, {0, 3}, {4, 0}, {5, 0}, {0, 6}, {2, 1}, {2, 3}, {5, 4}, {6, 5},
                                        {6, 1}, {3, 8}, {7, 9}, {8, 7}, {9, 8}, {7, 3}
 };
 
-std::vector<double> conditional_distribution(const Graph &graph, const std::vector<int> &assignment, int vertex1,
-                                             int num_blocks = -1, bool mdl = false) {
+std::vector<double> conditional_distribution(const Graph &graph, const std::vector<long> &assignment, long vertex1,
+                                             long num_blocks = -1, bool mdl = false) {
     if (num_blocks == -1)
         num_blocks = graph.num_vertices();
     std::vector<double> distribution(num_blocks, 0.0);
-    for (int block = 0; block < num_blocks; ++block) {
-        std::vector<int> modified_assignment(assignment);
+    for (long block = 0; block < num_blocks; ++block) {
+        std::vector<long> modified_assignment(assignment);
         modified_assignment[vertex1] = block;
-        std::vector<int> block_map(num_blocks, -1);
-        int block_number = 0;
-        for (int i = 0; i < graph.num_vertices(); ++i) {
-            int _block = modified_assignment[i];
+        std::vector<long> block_map(num_blocks, -1);
+        long block_number = 0;
+        for (long i = 0; i < graph.num_vertices(); ++i) {
+            long _block = modified_assignment[i];
             if (block_map[_block] == -1) {
                 block_map[_block] = block_number;
                 block_number++;
@@ -85,11 +85,11 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
             modified_assignment[i] = block_map[_block];
         }
 //        std::cout << "modified assignment: ";
-//        utils::print<int>(modified_assignment);
+//        utils::print<long>(modified_assignment);
         Blockmodel blockmodel(block_number, graph, 0.5, modified_assignment);
 //        std::cout << "log_posterior_prob: " << blockmodel.log_posterior_probability() << " exp(log_p) = " << std::exp(blockmodel.log_posterior_probability()) << std::endl;
         if (mdl)
-            distribution[block] = 0.0 - entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+            distribution[block] = 0.0 - entropy::mdl(blockmodel, graph);
         else  // use log posterior probability
             distribution[block] = blockmodel.log_posterior_probability();
     }
@@ -100,7 +100,7 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
             min_log_posterior_probability = val;
     }
     min_log_posterior_probability = std::abs(min_log_posterior_probability);
-    for (int block = 0; block < num_blocks; ++block) {
+    for (long block = 0; block < num_blocks; ++block) {
         distribution[block] = std::exp(min_log_posterior_probability + distribution[block]);
     }
 //    }
@@ -117,19 +117,19 @@ std::vector<double> conditional_distribution(const Graph &graph, const std::vect
     return distribution;
 }
 
-std::vector<double> neighbor_conditional_distribution(const Graph &graph, const std::vector<int> &assignment,
-                                                      int vertex1, std::set<int> &neighbors, int num_blocks = -1,
+std::vector<double> neighbor_conditional_distribution(const Graph &graph, const std::vector<long> &assignment,
+                                                      long vertex1, std::set<long> &neighbors, long num_blocks = -1,
                                                       bool mdl = false) {
     if (num_blocks == -1)
         num_blocks = graph.num_vertices();
     std::vector<double> distribution;
-    for (const int &block : neighbors) {
-        std::vector<int> modified_assignment(assignment);
+    for (const long &block : neighbors) {
+        std::vector<long> modified_assignment(assignment);
         modified_assignment[vertex1] = block;
-        std::vector<int> block_map(num_blocks, -1);
-        int block_number = 0;
-        for (int i = 0; i < graph.num_vertices(); ++i) {
-            int _block = modified_assignment[i];
+        std::vector<long> block_map(num_blocks, -1);
+        long block_number = 0;
+        for (long i = 0; i < graph.num_vertices(); ++i) {
+            long _block = modified_assignment[i];
             if (block_map[_block] == -1) {
                 block_map[_block] = block_number;
                 block_number++;
@@ -138,7 +138,7 @@ std::vector<double> neighbor_conditional_distribution(const Graph &graph, const 
         }
         Blockmodel blockmodel(block_number, graph, 0.5, modified_assignment);
         if (mdl)
-            distribution.push_back(0.0 - entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges()));
+            distribution.push_back(0.0 - entropy::mdl(blockmodel, graph));
         else  // use log posterior probability
             distribution.push_back(blockmodel.log_posterior_probability());
     }
@@ -148,7 +148,7 @@ std::vector<double> neighbor_conditional_distribution(const Graph &graph, const 
             min_log_posterior_probability = val;
     }
     min_log_posterior_probability = std::abs(min_log_posterior_probability);
-    for (int block = 0; block < distribution.size(); ++block) {
+    for (long block = 0; block < distribution.size(); ++block) {
         distribution[block] = std::exp(min_log_posterior_probability + distribution[block]);
     }
     auto sum = utils::sum<double>(distribution);
@@ -158,15 +158,15 @@ std::vector<double> neighbor_conditional_distribution(const Graph &graph, const 
     return distribution;
 }
 
-double total_variation_distance(const Blockmodel &B, const Graph &graph, int vertex1, int vertex2, int block1, int block2, bool mdl = false) {
-    std::vector<int> X(B.block_assignment());  // graph.assignment());
+double total_variation_distance(const Blockmodel &B, const Graph &graph, long vertex1, long vertex2, long block1, long block2, bool mdl = false) {
+    std::vector<long> X(B.block_assignment());  // graph.assignment());
     X[vertex2] = block1;
     std::vector<double> Xcd = conditional_distribution(graph, X, vertex1, B.getNum_blocks(), mdl);
-    std::vector<int> Y(B.block_assignment());  // graph.assignment());
+    std::vector<long> Y(B.block_assignment());  // graph.assignment());
     Y[vertex2] = block2;
     std::vector<double> Ycd = conditional_distribution(graph, Y, vertex1, B.getNum_blocks(), mdl);
     double tvd = 0.0;
-    for (int block = 0; block < B.getNum_blocks(); ++block) {
+    for (long block = 0; block < B.getNum_blocks(); ++block) {
 //        if (mdl && vertex1 == 0 && vertex2 == 1) {
 //            std::cout << "block = " << block << "|" << Xcd[block] << " - " << Ycd[block] << "| = " << Xcd[block] - Ycd[block] << std::endl;
 //        }
@@ -177,21 +177,21 @@ double total_variation_distance(const Blockmodel &B, const Graph &graph, int ver
     return tvd;
 }
 
-double neighbor_total_variation_distance(const Blockmodel &B, const Graph &graph, int vertex1, int vertex2, int block1,
-                                         int block2, bool mdl = false) {
-    std::set<int> v1_neighbors = B.blockmatrix()->neighbors(B.block_assignment(vertex1));
+double neighbor_total_variation_distance(const Blockmodel &B, const Graph &graph, long vertex1, long vertex2, long block1,
+                                         long block2, bool mdl = false) {
+    std::set<long> v1_neighbors = B.blockmatrix()->neighbors(B.block_assignment(vertex1));
     // We're assuming that only the membership to neighboring nodes changes significantly. Thus, adding block1 and
     // block2 to v1_neighbors shouldn't affect the result much, even if they're not neighbors of vertex1.
     v1_neighbors.insert(block1);
     v1_neighbors.insert(block2);
-    std::vector<int> X(B.block_assignment());  // graph.assignment());
+    std::vector<long> X(B.block_assignment());  // graph.assignment());
     X[vertex2] = block1;
     std::vector<double> Xcd = neighbor_conditional_distribution(graph, X, vertex1, v1_neighbors, B.getNum_blocks(), mdl);
-    std::vector<int> Y(B.block_assignment());  // graph.assignment());
+    std::vector<long> Y(B.block_assignment());  // graph.assignment());
     Y[vertex2] = block2;
     std::vector<double> Ycd = neighbor_conditional_distribution(graph, Y, vertex1, v1_neighbors, B.getNum_blocks(), mdl);
     double tvd = 0.0;
-    for (int block = 0; block < v1_neighbors.size(); ++block) {
+    for (long block = 0; block < v1_neighbors.size(); ++block) {
         tvd += std::abs(Xcd[block] - Ycd[block]);
     }
     tvd *= 0.5;
@@ -200,28 +200,28 @@ double neighbor_total_variation_distance(const Blockmodel &B, const Graph &graph
 
 Result compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge = false, bool mdl = false) {
     std::cout << "computing influence" << std::endl;
-//    std::vector<int> initial_assignment = utils::range<int>(0, graph.num_vertices());
+//    std::vector<long> initial_assignment = utils::range<long>(0, graph.num_vertices());
 //    Blockmodel B(graph.num_vertices(), graph.out_neighbors(), 0.5, initial_assignment);
 //    if (do_merge)
 //        B = block_merge::merge_blocks(B, graph.out_neighbors(), graph.num_edges());
 //    std::cout << "Block assignment = ";
-//    utils::print<int>(B.block_assignment());
+//    utils::print<long>(B.block_assignment());
     std::vector<double> influence(graph.num_vertices(), std::numeric_limits<double>::min());
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
-    for (int vertex1 = 0; vertex1 < graph.num_vertices(); ++vertex1) {
+    for (long vertex1 = 0; vertex1 < graph.num_vertices(); ++vertex1) {
         double sum_influence_on_vertex1 = 0.0;
 #pragma omp parallel for default(shared)
-        for (int vertex2 = 0; vertex2 < graph.num_vertices(); ++vertex2) {
+        for (long vertex2 = 0; vertex2 < graph.num_vertices(); ++vertex2) {
             if (vertex1 == vertex2) continue;
             double max_influence_on_vertex1 = std::numeric_limits<double>::min();
             // Keep block1 as the current block for vertex2
             // Only loop over b1lock2
-//            int b1 = -1;
-//            int b2 = -1;
+//            long b1 = -1;
+//            long b2 = -1;
             std::vector<double> tvds;
-            for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
-                for (int block2 = block1 + 1; block2 < B.getNum_blocks(); ++block2) {
+            for (long block1 = 0; block1 < B.getNum_blocks(); ++block1) {
+                for (long block2 = block1 + 1; block2 < B.getNum_blocks(); ++block2) {
                     if (block1 == block2) continue;
 //                    double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
                     double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
@@ -252,13 +252,13 @@ Result compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge 
         }
         influence[vertex1] = sum_influence_on_vertex1;
 //        max_influence = std::max(max_influence, sum_influence_on_vertex1);
-//        int max_influence_vertex = utils::argmax<double>(influence_matrix[vertex1]);
+//        long max_influence_vertex = utils::argmax<double>(influence_matrix[vertex1]);
 //        std::cout << vertex1 << " (" << sum_influence_on_vertex1 << "," << max_influence_vertex << "): ";
 //        utils::print<double>(influence_matrix[vertex1]);
     }
     double max_influence = std::numeric_limits<double>::min();
     double avg_influence = 0.0;
-    int v = 0;
+    long v = 0;
     for (double alpha : influence) {
         max_influence = std::max(alpha, max_influence);
         avg_influence += alpha;
@@ -273,21 +273,21 @@ Result compute_influence(const Graph &graph, const Blockmodel &B, bool do_merge 
 }
 
 /// Adapted from: https://dev.to/babak/an-algorithm-for-picking-random-numbers-in-a-range-without-repetition-4cp6
-std::vector<int> pseudoshuffle_range(int num, int range_max, int num_vertices) {
-    MapVector<int> mapping;
-    std::vector<int> result;
+std::vector<long> pseudoshuffle_range(long num, long range_max, long num_vertices) {
+    MapVector<long> mapping;
+    std::vector<long> result;
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::mt19937_64 generator(seed);
 //    std::cout << "seed: " << seed << std::endl;
-    std::uniform_int_distribution<int> distribution;
-    int index = range_max - 1;
+    std::uniform_int_distribution<long> distribution;
+    long index = range_max - 1;
     while (result.size() < num) {
         // below allows re-using the same distribution object with different start, end values.
-        int random_index = distribution(generator, decltype(distribution)::param_type{0, index});
+        long random_index = distribution(generator, decltype(distribution)::param_type{0, index});
         const auto it = mapping.find(random_index);
         if (it != mapping.end())
             random_index = it->second;
-        int pointer_index = index;
+        long pointer_index = index;
         const auto it2 = mapping.find(pointer_index);
         if (it2 != mapping.end())
             pointer_index = it2->second;
@@ -295,13 +295,13 @@ std::vector<int> pseudoshuffle_range(int num, int range_max, int num_vertices) {
         const auto it3 = mapping.find(pointer_index);
         if (it3 != mapping.end())
             mapping.erase(pointer_index);
-        int vertex1 = random_index / num_vertices;
-        int vertex2 = random_index % num_vertices;
+        long vertex1 = random_index / num_vertices;
+        long vertex2 = random_index % num_vertices;
         if (vertex1 != vertex2)
             result.push_back(random_index);
         index--;
     }
-//    utils::print<int>(result);
+//    utils::print<long>(result);
     return result;
 }
 
@@ -311,23 +311,23 @@ Result compute_random_avg_influence(const Graph &graph, const Blockmodel &B, boo
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
     double sum_influence = 0.0;
-    int num = 100;
-    std::vector<int> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
+    long num = 100;
+    std::vector<long> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
     #pragma omp parallel for default(shared)
-    for (int i = 0; i < num; ++i) {
-        int index = cells[i];
-        int vertex1 = index / graph.num_vertices();
-        int vertex2 = index % graph.num_vertices();
+    for (long i = 0; i < num; ++i) {
+        long index = cells[i];
+        long vertex1 = index / graph.num_vertices();
+        long vertex2 = index % graph.num_vertices();
         if (vertex1 == vertex2) {
             num--;
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-//        int vertex1_block = B.block_assignment(vertex1);
-        for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
+//        long vertex1_block = B.block_assignment(vertex1);
+        for (long block1 = 0; block1 < B.getNum_blocks(); ++block1) {
 //            if (!B.is_neighbor_of(vertex1_block, block1)) continue;
-//            int vertex2_block = B.block_assignment(vertex2);
-            for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
+//            long vertex2_block = B.block_assignment(vertex2);
+            for (long block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2) continue;
 //                if (block1 == block2 || !B.is_neighbor_of(vertex2_block, block2)) continue;
                 double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
@@ -349,27 +349,27 @@ Result compute_random_avg_std_max_influence(const Graph &graph, const Blockmodel
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
     double sum_influence = 0.0;
-    int num = 100;
-    std::vector<int> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
+    long num = 100;
+    std::vector<long> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
 #pragma omp parallel for default(shared)
-    for (int i = 0; i < num; ++i) {
-        int index = cells[i];
-        int vertex1 = index / graph.num_vertices();
-        int vertex2 = index % graph.num_vertices();
+    for (long i = 0; i < num; ++i) {
+        long index = cells[i];
+        long vertex1 = index / graph.num_vertices();
+        long vertex2 = index % graph.num_vertices();
         if (vertex1 == vertex2) {
             num--;
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        std::vector<int> moves;
+        std::vector<long> moves;
         if ((B.getNum_blocks() * B.getNum_blocks()) - B.getNum_blocks() > num)
             moves = pseudoshuffle_range(num, B.getNum_blocks() * B.getNum_blocks(), B.getNum_blocks());
         else
-            moves = utils::range<int>(0, B.getNum_blocks() * B.getNum_blocks());
+            moves = utils::range<long>(0, B.getNum_blocks() * B.getNum_blocks());
         std::vector<double> tvds;
-        for (int j = 0; j < moves.size(); ++j) {
-            int block1 = j / B.getNum_blocks();
-            int block2 = j % B.getNum_blocks();
+        for (long j = 0; j < moves.size(); ++j) {
+            long block1 = j / B.getNum_blocks();
+            long block2 = j % B.getNum_blocks();
             if (block1 == block2) continue;
             double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
             tvds.push_back(tvd);
@@ -401,23 +401,23 @@ Result compute_random_avg_neighbor_max_influence(const Graph &graph, const Block
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
     double sum_influence = 0.0;
-    int num = 100;
-    std::vector<int> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
+    long num = 100;
+    std::vector<long> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
     #pragma omp parallel for default(shared)
-    for (int i = 0; i < num; ++i) {
-        int index = cells[i];
-        int vertex1 = index / graph.num_vertices();
-        int vertex2 = index % graph.num_vertices();
+    for (long i = 0; i < num; ++i) {
+        long index = cells[i];
+        long vertex1 = index / graph.num_vertices();
+        long vertex2 = index % graph.num_vertices();
         if (vertex1 == vertex2) {
             num--;
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        int vertex1_block = B.block_assignment(vertex1);
-        for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
+        long vertex1_block = B.block_assignment(vertex1);
+        for (long block1 = 0; block1 < B.getNum_blocks(); ++block1) {
             if (!B.is_neighbor_of(vertex1_block, block1)) continue;
-            int vertex2_block = B.block_assignment(vertex2);
-            for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
+            long vertex2_block = B.block_assignment(vertex2);
+            for (long block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2 || !B.is_neighbor_of(vertex2_block, block2)) continue;
                 double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
                 max_influence_on_vertex1 = std::max(tvd, max_influence_on_vertex1);
@@ -438,22 +438,22 @@ Result compute_random_avg_practical_max_influence(const Graph &graph, const Bloc
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
     double sum_influence = 0.0;
-    int num = 100;
-    std::vector<int> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
+    long num = 100;
+    std::vector<long> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
     #pragma omp parallel for default(shared)
-    for (int i = 0; i < num; ++i) {
-        int index = cells[i];
-        int vertex1 = index / graph.num_vertices();
-        int vertex2 = index % graph.num_vertices();
+    for (long i = 0; i < num; ++i) {
+        long index = cells[i];
+        long vertex1 = index / graph.num_vertices();
+        long vertex2 = index % graph.num_vertices();
         if (vertex1 == vertex2) {
             num--;
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        int vertex2_block = B.block_assignment(vertex1);
-        for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
+        long vertex2_block = B.block_assignment(vertex1);
+        for (long block1 = 0; block1 < B.getNum_blocks(); ++block1) {
             if (!B.is_neighbor_of(vertex2_block, block1) && block1 != vertex2_block) continue;
-            for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
+            for (long block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2 || !B.is_neighbor_of(block1, block2)) continue;
                 double tvd = total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
                 max_influence_on_vertex1 = std::max(tvd, max_influence_on_vertex1);
@@ -474,22 +474,22 @@ Result compute_random_avg_practical_max_neighbor_influence(const Graph &graph, c
     std::vector<std::vector<double>> influence_matrix(graph.num_vertices(), std::vector<double>(graph.num_vertices(), 0.0));
     std::cout << "Influence matrix, where M[x,y] = influence of y on x" << std::endl;
     double sum_influence = 0.0;
-    int num = 100;
-    std::vector<int> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
+    long num = 100;
+    std::vector<long> cells = pseudoshuffle_range(num, graph.num_vertices() * graph.num_vertices(), graph.num_vertices());
     #pragma omp parallel for default(shared)
-    for (int i = 0; i < num; ++i) {
-        int index = cells[i];
-        int vertex1 = index / graph.num_vertices();
-        int vertex2 = index % graph.num_vertices();
+    for (long i = 0; i < num; ++i) {
+        long index = cells[i];
+        long vertex1 = index / graph.num_vertices();
+        long vertex2 = index % graph.num_vertices();
         if (vertex1 == vertex2) {
             num--;
             continue;
         }
         double max_influence_on_vertex1 = std::numeric_limits<double>::min();
-        int vertex2_block = B.block_assignment(vertex1);
-        for (int block1 = 0; block1 < B.getNum_blocks(); ++block1) {
+        long vertex2_block = B.block_assignment(vertex1);
+        for (long block1 = 0; block1 < B.getNum_blocks(); ++block1) {
             if (!B.is_neighbor_of(vertex2_block, block1) && block1 != vertex2_block) continue;
-            for (int block2 = 0; block2 < B.getNum_blocks(); ++block2) {
+            for (long block2 = 0; block2 < B.getNum_blocks(); ++block2) {
                 if (block1 == block2 || !B.is_neighbor_of(block1, block2)) continue;
                 double tvd = neighbor_total_variation_distance(B, graph, vertex1, vertex2, block1, block2, mdl);
                 max_influence_on_vertex1 = std::max(tvd, max_influence_on_vertex1);
@@ -504,18 +504,18 @@ Result compute_random_avg_practical_max_neighbor_influence(const Graph &graph, c
     return { B.block_assignment(), influence_matrix, -1, avg_influence };
 }
 
-Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
-    int num_vertices = -1;
-    int num_edges = (int) graph_edges.size();
+Graph to_graph(const std::vector<std::vector<long>> &graph_edges) {
+    long num_vertices = -1;
+    long num_edges = (long) graph_edges.size();
     NeighborList out_neighbors;
     NeighborList in_neighbors;
     std::vector<bool> self_edges;
-    for (const std::vector<int> &edge : graph_edges) {
-        int from = edge[0];
-        int to = edge[1];
+    for (const std::vector<long> &edge : graph_edges) {
+        long from = edge[0];
+        long to = edge[1];
         utils::insert_nodup(out_neighbors, from , to);
         utils::insert_nodup(in_neighbors, to, from);
-        int max_v = std::max(from + 1, to + 1);
+        long max_v = std::max(from + 1, to + 1);
         num_vertices = std::max(max_v, num_vertices);
         while (self_edges.size() < num_vertices) {
             self_edges.push_back(false);
@@ -525,12 +525,12 @@ Graph to_graph(const std::vector<std::vector<int>> &graph_edges) {
         }
     }
     while (out_neighbors.size() < size_t(num_vertices)) {
-        out_neighbors.push_back(std::vector<int>());
+        out_neighbors.push_back(std::vector<long>());
     }
     while (in_neighbors.size() < size_t(num_vertices)) {
-        in_neighbors.push_back(std::vector<int>());
+        in_neighbors.push_back(std::vector<long>());
     }
-    std::vector<int> assignment = utils::range<int>(0, num_vertices);
+    std::vector<long> assignment = utils::range<long>(0, num_vertices);
     Graph graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
     return graph;
 }
@@ -550,7 +550,7 @@ void print_csv(const std::vector<Result>& csv_row, double mdl, double f1, const 
     file.open(filepath, std::ios_base::app);
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
-        for (int i = 0; i < 5; ++i) {
+        for (long i = 0; i < 5; ++i) {
             file << ",itr" << i << "_ll_max_influence,itr" << i << "_ll_avg_influence,itr" << i
                  << "_ll_matrix,itr" << i << "membership,itr" << i << "_mdl_max_influence,itr" << i
                  << "_mdl_avg_influence,itr" << i << "_mdl_matrix";
@@ -562,15 +562,15 @@ void print_csv(const std::vector<Result>& csv_row, double mdl, double f1, const 
     }
     file << tag << "," << args.numvertices << "," << args.overlap << "," << args.blocksizevar << "," << args.undirected;
     file << "," << args.algorithm;
-    for (int i = 0; i < 6; ++i) {
+    for (long i = 0; i < 6; ++i) {
         const Result &ll_res = csv_row[i * 2];
         file << "," << ll_res.max_influence << "," << ll_res.avg_influence << ",\"";
 //        file << "," << std::get<0>(ll_res) << "," << std::get<1>(ll_res) << ",\"";  // ll_res.first << "," << ll_res.second;
 //        auto matrix = std::get<2>(ll_res);
         const auto &ll_matrix = ll_res.matrix;
-        for (int vertex = 0; vertex < ll_matrix.size(); ++vertex) {
+        for (long vertex = 0; vertex < ll_matrix.size(); ++vertex) {
             auto row = ll_matrix[vertex];
-            for (int col = 0; col < row.size(); ++col) {
+            for (long col = 0; col < row.size(); ++col) {
                 if (vertex == ll_matrix.size() - 1 && col == ll_matrix.size() - 1) {
                     file << row[col];
                 } else {
@@ -579,7 +579,7 @@ void print_csv(const std::vector<Result>& csv_row, double mdl, double f1, const 
             }
         }
         file << "\",\"";
-        for (int vertex = 0; vertex < ll_res.membership.size(); ++vertex) {
+        for (long vertex = 0; vertex < ll_res.membership.size(); ++vertex) {
             if (vertex == ll_res.membership.size() - 1) {
                 file << ll_res.membership[vertex];
             } else {
@@ -593,9 +593,9 @@ void print_csv(const std::vector<Result>& csv_row, double mdl, double f1, const 
         file << "," << mdl_res.max_influence << "," << mdl_res.avg_influence << ",\"";
 //        matrix = std::get<2>(ll_res);
         const auto &mdl_matrix = mdl_res.matrix;
-        for (int vertex = 0; vertex < mdl_matrix.size(); ++vertex) {
+        for (long vertex = 0; vertex < mdl_matrix.size(); ++vertex) {
             auto row = mdl_matrix[vertex];
-            for (int col = 0; col < row.size(); ++col) {
+            for (long col = 0; col < row.size(); ++col) {
                 if (vertex == mdl_matrix.size() - 1 && col == mdl_matrix.size() - 1) {
                     file << row[col];
                 } else {
@@ -624,7 +624,7 @@ void print_neighbor_csv(const std::vector<Result>& csv_row, double mdl, double f
     file.open(filepath, std::ios_base::app);
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
-        for (int i = 0; i < 5; ++i) {
+        for (long i = 0; i < 5; ++i) {
             file << ",itr" << i << "_neighbor_max_influence,itr" << i << "_neighbor_avg_influence,itr" << i
                  << "_neighbor_matrix,itr" << i << "membership,itr" << i << "_mdl_max_influence,itr" << i
                  << "_mdl_avg_influence,itr" << i << "_mdl_matrix";
@@ -636,13 +636,13 @@ void print_neighbor_csv(const std::vector<Result>& csv_row, double mdl, double f
     }
     file << tag << "," << args.numvertices << "," << args.overlap << "," << args.blocksizevar << "," << args.undirected;
     file << "," << args.algorithm;
-    for (int i = 0; i < 6; ++i) {
+    for (long i = 0; i < 6; ++i) {
         const Result &neighbor_res = csv_row[i * 2];
         file << "," << neighbor_res.max_influence << "," << neighbor_res.avg_influence << ",\"";
         const auto &ll_matrix = neighbor_res.matrix;
-        for (int vertex = 0; vertex < ll_matrix.size(); ++vertex) {
+        for (long vertex = 0; vertex < ll_matrix.size(); ++vertex) {
             auto row = ll_matrix[vertex];
-            for (int col = 0; col < row.size(); ++col) {
+            for (long col = 0; col < row.size(); ++col) {
                 if (vertex == ll_matrix.size() - 1 && col == ll_matrix.size() - 1) {
                     file << row[col];
                 } else {
@@ -651,7 +651,7 @@ void print_neighbor_csv(const std::vector<Result>& csv_row, double mdl, double f
             }
         }
         file << "\",\"";
-        for (int vertex = 0; vertex < neighbor_res.membership.size(); ++vertex) {
+        for (long vertex = 0; vertex < neighbor_res.membership.size(); ++vertex) {
             if (vertex == neighbor_res.membership.size() - 1) {
                 file << neighbor_res.membership[vertex];
             } else {
@@ -662,9 +662,9 @@ void print_neighbor_csv(const std::vector<Result>& csv_row, double mdl, double f
         const Result &mdl_res = csv_row[i * 2 + 1];
         file << "," << mdl_res.max_influence << "," << mdl_res.avg_influence << ",\"";
         const auto &mdl_matrix = mdl_res.matrix;
-        for (int vertex = 0; vertex < mdl_matrix.size(); ++vertex) {
+        for (long vertex = 0; vertex < mdl_matrix.size(); ++vertex) {
             auto row = mdl_matrix[vertex];
-            for (int col = 0; col < row.size(); ++col) {
+            for (long col = 0; col < row.size(); ++col) {
                 if (vertex == mdl_matrix.size() - 1 && col == mdl_matrix.size() - 1) {
                     file << row[col];
                 } else {
@@ -693,7 +693,7 @@ void print_minimal_csv(const std::vector<Result>& csv_row, double mdl, double f1
     file.open(filepath, std::ios_base::app);
     if (write_header) {
         file << "tag,numvertices,overlap,blocksizevar,undirected,algorithm";
-        for (int i = 0; i < csv_row.size() - 1; ++i) {
+        for (long i = 0; i < csv_row.size() - 1; ++i) {
             file << ",itr" << i << "_avg_influence,itr" << i << "membership";
             if (i == 0)
                 file << ",itr0.5_avg_influence,itr0.5_membership";
@@ -702,10 +702,10 @@ void print_minimal_csv(const std::vector<Result>& csv_row, double mdl, double f1
     }
     file << tag << "," << args.numvertices << "," << args.overlap << "," << args.blocksizevar << "," << args.undirected;
     file << "," << args.algorithm;
-    for (int i = 0; i < csv_row.size(); ++i) {
+    for (long i = 0; i < csv_row.size(); ++i) {
         const Result &neighbor_res = csv_row[i];
         file << "," << neighbor_res.avg_influence << ",\"";
-        for (int vertex = 0; vertex < neighbor_res.membership.size(); ++vertex) {
+        for (long vertex = 0; vertex < neighbor_res.membership.size(); ++vertex) {
             if (vertex == neighbor_res.membership.size() - 1) {
                 file << neighbor_res.membership[vertex];
             } else {
@@ -735,7 +735,7 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
-    int iteration = 0;
+    long iteration = 0;
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
@@ -768,7 +768,7 @@ void stochastic_block_partition(Graph &graph, const std::string &tag = "test") {
     auto influence_duration = std::chrono::duration_cast<std::chrono::seconds>(t2);
     std::cout << "influence took " << influence_duration.count() << "/" << full_duration.count() << " seconds ("
               << 100.0 * double(influence_duration.count()) / double(full_duration.count()) << ")" << std::endl;
-    double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double mdl = entropy::mdl(blockmodel, graph);
     double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_minimal_csv(csv_row, mdl, f1, tag);
 }
@@ -786,7 +786,7 @@ void stochastic_block_partition_neighbor_influence_comparison(Graph &graph, cons
     std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
               << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
-    int iteration = 0;
+    long iteration = 0;
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
@@ -809,12 +809,12 @@ void stochastic_block_partition_neighbor_influence_comparison(Graph &graph, cons
 //            csv_row.push_back(compute_influence(graph, blockmodel, false, true));
         }
     }
-    double mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    double mdl = entropy::mdl(blockmodel, graph);
     double f1 = evaluate::evaluate_blockmodel(graph, blockmodel).f1_score;
     print_neighbor_csv(csv_row, mdl, f1, tag);
 }
 
-int main(int argc, char* argv[]) {
+long main(long argc, char* argv[]) {
     args = Args(argc, argv);
     Graph G = Graph::load();
 //    Graph G = to_graph(Graph1);
