@@ -128,8 +128,8 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         }
     }
     blockmodel.setOverall_entropy(new_entropy);
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    if (mpi.rank == 0) std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    if (mpi.rank == 0) std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
     // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
     return blockmodel;
@@ -233,8 +233,8 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
         }
     }
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    if (mpi.rank == 0) std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    if (mpi.rank == 0) std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
     return blockmodel;
 }
@@ -290,8 +290,8 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
         }
     }
     blockmodel.setOverall_entropy(new_entropy);
-    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    if (mpi.rank == 0) std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    if (mpi.rank == 0) std::cout << blockmodel.getOverall_entropy() << std::endl;
     MPI_Type_free(&Membership_t);
     return blockmodel;
 }
@@ -408,6 +408,9 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove{0.0, did_move, -1, -1 };
+    }
 
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
@@ -428,6 +431,9 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, c
 VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove{0.0, did_move, -1, -1 };
+    }
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
