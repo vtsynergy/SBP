@@ -408,6 +408,9 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
 VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove{0.0, did_move, -1, -1 };
+    }
 
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
@@ -428,6 +431,9 @@ VertexMove propose_gibbs_move(const TwoHopBlockmodel &blockmodel, long vertex, c
 VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);  // getBlock_assignment()[vertex];
+    if (blockmodel.block_size(current_block) == 1) {
+        return VertexMove{0.0, did_move, -1, -1 };
+    }
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
 
