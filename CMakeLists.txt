@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 option(DEBUG "If ON, executable will try to diagnose where failures occur." OFF)
 option(SCOREP "If ON, will add score-p instrumentation to the executable." OFF)
 option(VALGRIND "If ON, will not link against -fsanitize=address." OFF)
+option(TAU "If ON, will attempt to compile using TAU." OFF)
 
 # set compilers
 if (SCOREP)
@@ -13,8 +14,13 @@ else (SCOREP)
     set(CMAKE_CXX_COMPILER mpic++)
 endif (SCOREP)
 
+if (TAU)
+    set(CMAKE_C_COMPILER tau_cc.sh)
+    set(CMAKE_CXX_COMPILER tau_cxx.sh)
+endif(TAU)
+
 # set the project name
-project(DistributedSBP VERSION 2022.02.04)
+project(DistributedSBP VERSION 2024.03.30)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -60,7 +66,7 @@ add_library(SBP STATIC
         src/distributed/dist_common.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
-        src/distributed/divide_and_conquer.cpp
+        # src/distributed/divide_and_conquer.cpp
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp
@@ -72,11 +78,11 @@ target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
 add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp)
-target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
+# add_executable(DivideAndConquerSBP src/DivideAndConquerSBP.cpp)
+# target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 
-add_executable(ladis src/LayerDistributedSBP.cpp)
-target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
+# add_executable(ladis src/LayerDistributedSBP.cpp)
+# target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
 
 if (DEBUG AND VALGRIND)
     set(COMPILE_OPTS -g3 -static-libasan)
@@ -92,8 +98,8 @@ endif()
 target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
 target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb "${COMPILE_OPTS}")
 target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
+# target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
+# target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
 
 # Google Test Suite
 enable_testing()
