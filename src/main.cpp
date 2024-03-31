@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
     }
     if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();
-        std::cout << "Running sampling with size: " << args.samplesize << std::endl;
+        if (mpi.rank == 0) std::cout << "Running sampling with size: " << args.samplesize << std::endl;
 //        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
         if (mpi.num_processes > 1) {
@@ -199,6 +199,8 @@ int main(int argc, char* argv[]) {
         // fine-tune full graph
         double finetune_start_t = MPI_Wtime();
         if (mpi.num_processes > 1) {
+            // make sure the assignment is the same across processes
+            MPI_Bcast(assignment.data(), (int) assignment.size(), MPI_LONG, 0, mpi.comm);
             Rank_indices = std::vector<long>();  // reset the rank_indices
             auto blockmodel = TwoHopBlockmodel(sample_partition.blockmodel.getNum_blocks(), partition.graph, 0.5, assignment);
             partition.blockmodel = finetune::dist::finetune_assignment(blockmodel, partition.graph);
@@ -221,7 +223,7 @@ int main(int argc, char* argv[]) {
     }
     // evaluate
     double end = MPI_Wtime();
-    evaluate_partition(graph, partition.blockmodel, end - start);
+    if (mpi.rank == 0) evaluate_partition(graph, partition.blockmodel, end - start);
 
     MPI_Finalize();
 }

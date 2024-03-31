@@ -155,7 +155,7 @@ Sample expansion_snowball(const Graph &graph) {
 }
 
 std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
-    std::cout << "Extending the sample results to the full graph" << std::endl;
+    if (mpi.rank == 0) std::cout << "Extending the sample results to the full graph" << std::endl;
     std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), -1);
     // Embed the known assignments from the partitioned sample
     for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
@@ -364,7 +364,7 @@ Sample sample(const Graph &graph) {
 }
 
 Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, const Sample &sample) {
-    std::cout << "Extending the sample results to the full graph with size: " << graph.num_vertices() << std::endl;
+    if (mpi.rank == 0) std::cout << "Extending the sample results to the full graph with size: " << graph.num_vertices() << std::endl;
     std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), -1);
     // Embed the known assignments from the partitioned sample
     for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {

@@ -47,10 +47,13 @@ void add_intermediate(double iteration, const Graph &graph, double modularity, d
     intermediate.total_time = total_time;
     intermediate.update_assignment = Blockmodel_update_assignment;
     intermediate_results.push_back(intermediate);
-    std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
-              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
-              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
-              << total_time << std::endl;
+    if (mpi.rank == 0) {
+        std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
+                  << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations
+                  << " MCMC time: "
+                  << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
+                  << total_time << std::endl;
+    }
 }
 
 void record_runtime_imbalance() {
@@ -145,7 +148,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
-    std::cout << "num threads: " << omp_get_max_threads() << std::endl;
+    if (mpi.rank == 0) std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     // DistBlockmodel blockmodel(graph, args, mpi);
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
@@ -200,7 +203,7 @@ bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blo
     }
     if (blockmodel_triplet.optimal_num_blocks_found) {
         blockmodel_triplet.status();
-        std::cout << "Optimal number of blocks was found" << std::endl;
+        if (mpi.rank == 0) std::cout << "Optimal number of blocks was found" << std::endl;
         return true;
     }
     return false;

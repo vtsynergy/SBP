@@ -570,12 +570,12 @@ double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
 
 double null_mdl_v1(const Graph &graph) {
     if (args.nonparametric) {
-        std::cout << "why is this running nonparametric?" << std::endl;
+//        std::cout << "why is this running nonparametric?" << std::endl;
         std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), 0);
         Blockmodel null_model(1, graph, 0.5, assignment);
         return mdl(null_model, graph);
     }
-    std::cout << "running correct version at least..." << std::endl;
+//    std::cout << "running correct version at least..." << std::endl;
     std::cout << graph.num_edges() << std::endl;
     double log_posterior_p = graph.num_edges() * log(1.0 / graph.num_edges());
     double x = 1.0 / graph.num_edges();

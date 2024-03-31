@@ -123,7 +123,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         total_vertex_moves += vertex_moves;
         MCMC_iterations++;
         // Early stopping
-        if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
+        if (early_stop(iteration, blockmodels.golden_ratio_not_reached(), new_entropy, delta_entropies)) {
             break;
         }
     }
@@ -161,7 +161,7 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
     return membership_updates;
 }
 
-bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                 std::vector<double> &delta_entropies) {
     size_t last_index = delta_entropies.size() - 1;
     if (delta_entropies[last_index] == 0.0) {
@@ -173,7 +173,7 @@ bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initi
     double average = delta_entropies[last_index] + delta_entropies[last_index - 1] + delta_entropies[last_index - 2];
     average /= -3.0;
     double threshold;
-    if (blockmodels.get(2).empty) { // Golden ratio bracket not yet established
+    if (golden_ratio_not_reached) { // Golden ratio bracket not yet established
         threshold = 5e-4 * initial_entropy;
     } else {
         threshold = 1e-4 * initial_entropy;
@@ -196,6 +196,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     blockmodel.setOverall_entropy(old_entropy);
     double new_entropy = 0;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+//        std::cout << mpi.rank << " | starting iteration " << iteration << std::endl;
 //        measure_imbalance_metrics(blockmodel, graph);
         double start_t = MPI_Wtime();
 //        std::vector<long> block_assignment(blockmodel.block_assignment());
@@ -225,10 +226,12 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
             std::cout << "Itr: " << iteration << " vertex moves: " << vertex_moves << " delta S: "
                       << delta_entropy / new_entropy << std::endl;
         }
+//        std::cout << mpi.rank << " | finished computing entropy for iteration " << iteration << std::endl;
         total_vertex_moves += vertex_moves;
         MCMC_iterations++;
         // Early stopping
-        if (finetune::early_stop(iteration, blockmodel.getOverall_entropy(), delta_entropies)) {
+        if (early_stop(iteration, false, blockmodel.getOverall_entropy(), delta_entropies)) {
+            std::cout << mpi.rank << " | this mpi rank early stopped at iteration " << iteration << " with dE = " << delta_entropy << std::endl;
             break;
         }
     }
@@ -285,7 +288,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
         }
         total_vertex_moves += vertex_moves;
         MCMC_iterations++;
-        if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
+        if (early_stop(iteration, blockmodels.golden_ratio_not_reached(), new_entropy, delta_entropies)) {
             break;
         }
     }
@@ -364,7 +367,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
         }
         total_vertex_moves += vertex_moves;
         MCMC_iterations++;
-        if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
+        if (early_stop(iteration, blockmodels.golden_ratio_not_reached(), new_entropy, delta_entropies)) {
             break;
         }
     }

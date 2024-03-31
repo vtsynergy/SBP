@@ -22,7 +22,7 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
                                                      int batch = 0);
 
 /// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
-bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
 /// Finetunes the partial results on a given graph.

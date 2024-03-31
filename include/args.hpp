@@ -3,7 +3,7 @@
 #define TCLAP_WRAPPER_ARGS
 
 #include <iostream>
-#include <limits.h>
+#include <limits>
 #include <omp.h>
 #include <string>
 #include <unistd.h>
@@ -180,7 +180,7 @@ public:  // Everything in here is public, because why not?
             this->type = _type.getValue();
             this->undirected = _undirected.getValue();
             if (this->nonparametric) {
-                std::cout << "NOTE: using nonparametric entropy, setting greedy to false" << std::endl;
+//                std::cout << "NOTE: using nonparametric entropy, setting greedy to false" << std::endl;
                 this->greedy = false;
             }
         } catch (TCLAP::ArgException &exception) {
