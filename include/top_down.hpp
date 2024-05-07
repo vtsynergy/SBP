@@ -42,8 +42,17 @@ void apply_split(const Split &split, Blockmodel &blockmodel);
 /// splitting community `community`.
 Split propose_split(long community, const Graph &graph, const Blockmodel &blockmodel);
 
+std::vector<long> propose_random_split(const Graph &subgraph);
+
+std::vector<long> propose_snowball_split(const Graph &subgraph);
+
+std::vector<long> propose_single_snowball_split(const Graph &subgraph);
+
 /// Runs the top-down community detection algorithm.
 Blockmodel run(const Graph &graph);
+
+/// Runs the top-down community detection algorithm until golden ratio is reached, then reverts to block merges.
+Blockmodel run_mix(const Graph &graph);
 
 /// The reverse of block_merge::merge_blocks. Proposes several community splits, and applies the best ones until the
 /// number of communities reaches `target_num_communities`.

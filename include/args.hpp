@@ -3,7 +3,7 @@
 #define TCLAP_WRAPPER_ARGS
 
 #include <iostream>
-#include <limits.h>
+#include <limits>
 #include <omp.h>
 #include <string>
 #include <unistd.h>
@@ -32,6 +32,7 @@ public:  // Everything in here is public, because why not?
     bool greedy;
     std::string json;
     float mh_percent;
+    bool mix;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     bool nonparametric;
@@ -40,6 +41,7 @@ public:  // Everything in here is public, because why not?
     std::string overlap;
     double samplesize;
     std::string samplingalg;
+    std::string split;
     int subgraphs;
     std::string subgraphpartition;
     std::string tag;
@@ -108,6 +110,7 @@ public:  // Everything in here is public, because why not?
                                                false, "output", "path", parser);
             TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
                                                false, 0.075, "float", parser);
+            TCLAP::SwitchArg _mix("", "mix", "If set, will run block merges after golden ratio is found", parser, false);
             TCLAP::SwitchArg _modularity("", "modularity", "If set, will compute modularity at the end of execution.",
                                          parser, false);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
@@ -124,6 +127,8 @@ public:  // Everything in here is public, because why not?
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
                                                       false, "random", "random|max_degree|expansion_snowball", parser);
+            TCLAP::ValueArg<std::string> _split("", "split", "The type of split to use in TopDownSBP", false, "random",
+                                                "random|snowball|single-snowball", parser);
             TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
                                             "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
                                             false, 0, "<= number of MPI ranks>", parser);
@@ -159,6 +164,7 @@ public:  // Everything in here is public, because why not?
             this->greedy = _greedy.getValue();
             this->json = _json.getValue();
             this->mh_percent = _mh_percent.getValue();
+            this->mix = _mix.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->nonparametric = _nonparametric.getValue();
@@ -172,6 +178,7 @@ public:  // Everything in here is public, because why not?
             this->overlap = _overlap.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
+            this->split = _split.getValue();
             this->subgraphs = _subgraphs.getValue();
             this->subgraphpartition = _subgraphpartition.getValue();
             this->tag = _tag.getValue();

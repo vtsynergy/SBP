@@ -570,7 +570,7 @@ double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
 
 double null_mdl_v1(const Graph &graph) {
     if (args.nonparametric) {
-        std::cout << "why is this running nonparametric?" << std::endl;
+//        std::cout << "why is this running nonparametric?" << std::endl;
         std::vector<long> assignment = utils::constant<long>(graph.num_vertices(), 0);
         Blockmodel null_model(1, graph, 0.5, assignment);
         return mdl(null_model, graph);

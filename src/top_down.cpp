@@ -14,6 +14,7 @@
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
+#include "block_merge.hpp"
 #include "common.hpp"
 #include "entropy.hpp"
 #include "finetune.hpp"
@@ -30,15 +31,18 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
     std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
     long num_blocks = blockmodel.getNum_blocks();
-    long counter = 0;
-    while (num_blocks < target_num_communities) {
-        long block = sorted_splits[counter];
+//    long index_of_split = 0;
+//    while (num_blocks < target_num_communities) {
+    for (int index_of_split = 0; index_of_split < best_splits.size(); ++index_of_split) {
+        long block = sorted_splits[index_of_split];
         const Split& split = best_splits[block];
+        if (split.subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
         MapVector<long> reverse_translator;
         for (const auto &entry : split.translator) {
             reverse_translator[entry.second] = entry.first;
         }
         for (long index = 0; index < split.num_vertices; ++index) {
+            if (split.subgraph.num_vertices() > 20000) std::cout << "index: " << index << " vertices: " << split.subgraph.num_vertices() << std::endl;
             long assignment = split.blockmodel->block_assignment(index);
             if (assignment == 1) {
                 long vertex = reverse_translator[index];
@@ -46,6 +50,7 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
             }
         }
         num_blocks++;
+        if (num_blocks >= target_num_communities) break;
     }
     // Re-form blockmodel
     blockmodel.setNum_blocks(num_blocks);
@@ -64,24 +69,160 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
         index++;
     }
     split.num_vertices = long(community_vertices.size());
+    std::vector<long> split_assignment;
     Graph subgraph(split.num_vertices);
-    for (long vertex : community_vertices) {
-        for (long neighbor : graph.out_neighbors(vertex)) {
+    if (subgraph.num_vertices() < 2) {
+        split.subgraph = subgraph;
+        split_assignment = utils::constant<long>(1, 0);
+        split.blockmodel = std::make_shared<Blockmodel>(1, subgraph, 0.5, split_assignment);
+        return split;
+    }
+//    std::cout << "subgraph numvertices: " << subgraph.num_vertices() << std::endl;
+    for (long vertex: community_vertices) {
+        for (long neighbor: graph.out_neighbors(vertex)) {
             if (!community_flag[neighbor]) continue;
             subgraph.add_edge(split.translator[vertex], split.translator[neighbor]);
         }
     }
-    // TODO: -1s in assignment may screw with blockmodel formation
-    std::vector<long> split_assignment = utils::constant<long>(split.num_vertices, -1);
-    std::uniform_int_distribution<long> distribution(0, 1);
-    // TODO: implement translator for vertex IDs, and store it in Split
-    for (long vertex = 0; vertex < split.num_vertices; ++vertex) {
-        split_assignment[vertex] = distribution(rng::generator());
+    if (args.split == "random")
+        split_assignment = propose_random_split(subgraph);
+    else if (args.split == "snowball")
+        split_assignment = propose_snowball_split(subgraph);
+    else if (args.split == "single-snowball")
+        split_assignment = propose_single_snowball_split(subgraph);
+    else {
+        std::cerr << "Invalid split type provided." << std::endl;
+        exit(-2);
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
     split.num_edges = subgraph.num_edges();
     split.subgraph = subgraph;
     return split;
+}
+
+std::vector<long> propose_random_split(const Graph &subgraph) {
+    // TODO: -1s in assignment may screw with blockmodel formation
+    std::vector<long> split_assignment = utils::constant<long>(subgraph.num_vertices(), -1);
+    std::uniform_int_distribution<long> distribution(0, 1);
+    // TODO: implement translator for vertex IDs, and store it in Split
+    for (long vertex = 0; vertex < subgraph.num_vertices(); ++vertex) {
+        split_assignment[vertex] = distribution(rng::generator());
+    }
+    return split_assignment;
+}
+
+std::vector<long> propose_snowball_split(const Graph &subgraph) {
+    std::vector<long> split_assignment = utils::constant<long>(subgraph.num_vertices(), -1);
+    MapVector<bool> unsampled(subgraph.num_vertices());
+    for (long vertex = 0; vertex < subgraph.num_vertices(); ++vertex) {
+        unsampled[vertex] = true;
+    }
+    std::vector<MapVector<bool>> sampled(2);
+    std::vector<MapVector<bool>> frontiers(2);
+    std::vector<long> vertex_degrees = subgraph.degrees();
+    // ============= SETUP ================
+    std::vector<int> indices = utils::range<int>(0, subgraph.num_vertices());
+    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + 2,
+                     indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
+                return vertex_degrees[i1] > vertex_degrees[i2];
+            });
+    // Mark vertices as sampled
+    for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {
+        long nth_vertex = indices[subgraph_id];
+        split_assignment[nth_vertex] = subgraph_id;
+        sampled[subgraph_id][nth_vertex] = true;
+        unsampled.erase(nth_vertex);
+    }
+    // Fill in frontiers
+    for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {
+        std::vector<long> neighbors = subgraph.neighbors(indices[subgraph_id]);
+        for (const long &vertex : neighbors) {
+            if (split_assignment[vertex] != -1) continue;  // vertices that were already sampled shouldn't be in the frontier
+            frontiers[subgraph_id][vertex] = true;
+        }
+    }
+    // ============= END OF SETUP ===============
+    // ============= SNOWBALL ==============
+    while (!unsampled.empty()) {
+        for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {  // Iterate through the subgraphs
+            // TODO: sample highest degree vertex in frontier
+            if (unsampled.empty()) break;
+            long selected;
+            if (frontiers[subgraph_id].empty()) { // Select a random (first) unsampled vertex.
+                selected = unsampled.begin()->first;
+            } else {
+                selected = frontiers[subgraph_id].begin()->first;
+            }
+            split_assignment[selected] = subgraph_id;
+            sampled[subgraph_id][selected] = true;
+            unsampled.erase(selected);
+            for (MapVector<bool> &frontier : frontiers) {
+                frontier.erase(selected);
+            }
+            for (const long &neighbor : subgraph.neighbors(selected)) {
+                if (split_assignment[neighbor] != -1) continue;  // If already sampled, don't add to frontier
+                frontiers[subgraph_id][neighbor] = true;
+            }
+        }
+    }
+    return split_assignment;
+}
+
+void _sample_vertex(long vertex, const Graph &subgraph, MapVector<bool> &unsampled, MapVector<bool> &sampled,
+                    MapVector<bool> &frontier, MapVector<bool> &next_frontier, std::vector<long> &split_assignment,
+                    long block) {
+    if (sampled[vertex]) return;
+    split_assignment[vertex] = block;
+    sampled[vertex] = true;
+    unsampled.erase(vertex);
+//    frontier.erase(vertex);
+    // Fill in frontiers
+    std::vector<long> neighbors = subgraph.neighbors(vertex);
+    for (const long &neighbor : neighbors) {
+        if (split_assignment[neighbor] == 1) continue;  // vertices that were already sampled shouldn't be in the frontier
+        next_frontier[neighbor] = true;
+    }
+}
+
+std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
+    // vertices start in one cluster
+    std::vector<long> split_assignment = utils::constant<long>(subgraph.num_vertices(), 0);
+    MapVector<bool> unsampled(subgraph.num_vertices());
+    for (long vertex = 0; vertex < subgraph.num_vertices(); ++vertex) {
+        unsampled[vertex] = true;
+    }
+    MapVector<bool> sampled;
+    MapVector<bool> frontier;
+    MapVector<bool> next_frontier;
+//    std::vector<long> vertex_degrees = subgraph.degrees();
+    // ============= SETUP ================
+//    long start = utils::argmax<long>(vertex_degrees);
+    long start = common::random_integer(0, subgraph.num_vertices() - 1);
+//    std::cout << "vertex " << start << " has max degree of: " << vertex_degrees[start] << std::endl;
+    split_assignment[start] = 1;
+    sampled[start] = true;
+    unsampled.erase(start);
+    std::vector<int> indices = utils::range<int>(0, subgraph.num_vertices());
+    // Fill in frontiers
+    std::vector<long> neighbors = subgraph.neighbors(start);
+    for (const long &vertex : neighbors) {
+        if (split_assignment[vertex] == 1) continue;  // vertices that were already sampled shouldn't be in the frontier
+        frontier[vertex] = true;
+    }
+    // ============= END OF SETUP ===============
+    // ============= SNOWBALL ==============
+    long target_sample_size = subgraph.num_vertices() / 2;
+    while (sampled.size() < target_sample_size) {
+        if (frontier.empty() && next_frontier.empty()) break;  // do not try to reach target_sample_size if ran out of vertices
+        for (const std::pair<long, bool> &entry : frontier) {
+            long vertex = entry.first;
+            _sample_vertex(vertex, subgraph, unsampled, sampled, frontier, next_frontier, split_assignment, 1);
+            if (sampled.size() >= target_sample_size) break;
+        }
+        frontier = std::move(next_frontier);
+        next_frontier = MapVector<bool>();
+    }
+    return split_assignment;
 }
 
 Blockmodel run(const Graph &graph) {
@@ -90,22 +231,30 @@ Blockmodel run(const Graph &graph) {
     else
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    Blockmodel blockmodel(graph.num_vertices(), graph, float(BLOCK_REDUCTION_RATE));
+    std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
+    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     sbp::add_intermediate(0, graph, -1, initial_mdl);
-    BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
+    TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
     float iteration = 0;
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
+        std::cout << "============= Block sizes ============" << std::endl;
+        utils::print<long>(blockmodel.block_sizes());
         if (blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
-                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+            std::cout << "Splitting blocks up from " << blockmodel.getNum_blocks() << " to "
+                      << blockmodel.getNum_blocks_to_merge() << std::endl;
         }
-        blockmodel = split_communities(blockmodel, graph, blockmodel.getNum_blocks() * 2);
+        blockmodel = split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
+        std::cout << "============== Block sizes after split" << std::endl;
+        utils::print<long>(blockmodel.block_sizes());
+        std::cout << "============== num blocks after split = " << blockmodel.getNum_blocks() << std::endl;
         if (iteration < 1) {
             double mdl = entropy::nonparametric::mdl(blockmodel, graph);  // .num_vertices(), graph.num_edges());
             sbp::add_intermediate(0.5, graph, -1, mdl);
         }
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start = MPI_Wtime();
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
@@ -118,6 +267,8 @@ Blockmodel run(const Graph &graph) {
         finetune::MCMC_time += MPI_Wtime() - start;
         sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        std::cout << "Next iteration, we're gonna split the communities in blockmodel with B = " << blockmodel.getNum_blocks() << std::endl;
     }
     return blockmodel;
 }
@@ -128,10 +279,22 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
+//        if (blockmodel.block_size(current_block) < 2) {
+//            Split split;
+//            best_split_for_each_block[current_block] = split;
+//            delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
+//            continue;
+//        }
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             Split split = propose_split(current_block, graph, blockmodel);
+            if (split.subgraph.num_vertices() == 1) {
+                delta_entropy_for_each_block[current_block] = 0;
+                best_split_for_each_block[current_block] = split;
+                continue;
+            }
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.subgraph);  // split.num_vertices, split.num_edges);
+            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel),
+                                                             split.subgraph);  // split.num_vertices, split.num_edges);
             double old_entropy = entropy::null_mdl_v1(split.subgraph);
             double delta_entropy = new_entropy - old_entropy;
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {
@@ -140,8 +303,87 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
             }
         }
     }
+    utils::print<double>(delta_entropy_for_each_block);
+    std::cout << "Applying best splits" << std::endl;
     apply_best_splits(blockmodel, best_split_for_each_block, delta_entropy_for_each_block, target_num_communities);
     blockmodel.initialize_edge_counts(graph);
+    return blockmodel;
+}
+
+Blockmodel run_mix(const Graph &graph) {
+    if (args.threads > 0)
+        omp_set_num_threads(args.threads);
+    else
+        omp_set_num_threads(omp_get_num_procs());
+    std::cout << "num threads: " << omp_get_max_threads() << std::endl;
+    std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
+    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+    double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
+//    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+    sbp::add_intermediate(0, graph, -1, initial_mdl);
+    TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
+    float iteration = 0;
+//    while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
+    while (blockmodel_triplet.golden_ratio_not_reached()) {
+        std::cout << "============= Block sizes ============" << std::endl;
+        utils::print<long>(blockmodel.block_sizes());
+        if (blockmodel.getNum_blocks_to_merge() != 0) {
+            std::cout << "Splitting blocks up from " << blockmodel.getNum_blocks() << " to "
+                      << blockmodel.getNum_blocks_to_merge() << std::endl;
+        }
+        blockmodel = split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
+        std::cout << "============== Block sizes after split" << std::endl;
+        utils::print<long>(blockmodel.block_sizes());
+        if (iteration < 1) {
+            double mdl = entropy::nonparametric::mdl(blockmodel, graph);  // .num_vertices(), graph.num_edges());
+            sbp::add_intermediate(0.5, graph, -1, mdl);
+        }
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        std::cout << "Starting MCMC vertex moves" << std::endl;
+        double start = MPI_Wtime();
+        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
+            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, true);
+        else if (args.algorithm == "hybrid_mcmc")
+            blockmodel = finetune::hybrid_mcmc(blockmodel, graph, true);
+        else // args.algorithm == "metropolis_hastings"
+            blockmodel = finetune::metropolis_hastings(blockmodel, graph, true);
+//        iteration++;
+        finetune::MCMC_time += MPI_Wtime() - start;
+        sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
+        blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        std::cout << "Next iteration, we're gonna split the communities in blockmodel with B = " << blockmodel.getNum_blocks() << std::endl;
+    }
+    BlockmodelTriplet gr_blockmodel_triplet = BlockmodelTriplet();
+    blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(0));
+    blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(1));
+    blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(2));
+    while (!sbp::done_blockmodeling(blockmodel, gr_blockmodel_triplet)) {
+        if (blockmodel.getNum_blocks_to_merge() != 0) {
+            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
+                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+        }
+        double start_bm = MPI_Wtime();
+        blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
+        block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
+        std::cout << "Starting MCMC vertex moves" << std::endl;
+        double start_mcmc = MPI_Wtime();
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
+            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, false);
+        else if (args.algorithm == "hybrid_mcmc")
+            blockmodel = finetune::hybrid_mcmc(blockmodel, graph, false);
+        else if (args.algorithm == "hybrid_mcmc_load_balanced")
+            blockmodel = finetune::hybrid_mcmc_load_balanced(blockmodel, graph, false);
+        else // args.algorithm == "metropolis_hastings"
+            blockmodel = finetune::metropolis_hastings(blockmodel, graph, false);
+        finetune::MCMC_time += MPI_Wtime() - start_mcmc;
+        sbp::total_time += MPI_Wtime() - start_bm;
+        sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
+        blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+    }
     return blockmodel;
 }
 

@@ -686,7 +686,6 @@ VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCo
 //        return move_vertex_nodelta(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
     Delta delta = blockmodel_delta(vertex, current_block, proposal.proposal, out_edges, in_edges,
                                    blockmodel);
-
     double hastings = entropy::hastings_correction(vertex, graph, blockmodel, delta, current_block, proposal);
     double delta_entropy = args.nonparametric ?
                            entropy::nonparametric::delta_mdl(blockmodel, graph, vertex, delta, proposal) :
