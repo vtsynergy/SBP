@@ -39,7 +39,7 @@ set(INCLUDE_DIRS
         )
 
 # add the executable
-add_library(SBP STATIC
+add_library(SBPLIB STATIC
         src/graph.cpp
         src/utils.cpp
         src/sbp.cpp
@@ -67,7 +67,7 @@ add_library(SBP STATIC
         src/rng.cpp
         src/fastlgamma.cpp
         src/spence.cpp)
-target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
+target_include_directories(SBPLIB PUBLIC ${INCLUDE_DIRS})
 
 add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
@@ -92,12 +92,12 @@ else()
     message("Compiling without debug options")
 endif()
 
-target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
-target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb "${COMPILE_OPTS}")
-target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(TopDownSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_compile_options(SBPLIB PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
+target_link_libraries(SBPLIB PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb "${COMPILE_OPTS}")
+target_link_libraries(DistributedSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_link_libraries(DivideAndConquerSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_link_libraries(TopDownSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_link_libraries(ladis PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
 
 # Google Test Suite
 enable_testing()
@@ -118,5 +118,5 @@ add_executable(Test
         test/nonparametric_entropy_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
-target_link_libraries(Test SBP gtest_main gmock hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
+target_link_libraries(Test SBPLIB gtest_main gmock hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
 gtest_discover_tests(Test)
