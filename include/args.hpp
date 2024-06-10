@@ -42,6 +42,7 @@ public:  // Everything in here is public, because why not?
     double samplesize;
     std::string samplingalg;
     std::string split;
+    std::string splitinit;
     int subgraphs;
     std::string subgraphpartition;
     std::string tag;
@@ -129,6 +130,8 @@ public:  // Everything in here is public, because why not?
                                                       false, "random", "random|max_degree|expansion_snowball", parser);
             TCLAP::ValueArg<std::string> _split("", "split", "The type of split to use in TopDownSBP", false, "random",
                                                 "random|snowball|single-snowball", parser);
+            TCLAP::ValueArg<std::string> _splitinit("", "splitinit", "The type of split initialization to use", false, "random",
+                                                    "random|degree-weighted|high-degree", parser);
             TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
                                             "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
                                             false, 0, "<= number of MPI ranks>", parser);
@@ -179,6 +182,7 @@ public:  // Everything in here is public, because why not?
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
             this->split = _split.getValue();
+            this->splitinit = _splitinit.getValue();
             this->subgraphs = _subgraphs.getValue();
             this->subgraphpartition = _subgraphpartition.getValue();
             this->tag = _tag.getValue();

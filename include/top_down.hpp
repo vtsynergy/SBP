@@ -17,7 +17,7 @@ struct Split {
     /// The blockmodel for the two split communities.
     std::shared_ptr<Blockmodel> blockmodel;
     /// The number of vertices involved in the split.
-    long num_vertices;
+    long num_vertices = std::numeric_limits<long>::max();
     /// The number of edges involved in the split.
     long num_edges;
     /// Translates full graph vertex IDs to subgraph vertex IDs
@@ -44,6 +44,8 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
 
 std::vector<long> propose_random_split(const Graph &subgraph);
 
+std::vector<long> propose_connectivity_snowball_split(const Graph &subgraph);
+
 std::vector<long> propose_snowball_split(const Graph &subgraph);
 
 std::vector<long> propose_single_snowball_split(const Graph &subgraph);
@@ -57,6 +59,15 @@ Blockmodel run_mix(const Graph &graph);
 /// The reverse of block_merge::merge_blocks. Proposes several community splits, and applies the best ones until the
 /// number of communities reaches `target_num_communities`.
 Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities);
+
+/// Selects the two vertices that initialize the split
+std::pair<long, long> split_init(const Graph &subgraph, const std::vector<long> &vertex_degrees);
+
+std::pair<long, long> split_init_random(const Graph &subgraph);
+
+std::pair<long, long> split_init_degree_weighted(const Graph &subgraph, const std::vector<long> &vertex_degrees);
+
+std::pair<long, long> split_init_high_degree(const Graph &subgraph, const std::vector<long> &vertex_degrees);
 
 }
 

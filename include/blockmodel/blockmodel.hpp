@@ -31,6 +31,8 @@ extern double Blockmodel_sort_time;
 extern double Blockmodel_access_time;
 extern double Blockmodel_update_assignment;
 
+extern bool DIVISIVE_SBP;
+
 // typedef py::EigenDRef<Eigen::Matrix<long, Eigen::Dynamic, 2>> Matrix2Column;
 
 typedef struct edge_count_updates_t {
@@ -72,7 +74,13 @@ class Blockmodel {
         // Set the block sizes to be 0 (empty blocks)
         this->_block_sizes = utils::constant<long>(this->num_blocks, 0);
         // Number of blocks to merge
-        this->num_blocks_to_merge = (long)(this->num_blocks * this->block_reduction_rate);
+        if (DIVISIVE_SBP) {
+//            std::cout << "Running divisive SBP" << std::endl;
+            this->num_blocks_to_merge = (long) (ceil(this->num_blocks * this->block_reduction_rate));
+        } else {
+//            std::cout << "Running agglomerative SBP, boo..." << std::endl;
+            this->num_blocks_to_merge = (long) (this->num_blocks * this->block_reduction_rate);
+        }
     }
     Blockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
         : Blockmodel(num_blocks, block_reduction_rate) {

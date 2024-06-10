@@ -14,6 +14,8 @@ double Blockmodel_sort_time = 0.0;
 double Blockmodel_access_time = 0.0;
 double Blockmodel_update_assignment = 0.0;
 
+bool DIVISIVE_SBP = false;
+
 double Blockmodel::block_size_variation() const {
     // Normalized using variance / max_variance, where max_variance = range^2 / 4
     // See: https://link.springer.com/content/pdf/10.1007/BF00143817.pdf

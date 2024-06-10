@@ -10,6 +10,7 @@
 #include <mpi.h>
 #include <random>
 #include <vector>
+#include <utility>
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
@@ -29,20 +30,32 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
                        const std::vector<double> &split_entropy, int target_num_communities) {
     // Sort entropies in ascending order
     std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
+    std::cout << "the argsort result = " << std::endl;
+    utils::print<long>(sorted_splits);
+//    std::cout << "entropies of sorted splits, in order. if this is fucked, everything else is fucked too. should be from negative to positive" << std::endl;
+//    for (int i = 0; i < sorted_splits.size(); ++i) {
+//        std::cout << split_entropy[sorted_splits[i]] << std::endl;
+//    }
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
     long num_blocks = blockmodel.getNum_blocks();
 //    long index_of_split = 0;
 //    while (num_blocks < target_num_communities) {
-    for (int index_of_split = 0; index_of_split < best_splits.size(); ++index_of_split) {
+    for (int index_of_split = best_splits.size() - 1; index_of_split > -1; --index_of_split) {  // < best_splits.size(); ++index_of_split) {
         long block = sorted_splits[index_of_split];
+        std::cout << "block = " << block << std::endl;
         const Split& split = best_splits[block];
-        if (split.subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
+        std::cout << "split V = " << split.num_vertices << " split subgraph V = " << split.subgraph.num_vertices() << std::endl;
+//        if (split.subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
+        // TODO: fix: split.subgrpah.num_vertices() doesn't match split.num_vertices. May be as simple as initializing subgraph to an empty graph?
+        std::cout << "Looking at split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
+        if (split.num_vertices > blockmodel.block_assignment().size()) continue;
+        std::cout << "Applying split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
         MapVector<long> reverse_translator;
         for (const auto &entry : split.translator) {
             reverse_translator[entry.second] = entry.first;
         }
         for (long index = 0; index < split.num_vertices; ++index) {
-            if (split.subgraph.num_vertices() > 20000) std::cout << "index: " << index << " vertices: " << split.subgraph.num_vertices() << std::endl;
+            if (split.subgraph.num_vertices() > 50000) std::cout << "index: " << index << " vertices: " << split.subgraph.num_vertices() << std::endl;
             long assignment = split.blockmodel->block_assignment(index);
             if (assignment == 1) {
                 long vertex = reverse_translator[index];
@@ -86,6 +99,8 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
     }
     if (args.split == "random")
         split_assignment = propose_random_split(subgraph);
+    else if (args.split == "connectivity-snowball")
+        split_assignment = propose_connectivity_snowball_split(subgraph);
     else if (args.split == "snowball")
         split_assignment = propose_snowball_split(subgraph);
     else if (args.split == "single-snowball")
@@ -103,10 +118,80 @@ Split propose_split(long community, const Graph &graph, const Blockmodel &blockm
 std::vector<long> propose_random_split(const Graph &subgraph) {
     // TODO: -1s in assignment may screw with blockmodel formation
     std::vector<long> split_assignment = utils::constant<long>(subgraph.num_vertices(), -1);
-    std::uniform_int_distribution<long> distribution(0, 1);
+//    std::uniform_int_distribution<long> distribution(0, 1);
+    auto split_size = double(common::random_integer(subgraph.num_vertices()*0.2, subgraph.num_vertices()*0.8));
+//    std::cout << "split size: " << split_size << std::endl;
+    std::discrete_distribution<> distribution({split_size, (double) subgraph.num_vertices() - split_size});
     // TODO: implement translator for vertex IDs, and store it in Split
     for (long vertex = 0; vertex < subgraph.num_vertices(); ++vertex) {
         split_assignment[vertex] = distribution(rng::generator());
+    }
+    return split_assignment;
+}
+
+std::vector<long> propose_connectivity_snowball_split(const Graph &subgraph) {
+    std::vector<long> split_assignment = utils::constant<long>(subgraph.num_vertices(), -1);
+    MapVector<bool> unsampled(subgraph.num_vertices());
+    for (long vertex = 0; vertex < subgraph.num_vertices(); ++vertex) {
+        unsampled[vertex] = true;
+    }
+    MapVector<bool> sampled;
+    MapVector<bool> frontier;
+    MapVector<bool> next_frontier;
+    std::vector<long> vertex_degrees = subgraph.degrees();
+    // ============= SETUP ================
+    std::pair<long, long> init_vertices = split_init(subgraph, vertex_degrees);
+    long start_one = init_vertices.first;
+    long start_two = init_vertices.second;
+
+    int subgraph_id = 0;
+    for (long start_vertex : { start_one, start_two }) {  // int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {
+        split_assignment[start_vertex] = subgraph_id;
+        sampled[start_vertex] = true;
+        unsampled.erase(start_vertex);
+        subgraph_id++;
+    }
+    // Fill in frontiers
+    for (long start_vertex : { start_one, start_two }) {
+        std::vector<long> neighbors = subgraph.neighbors(start_vertex);
+        for (const long &vertex : neighbors) {
+            if (split_assignment[vertex] != -1) continue;  // vertices that were already sampled shouldn't be in the frontier
+            frontier[vertex] = true;
+        }
+    }
+    // ============= END OF SETUP ===============
+    // ============= SNOWBALL ==============
+    auto sample_vertex = [&subgraph, &split_assignment, &frontier, &sampled, &unsampled, &next_frontier](long vertex) {
+        int edges_to_0 = 0;
+        int edges_to_1 = 0;
+        for (const long &neighbor : subgraph.neighbors(vertex)) {
+            long block = split_assignment[neighbor];
+            if (block == 0) edges_to_0++;
+            if (block == 1) edges_to_1++;
+            if (split_assignment[neighbor] != -1) continue;  // If already sampled, don't add to frontier
+            next_frontier[neighbor] = true;
+        }
+        int subgraph_id = edges_to_1 > edges_to_0 ? 1 : 0;
+        split_assignment[vertex] = subgraph_id;
+        sampled[vertex] = true;
+        unsampled.erase(vertex);
+        frontier[vertex] = false;
+    };
+    while (!unsampled.empty()) {
+        // TODO: sample highest degree vertex in frontier
+        if (unsampled.empty()) break;
+        long selected;
+        if (frontier.empty()) {
+            selected = unsampled.begin()->first;
+            sample_vertex(selected);
+            continue;
+        }
+        for (const auto &entry : frontier) {
+            long vertex = entry.first;
+            sample_vertex(vertex);
+        }
+        frontier = std::move(next_frontier);
+        next_frontier = MapVector<bool>();
     }
     return split_assignment;
 }
@@ -121,21 +206,18 @@ std::vector<long> propose_snowball_split(const Graph &subgraph) {
     std::vector<MapVector<bool>> frontiers(2);
     std::vector<long> vertex_degrees = subgraph.degrees();
     // ============= SETUP ================
-    std::vector<int> indices = utils::range<int>(0, subgraph.num_vertices());
-    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + 2,
-                     indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
-                return vertex_degrees[i1] > vertex_degrees[i2];
-            });
+    std::pair<long, long> init_vertices = split_init(subgraph, vertex_degrees);
     // Mark vertices as sampled
     for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {
-        long nth_vertex = indices[subgraph_id];
+        long nth_vertex = subgraph_id == 0 ? init_vertices.first : init_vertices.second;
         split_assignment[nth_vertex] = subgraph_id;
         sampled[subgraph_id][nth_vertex] = true;
         unsampled.erase(nth_vertex);
     }
     // Fill in frontiers
     for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {
-        std::vector<long> neighbors = subgraph.neighbors(indices[subgraph_id]);
+        long nth_vertex = subgraph_id == 0 ? init_vertices.first : init_vertices.second;
+        std::vector<long> neighbors = subgraph.neighbors(nth_vertex);
         for (const long &vertex : neighbors) {
             if (split_assignment[vertex] != -1) continue;  // vertices that were already sampled shouldn't be in the frontier
             frontiers[subgraph_id][vertex] = true;
@@ -143,26 +225,29 @@ std::vector<long> propose_snowball_split(const Graph &subgraph) {
     }
     // ============= END OF SETUP ===============
     // ============= SNOWBALL ==============
+    auto split_size = double(common::random_integer(subgraph.num_vertices()*0.2, subgraph.num_vertices()*0.8));
+    std::discrete_distribution<int> distribution({split_size, (double) subgraph.num_vertices() - split_size});
     while (!unsampled.empty()) {
-        for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {  // Iterate through the subgraphs
-            // TODO: sample highest degree vertex in frontier
-            if (unsampled.empty()) break;
-            long selected;
-            if (frontiers[subgraph_id].empty()) { // Select a random (first) unsampled vertex.
-                selected = unsampled.begin()->first;
-            } else {
-                selected = frontiers[subgraph_id].begin()->first;
-            }
-            split_assignment[selected] = subgraph_id;
-            sampled[subgraph_id][selected] = true;
-            unsampled.erase(selected);
-            for (MapVector<bool> &frontier : frontiers) {
-                frontier.erase(selected);
-            }
-            for (const long &neighbor : subgraph.neighbors(selected)) {
-                if (split_assignment[neighbor] != -1) continue;  // If already sampled, don't add to frontier
-                frontiers[subgraph_id][neighbor] = true;
-            }
+//        auto subgraph_id = (int) common::random_integer(0, 1);
+        int subgraph_id = distribution(rng::generator());
+//        for (int subgraph_id = 0; subgraph_id < 2; ++subgraph_id) {  // Iterate through the subgraphs
+        // TODO: sample highest degree vertex in frontier
+        if (unsampled.empty()) break;
+        long selected;
+        if (frontiers[subgraph_id].empty()) { // Select a random (first) unsampled vertex.
+            selected = unsampled.begin()->first;
+        } else {
+            selected = frontiers[subgraph_id].begin()->first;
+        }
+        split_assignment[selected] = subgraph_id;
+        sampled[subgraph_id][selected] = true;
+        unsampled.erase(selected);
+        for (MapVector<bool> &frontier : frontiers) {
+            frontier.erase(selected);
+        }
+        for (const long &neighbor : subgraph.neighbors(selected)) {
+            if (split_assignment[neighbor] != -1) continue;  // If already sampled, don't add to frontier
+            frontiers[subgraph_id][neighbor] = true;
         }
     }
     return split_assignment;
@@ -197,7 +282,10 @@ std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
 //    std::vector<long> vertex_degrees = subgraph.degrees();
     // ============= SETUP ================
 //    long start = utils::argmax<long>(vertex_degrees);
-    long start = common::random_integer(0, subgraph.num_vertices() - 1);
+    std::vector<long> vertex_degrees = subgraph.degrees();
+    std::pair<long, long> init_vertices = split_init(subgraph, vertex_degrees);
+    long start = init_vertices.first;
+//    long start = common::random_integer(0, subgraph.num_vertices() - 1);
 //    std::cout << "vertex " << start << " has max degree of: " << vertex_degrees[start] << std::endl;
     split_assignment[start] = 1;
     sampled[start] = true;
@@ -211,7 +299,8 @@ std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
     }
     // ============= END OF SETUP ===============
     // ============= SNOWBALL ==============
-    long target_sample_size = subgraph.num_vertices() / 2;
+    long target_sample_size = common::random_integer(subgraph.num_vertices()*0.2, subgraph.num_vertices()*0.8);
+//    long target_sample_size = subgraph.num_vertices() / 2;
     while (sampled.size() < target_sample_size) {
         if (frontier.empty() && next_frontier.empty()) break;  // do not try to reach target_sample_size if ran out of vertices
         for (const std::pair<long, bool> &entry : frontier) {
@@ -232,12 +321,14 @@ Blockmodel run(const Graph &graph) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
-    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+//    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+    Blockmodel blockmodel(1, graph, 1.5, initial_memberships);
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     sbp::add_intermediate(0, graph, -1, initial_mdl);
     TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
+    blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
         std::cout << "============= Block sizes ============" << std::endl;
@@ -279,19 +370,20 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
-//        if (blockmodel.block_size(current_block) < 2) {
-//            Split split;
-//            best_split_for_each_block[current_block] = split;
-//            delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
-//            continue;
-//        }
+        // Do not attempt to split small clusters
+        if ((double) blockmodel.block_size(current_block) < 0.005 * (double) graph.num_vertices()) {
+            Split split;
+            best_split_for_each_block[current_block] = split;
+            delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
+            continue;
+        }
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             Split split = propose_split(current_block, graph, blockmodel);
-            if (split.subgraph.num_vertices() == 1) {
-                delta_entropy_for_each_block[current_block] = 0;
-                best_split_for_each_block[current_block] = split;
-                continue;
-            }
+//            if (split.subgraph.num_vertices() == 1) {
+//                delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
+//                best_split_for_each_block[current_block] = split;
+//                continue;
+//            }
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
             double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel),
                                                              split.subgraph);  // split.num_vertices, split.num_edges);
@@ -304,6 +396,10 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
         }
     }
     utils::print<double>(delta_entropy_for_each_block);
+    std::cout << "splits =================" << std::endl;
+    for (int i = 0; i < best_split_for_each_block.size(); ++i) {
+        std::cout << "V = " << best_split_for_each_block[i].num_vertices << " dE = " << delta_entropy_for_each_block[i] << std::endl;
+    }
     std::cout << "Applying best splits" << std::endl;
     apply_best_splits(blockmodel, best_split_for_each_block, delta_entropy_for_each_block, target_num_communities);
     blockmodel.initialize_edge_counts(graph);
@@ -317,12 +413,14 @@ Blockmodel run_mix(const Graph &graph) {
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
-    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+//    Blockmodel blockmodel(1, graph, 1.0 / float(BLOCK_REDUCTION_RATE), initial_memberships);
+    Blockmodel blockmodel(1, graph, 1.5, initial_memberships);
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     sbp::add_intermediate(0, graph, -1, initial_mdl);
     TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
+    blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
 //    while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
     while (blockmodel_triplet.golden_ratio_not_reached()) {
@@ -385,6 +483,47 @@ Blockmodel run_mix(const Graph &graph) {
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     }
     return blockmodel;
+}
+
+std::pair<long, long> split_init(const Graph &subgraph, const std::vector<long> &vertex_degrees) {
+    if (args.splitinit == "random") {
+        return split_init_random(subgraph);
+    } else if (args.splitinit == "degree-weighted") {
+        return split_init_degree_weighted(subgraph, vertex_degrees);
+    } else if (args.splitinit == "high-degree") {
+        return split_init_high_degree(subgraph, vertex_degrees);
+    }
+    throw std::logic_error("This init split type has not been implemented yet.");
+}
+
+std::pair<long, long> split_init_random(const Graph &subgraph) {
+    std::uniform_int_distribution<long> distribution(0, (subgraph.num_vertices() / 10) - 1);
+    long start_one = distribution(rng::generator());
+    long start_two = distribution(rng::generator());
+    while (start_two == start_one) start_two = distribution(rng::generator());
+    return std::make_pair(start_one, start_two);
+}
+
+std::pair<long, long> split_init_degree_weighted(const Graph &subgraph, const std::vector<long> &vertex_degrees) {
+    std::vector<int> indices = utils::range<int>(0, subgraph.num_vertices());
+    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + (subgraph.num_vertices() / 10),
+                     indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
+                return vertex_degrees[i1] > vertex_degrees[i2];
+            });
+    std::uniform_int_distribution<long> distribution(0, (subgraph.num_vertices() / 10) - 1);
+    long start_one = distribution(rng::generator());
+    long start_two = distribution(rng::generator());
+    while (start_two == start_one) start_two = distribution(rng::generator());
+    return std::make_pair(indices[start_one], indices[start_two]);
+}
+
+std::pair<long, long> split_init_high_degree(const Graph &subgraph, const std::vector<long> &vertex_degrees) {
+    std::vector<int> indices = utils::range<int>(0, subgraph.num_vertices());
+    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + 3,
+                     indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
+                return vertex_degrees[i1] > vertex_degrees[i2];
+            });
+    return std::make_pair(indices[0], indices[1]);
 }
 
 }

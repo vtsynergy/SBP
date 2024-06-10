@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
     args = Args(argc, argv);
     rng::init_generators();  // TO-DO: automagically init generators. Initialized = false?
-
+    DIVISIVE_SBP = true;
     if (mpi.rank == 0) {
         std::cout << "Number of processes = " << mpi.num_processes << std::endl;
     }

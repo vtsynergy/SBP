@@ -112,7 +112,8 @@ Blockmodel TopDownBlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmo
     // If search has not yet reached golden ratio, continue from middle blockmodel
     if (this->golden_ratio_not_reached()) {
         Blockmodel blockmodel = this->get(1).copy();
-        blockmodel.setNum_blocks_to_merge(long(blockmodel.getNum_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
+//        blockmodel.setNum_blocks_to_merge(long(blockmodel.getNum_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
+        blockmodel.setNum_blocks_to_merge(long(ceil(blockmodel.getNum_blocks() * 1.5)));
         if (blockmodel.getNum_blocks_to_merge() == 0 ||
             blockmodel.getNum_blocks_to_merge() >= blockmodel.block_assignment().size()) {
             this->optimal_num_blocks_found = true;
