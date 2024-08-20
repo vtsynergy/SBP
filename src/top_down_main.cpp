@@ -136,6 +136,7 @@ int main(int argc, char* argv[]) {
         partition.blockmodel = top_down::run_mix(partition.graph);
     else
         partition.blockmodel = top_down::run(partition.graph);
+    sbp::add_intermediate(-1, partition.graph, -1, partition.blockmodel.getOverall_entropy());
     // evaluate
     double end = MPI_Wtime();
     evaluate_partition(partition.graph, partition.blockmodel, end - start);

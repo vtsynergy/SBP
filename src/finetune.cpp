@@ -375,28 +375,6 @@ VertexMove_v3 eval_vertex_move_v3(long vertex, long current_block, utils::Propos
 //    return VertexMove_v2{delta_entropy, false, -1, -1, out_edges, in_edges};
 }
 
-//VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-//                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-//                                    EdgeWeights &in_edges) {
-//    EdgeWeights blocks_out_neighbors = block_edge_weights(blockmodel.block_assignment(), out_edges);
-//    EdgeWeights blocks_in_neighbors = block_edge_weights(blockmodel.block_assignment(), in_edges);
-//    SparseEdgeCountUpdates updates;
-//    edge_count_updates_sparse(blockmodel, vertex, current_block, proposal.proposal, out_edges, in_edges, updates);
-//    long current_block_self_edges = updates.block_row[current_block];
-//    long proposed_block_self_edges = updates.proposal_row[proposal.proposal];
-//    common::NewBlockDegrees new_block_degrees = common::compute_new_block_degrees(
-//            current_block, blockmodel, current_block_self_edges, proposed_block_self_edges, proposal);
-//    double hastings =
-//            entropy::hastings_correction(blockmodel, blocks_out_neighbors, blocks_in_neighbors, proposal, updates,
-//                                         new_block_degrees);
-//    double delta_entropy =
-//            entropy::delta_mdl(current_block, proposal.proposal, blockmodel, graph.num_edges(), updates,
-//                               new_block_degrees);
-//    if (accept(delta_entropy, hastings))
-//        return VertexMove{delta_entropy, true, vertex, proposal.proposal};
-//    return VertexMove{delta_entropy, false, -1, -1};
-//}
-
 Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {
         std::cout << "Hybrid MCMC iteration" << std::endl;
         if (blockmodel.getNum_blocks() == 1) {
@@ -732,7 +710,7 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
 VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
-    if (blockmodel.block_size(current_block) < args.threads) {
+    if (blockmodel.block_size(current_block) <= args.threads) {
         return VertexMove_v3{ 0.0, did_move, InvalidVertex, -1 };
     }
 
