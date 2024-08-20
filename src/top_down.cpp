@@ -369,15 +369,23 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     std::vector<Split> best_split_for_each_block(num_blocks);
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
+    std::vector<omp_lock_t> locks(num_blocks);
+    for (int i = 0; i < num_blocks; ++i) {
+        omp_init_lock(&locks[i]);
+    }
+    #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
+    shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, best_split_for_each_block, delta_entropy_for_each_block, locks)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
-        // Do not attempt to split small clusters
-        if ((double) blockmodel.block_size(current_block) < 0.005 * (double) graph.num_vertices()) {
-            Split split;
-            best_split_for_each_block[current_block] = split;
-            delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
-            continue;
-        }
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
+            // Do not attempt to split small clusters
+            if ((double) blockmodel.block_size(current_block) < 0.005 * (double) graph.num_vertices()) {
+                Split split;
+                omp_set_lock(&locks[current_block]);
+                best_split_for_each_block[current_block] = split;
+                delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
+                omp_unset_lock(&locks[current_block]);
+                continue;
+            }
             Split split = propose_split(current_block, graph, blockmodel);
 //            if (split.subgraph.num_vertices() == 1) {
 //                delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
@@ -389,11 +397,16 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
                                                              split.subgraph);  // split.num_vertices, split.num_edges);
             double old_entropy = entropy::null_mdl_v1(split.subgraph);
             double delta_entropy = new_entropy - old_entropy;
+            omp_set_lock(&locks[current_block]);
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {
                 delta_entropy_for_each_block[current_block] = delta_entropy;
                 best_split_for_each_block[current_block] = split;
             }
+            omp_unset_lock(&locks[current_block]);
         }
+    }
+    for (int i = 0; i < num_blocks; ++i) {
+        omp_destroy_lock(&locks[i]);
     }
     utils::print<double>(delta_entropy_for_each_block);
     std::cout << "splits =================" << std::endl;

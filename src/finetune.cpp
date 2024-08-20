@@ -729,26 +729,10 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
     return move_vertex(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
 }
 
-//VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
-//    bool did_move = false;
-//    long current_block = blockmodel.block_assignment(vertex);
-//
-//    EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
-//    EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
-//
-//    utils::ProposalAndEdgeCounts proposal = common::propose_new_block(current_block, out_edges, in_edges,
-//                                                                      blockmodel.block_assignment(), blockmodel,
-//                                                                      false);
-//    if (proposal.proposal == current_block) {
-//        return VertexMove{0.0, did_move, -1, -1};
-//    }
-//    return eval_vertex_move(vertex, current_block, proposal, blockmodel, graph, out_edges, in_edges);
-//}
-
 VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
-    if (blockmodel.block_size(current_block) == 1) {
+    if (blockmodel.block_size(current_block) < args.threads) {
         return VertexMove_v3{ 0.0, did_move, InvalidVertex, -1 };
     }
 
