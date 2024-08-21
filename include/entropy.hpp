@@ -18,7 +18,7 @@ const double BETA_DL = 1.0;
 double block_merge_delta_mdl(long current_block, long proposal, long num_edges, const Blockmodel &blockmodel,
                              EdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);
 
-/// Computes the change in entropy under a proposed block merge using sparse intermediate structures.
+/// Computes the change in entropy under a proposed block merge using sparse PartialProfile structures.
 [[deprecated("use blockmodel deltas without block degrees instead")]]
 double block_merge_delta_mdl(long current_block, long proposal, long num_edges, const Blockmodel &blockmodel,
                              SparseEdgeCountUpdates &updates, common::NewBlockDegrees &block_degrees);

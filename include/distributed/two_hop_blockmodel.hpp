@@ -19,10 +19,8 @@
 #include "mpi_data.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "../utils.hpp"
-
-extern double Load_balancing_time;
 
 extern std::vector<long> Rank_indices;
 

@@ -33,6 +33,29 @@ struct EdgeWeights {
     }
 };
 
+/// Stores intermediate evaluation info & timers for later printing.
+struct PartialProfile {
+    double iteration = -1;
+    double mdl = -1;
+    double normalized_mdl_v1 = -1;
+    double modularity = -1;
+    long mcmc_iterations = -1;
+    double mcmc_time = 0.0;
+    double mcmc_sequential_time = 0.0;
+    double mcmc_parallel_time = 0.0;
+    double mcmc_vertex_move_time = 0.0;
+    ulong mcmc_moves = 0;
+    double block_merge_time = 0.0;
+    double block_merge_loop_time = 0.0;
+    double blockmodel_build_time = 0.0;
+    double finetune_time = 0.0;
+    double load_balancing_time = 0.0;
+    double sort_time = 0.0;
+    double access_time = 0.0;
+    double update_assignment = 0.0;
+    double total_time = 0.0;
+};
+
 /// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853
 struct longPairHash {
     size_t operator() (const std::pair<long, long> &pair) const {
@@ -72,6 +95,7 @@ struct SparseVector {
 
 template <typename T>
 using MapVector = tsl::robin_map<long, T>;
+using LongEntry = std::pair<long, long>;
 
 struct Merge {
     long block = -1;

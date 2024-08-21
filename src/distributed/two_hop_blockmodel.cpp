@@ -2,8 +2,6 @@
 
 #include <unordered_set>
 
-double Load_balancing_time = 0.0;
-
 std::vector<long> Rank_indices;
 
 void TwoHopBlockmodel::build_two_hop_blockmodel(const NeighborList &neighbors) {
@@ -89,7 +87,7 @@ void TwoHopBlockmodel::distribute(const Graph &graph) {
         std::cout << "WARNING: data distribution is NOT fully supported yet. "
                   << "We STRONGLY recommend running this software with --distribute none instead" << std::endl;
     }
-    Load_balancing_time += MPI_Wtime() - start;
+    timers::Load_balancing_time += MPI_Wtime() - start;
 }
 
 void TwoHopBlockmodel::distribute_none() {

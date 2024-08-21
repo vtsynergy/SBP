@@ -12,7 +12,7 @@
 
 #include "blockmodel/blockmodel.hpp"
 #include "blockmodel/sparse/csparse_matrix.hpp"
-#include "blockmodel/sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "fastlog.hpp"
 #include "rng.hpp"
 #include "utils.hpp"

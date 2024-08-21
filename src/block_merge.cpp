@@ -4,18 +4,16 @@
 
 #include "args.hpp"
 #include "entropy.hpp"
+#include "globals.hpp"
 #include "mpi_data.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
 namespace block_merge {
 
-double BlockMerge_time = 0.0;
-double BlockMerge_loop_time = 0.0;
-
 Delta blockmodel_delta(long current_block, long proposed_block, const Blockmodel &blockmodel) {
     Delta delta(current_block, proposed_block, blockmodel.degrees(current_block));
-    for (const std::pair<const long, long> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
+    for (const std::pair<long, long> &entry: blockmodel.blockmatrix()->getrow_sparse(current_block)) {
         long col = entry.first;  // row = current_block
         long value = entry.second;
         if (col == current_block || col == proposed_block) {  // entry = current_block, current_block
@@ -25,7 +23,7 @@ Delta blockmodel_delta(long current_block, long proposed_block, const Blockmodel
         }
         delta.sub(current_block, col, value);
     }
-    for (const std::pair<const long, long> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
+    for (const std::pair<long, long> &entry: blockmodel.blockmatrix()->getcol_sparse(current_block)) {
         long row = entry.first;  // col = current_block
         if (row == current_block) continue;  // already handled above
         long value = entry.second;
@@ -111,7 +109,6 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
         long block = blockmodel.block_assignment(i);
         long new_block_index = mapping[block];
         blockmodel.set_block_assignment(i, new_block_index);
-        // blockmodel.getBlock_assignment()[i] = new_block;
     }
     blockmodel.setNum_blocks(blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge());
 }
@@ -215,7 +212,7 @@ Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_ed
             }
         }
     }
-    BlockMerge_loop_time += MPI_Wtime() - start_t;
+    timers::BlockMerge_loop_time += MPI_Wtime() - start_t;
     std::cout << "Avoided " << num_avoided << " / " << NUM_AGG_PROPOSALS_PER_BLOCK * num_blocks << " comparisons."
               << std::endl;
     if (args.approximate)

@@ -14,6 +14,7 @@
 #include "blockmodel/blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "blockmodel/sparse/delta.hpp"
+#include "globals.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -21,19 +22,6 @@
  * FINE-TUNE
  ******************/
 namespace finetune {
-
-/// The total number of MCMC iterations completed, to be dynamically updated during execution.
-extern long MCMC_iterations;
-
-/// The total amount of time spent performing MCMC iterations, to be dynamically updated during execution.
-extern double MCMC_time;
-
-/// The total amount of time spent in the main parallelizable loop of the MCMC iterations, to by dynamically
-/// updated during execution.
-extern double MCMC_sequential_time, MCMC_parallel_time, MCMC_vertex_move_time;
-
-/// The number of MCMC moves performed.
-extern ulong MCMC_moves;
 
 //struct Neighbors {
 //    EdgeWeights out_neighbors;

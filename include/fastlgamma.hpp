@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "args.hpp"
+#include "globals.hpp"
 
 extern std::vector<double> fastlgamma_cache;
 

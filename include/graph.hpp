@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-#include "blockmodel/sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "fs.hpp"
 #include "utils.hpp"
 

@@ -13,14 +13,6 @@
 
 namespace sbp::dist {
 
-// The amount of time taken to finetune the partition.
-extern double finetune_time;
-
-/// Adds intermediate results to be later saved in a CSV file.
-void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl);
-
-std::vector<intermediate> get_intermediates();
-
 /// Performs community detection on the provided graph using MPI, using the stochastic block partitioning algorithm
 Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer = false);
 

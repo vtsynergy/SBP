@@ -43,7 +43,7 @@ Graph partition::partition_round_robin(const Graph &graph, long rank, long num_p
         }
     }
     std::vector<long> assignment(num_vertices, -1);
-    for (const std::pair<const long, long> &element : translator) {
+    for (const LongEntry &element : translator) {
         assignment[element.second] = graph.assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";
@@ -86,7 +86,7 @@ Graph partition::partition_random(const Graph &graph, long rank, long num_proces
         }
     }
     std::vector<long> assignment(num_vertices, -1);
-    for (const std::pair<const long, long> &element : translator) {
+    for (const LongEntry &element : translator) {
         assignment[element.second] = graph.assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";
@@ -162,7 +162,7 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
         }
     }
     std::vector<long> assignment(num_vertices, -1);
-    for (const std::pair<const long, long> &element : translator) {
+    for (const LongEntry &element : translator) {
         assignment[element.second] = graph.assignment(element.first);
     }
     std::cout << "NOTE: rank " << rank << "/" << num_processes - 1 << " has N = " << num_vertices << " E = ";

@@ -201,6 +201,6 @@ public:  // Everything in here is public, because why not?
     }
 };
 
-extern Args args;
+//extern Args args;
 
 #endif // TCLAP_WRAPPER_ARGS

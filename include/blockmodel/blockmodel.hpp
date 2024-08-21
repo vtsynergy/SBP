@@ -13,23 +13,16 @@
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
-#include "../args.hpp"
+#include "args.hpp"
 #include "delta.hpp"
+#include "globals.hpp"
+#include "graph.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "../graph.hpp"
-#include "sparse/typedefs.hpp"
-#include "../utils.hpp"
 #include "typedefs.hpp"
 #include "utils.hpp"
 
 static const double BLOCK_REDUCTION_RATE = 0.5;
-
-// The time taken to build the blockmodel
-extern double BLOCKMODEL_BUILD_TIME;
-extern double Blockmodel_sort_time;
-extern double Blockmodel_access_time;
-extern double Blockmodel_update_assignment;
 
 extern bool DIVISIVE_SBP;
 
@@ -165,7 +158,7 @@ class Blockmodel {
     void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
     bool stores(long block) const { return true; }
-    /// TODO
+    /// Updates the block assignment of all vertices in `from_block` to `to_block`.
     void update_block_assignment(long from_block, long to_block);
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
     void update_edge_counts(long current_block, long proposed_block, EdgeCountUpdates &updates);
