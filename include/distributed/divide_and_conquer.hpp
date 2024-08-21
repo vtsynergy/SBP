@@ -42,7 +42,7 @@ void translate_local_partition(std::vector<long> &local_vertices, std::vector<lo
                                const sample::Sample &subgraph, long num_vertices,
                                const std::vector<long> &partition_assignment);
 
-void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime);
+//void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime);
 
 }
 

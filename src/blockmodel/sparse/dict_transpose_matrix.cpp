@@ -192,7 +192,7 @@ Indices DictTransposeMatrix::nonzero() const {
     std::vector<long> col_vector;
     for (long row = 0; row < nrows; ++row) {
         const MapVector<long> matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             row_vector.push_back(row);
             col_vector.push_back(element.first);
         }
@@ -461,7 +461,7 @@ std::vector<long> DictTransposeMatrix::values() const {
     std::vector<long> values;
     for (long row = 0; row < nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             values.push_back(element.second);
         }
     }

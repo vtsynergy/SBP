@@ -67,16 +67,16 @@ public:
     /// Returns all stores deltas as a list of tuples storing `row`, `col`, `delta`.
     std::vector<std::tuple<long, long, long>> entries() const {
         std::vector<std::tuple<long, long, long>> result;
-        for (const std::pair<const long, long> &entry : this->_current_block_row) {
+        for (const LongEntry &entry : this->_current_block_row) {
             result.emplace_back(this->_current_block, entry.first, entry.second);
         }
-        for (const std::pair<const long, long> &entry : this->_proposed_block_row) {
+        for (const LongEntry &entry : this->_proposed_block_row) {
             result.emplace_back(this->_proposed_block, entry.first, entry.second);
         }
-        for (const std::pair<const long, long> &entry : this->_current_block_col) {
+        for (const LongEntry &entry : this->_current_block_col) {
             result.emplace_back(entry.first, this->_current_block, entry.second);
         }
-        for (const std::pair<const long, long> &entry : this->_proposed_block_col) {
+        for (const LongEntry &entry : this->_proposed_block_col) {
             result.emplace_back(entry.first, this->_proposed_block, entry.second);
         }
         return result;
@@ -121,25 +121,25 @@ public:
 //    void zero_init(const ISparseMatrix *matrix) {
 //        const MapVector<long> &block_row = matrix->getrow_sparse(this->_current_vertex);
         this->_current_block_row = MapVector<long>(block_row.bucket_count());
-        for (const std::pair<const long, long> &entry : block_row) {
+        for (const LongEntry &entry : block_row) {
             long col = entry.first;
             this->add(this->_current_block, col, 0);
         }
 //        const MapVector<long> &block_col = matrix->getcol_sparse(this->_current_vertex);
         this->_current_block_col = MapVector<long>(block_col.bucket_count());
-        for (const std::pair<const long, long> &entry : block_col) {
+        for (const LongEntry &entry : block_col) {
             long row = entry.first;
             this->add(row, this->_current_block, 0);
         }
 //        const MapVector<long> &proposed_row = matrix->getrow_sparse(this->_proposed_block);
         this->_proposed_block_row = MapVector<long>(proposed_row.bucket_count());
-        for (const std::pair<const long, long> &entry : proposed_row) {
+        for (const LongEntry &entry : proposed_row) {
             long col = entry.first;
             this->add(this->_proposed_block, col, 0);
         }
 //        const MapVector<long> &proposed_col = matrix->getcol_sparse(this->_proposed_block);
         this->_proposed_block_col = MapVector<long>(proposed_col.bucket_count());
-        for (const std::pair<const long, long> &entry : proposed_col) {
+        for (const LongEntry &entry : proposed_col) {
             long row = entry.first;
             this->add(row, this->_proposed_block, 0);
         }
@@ -197,16 +197,16 @@ public:
 //    /// Returns all stores deltas as a list of tuples storing `row`, `col`, `delta`.
 //    std::vector<std::tuple<long, long, long>> entries() const {
 //        std::vector<std::tuple<long, long, long>> result;
-//        for (const std::pair<const long, long> &entry : this->_current_block_row) {
+//        for (const LongEntry &entry : this->_current_block_row) {
 //            result.emplace_back(this->_current_vertex, entry.first, entry.second);
 //        }
-//        for (const std::pair<const long, long> &entry : this->_proposed_block_row) {
+//        for (const LongEntry &entry : this->_proposed_block_row) {
 //            result.emplace_back(this->_proposed_block, entry.first, entry.second);
 //        }
-//        for (const std::pair<const long, long> &entry : this->_current_block_col) {
+//        for (const LongEntry &entry : this->_current_block_col) {
 //            result.emplace_back(entry.first, this->_current_vertex, entry.second);
 //        }
-//        for (const std::pair<const long, long> &entry : this->_proposed_block_col) {
+//        for (const LongEntry &entry : this->_proposed_block_col) {
 //            result.emplace_back(entry.first, this->_proposed_block, entry.second);
 //        }
 //        return result;
@@ -251,25 +251,25 @@ public:
 ////    void zero_init(const ISparseMatrix *matrix) {
 ////        const MapVector<long> &block_row = matrix->getrow_sparse(this->_current_vertex);
 //        this->_current_block_row = MapVector<long>(block_row.bucket_count());
-//        for (const std::pair<const long, long> &entry : block_row) {
+//        for (const LongEntry &entry : block_row) {
 //            long col = entry.first;
 //            this->add(this->_current_vertex, col, 0);
 //        }
 ////        const MapVector<long> &block_col = matrix->getcol_sparse(this->_current_vertex);
 //        this->_current_block_col = MapVector<long>(block_col.bucket_count());
-//        for (const std::pair<const long, long> &entry : block_col) {
+//        for (const LongEntry &entry : block_col) {
 //            long row = entry.first;
 //            this->add(row, this->_current_vertex, 0);
 //        }
 ////        const MapVector<long> &proposed_row = matrix->getrow_sparse(this->_proposed_block);
 //        this->_proposed_block_row = MapVector<long>(proposed_row.bucket_count());
-//        for (const std::pair<const long, long> &entry : proposed_row) {
+//        for (const LongEntry &entry : proposed_row) {
 //            long col = entry.first;
 //            this->add(this->_proposed_block, col, 0);
 //        }
 ////        const MapVector<long> &proposed_col = matrix->getcol_sparse(this->_proposed_block);
 //        this->_proposed_block_col = MapVector<long>(proposed_col.bucket_count());
-//        for (const std::pair<const long, long> &entry : proposed_col) {
+//        for (const LongEntry &entry : proposed_col) {
 //            long row = entry.first;
 //            this->add(row, this->_proposed_block, 0);
 //        }

@@ -22,14 +22,8 @@ const int MEMBERSHIP_T_BLOCK_LENGTHS[2] = {1, 1};
 const MPI_Aint MEMBERSHIP_T_DISPLACEMENTS[2] = {0, sizeof(long)};
 const MPI_Datatype MEMBERSHIP_T_TYPES[2] = {MPI_LONG, MPI_LONG};
 
-//long MCMC_iterations = 0;
-//double MCMC_time = 0.0;
-//double MCMC_sequential_time = 0.0;
-//double MCMC_parallel_time = 0.0;
-//double MCMC_vertex_move_time = 0.0;
-//ulong MCMC_moves = 0;
 //long num_surrounded = 0;
-std::ofstream my_file;
+//std::ofstream my_file;
 
 MPI_Datatype Membership_t;
 
@@ -37,7 +31,7 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     int num_moves = (int) membership_updates.size();
     int rank_moves[mpi.num_processes];
 //    double t1 = MPI_Wtime();
-//    my_file << mpi.rank << "," << MCMC_iterations << "," << t1 - t0 << std::endl;
+//    my_file << mpi.rank << "," << timers::MCMC_iterations << "," << t1 - t0 << std::endl;
     MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, mpi.comm);
     int offsets[mpi.num_processes];
     offsets[0] = 0;
@@ -121,7 +115,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
             break;
@@ -226,7 +220,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         // Early stopping
         if (finetune::early_stop(iteration, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
@@ -284,7 +278,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBl
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
             break;
         }
@@ -363,7 +357,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
                       << delta_entropy / new_entropy << std::endl;
         }
         total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
             break;
         }

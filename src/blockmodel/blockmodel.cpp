@@ -9,11 +9,6 @@
 #include "typedefs.hpp"
 #include "utils.hpp"
 
-double BLOCKMODEL_BUILD_TIME = 0.0;
-double Blockmodel_sort_time = 0.0;
-double Blockmodel_access_time = 0.0;
-double Blockmodel_update_assignment = 0.0;
-
 bool DIVISIVE_SBP = false;
 
 double Blockmodel::block_size_variation() const {
@@ -73,7 +68,7 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
     std::vector<long> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
                                                                this->num_blocks_to_merge + 1);
     double sort_end_t = MPI_Wtime();
-    Blockmodel_sort_time += sort_end_t - sort_start_t;
+    timers::Blockmodel_sort_time += sort_end_t - sort_start_t;
     // std::vector<long> best_merges = utils::argsort(delta_entropy_for_each_block);
     std::vector<long> block_map = utils::range<long>(0, this->num_blocks);
     if (mpi.rank == 0) std::cout << "block map size: " << block_map.size() << std::endl;
@@ -112,11 +107,11 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         }
     }
     double update_start_t = MPI_Wtime();
-    Blockmodel_access_time += update_start_t - sort_end_t;
+    timers::Blockmodel_access_time += update_start_t - sort_end_t;
     for (long i = 0; i < this->_block_assignment.size(); ++i) {
         this->_block_assignment[i] = translate(this->_block_assignment[i]);
     }
-    Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
+    timers::Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
     std::vector<long> mapping = build_mapping(this->_block_assignment);
     for (size_t i = 0; i < this->_block_assignment.size(); ++i) {
         long block = this->_block_assignment[i];
@@ -319,7 +314,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     this->_in_degree_histogram = std::move(in_degree_histogram);
 //    double end = omp_get_wtime();
 //    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
-    BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
+    timers::BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
 }
 
 double Blockmodel::interblock_edges() const {
@@ -378,7 +373,7 @@ void Blockmodel::update_block_assignment(long from_block, long to_block) {
             this->_block_assignment[index] = to_block;
         }
     }
-    Blockmodel_update_assignment += MPI_Wtime() - start_t;
+    timers::Blockmodel_update_assignment += MPI_Wtime() - start_t;
 }
 
 void Blockmodel::merge_block(long merge_from, long merge_to, const Delta &delta,

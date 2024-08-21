@@ -33,7 +33,7 @@ ISparseMatrix* DictMatrix::copy() const {
     // std::vector<std::unordered_map<long, long>> dict_matrix(this->nrows, std::unordered_map<long, long>());
     ISparseMatrix* dict_matrix = new DictMatrix(this->nrows, this->ncols);
     for (long i = 0; i < this->nrows; ++i) {
-        for (const std::pair<const long, long> &entry : this->matrix[i]) {
+        for (const LongEntry &entry : this->matrix[i]) {
             dict_matrix->add(i, entry.first, entry.second);
         }
     }
@@ -64,7 +64,7 @@ std::vector<std::tuple<long, long, long>> DictMatrix::entries() const {
     std::vector<std::tuple<long, long, long>> result;
     for (long row_index = 0; row_index < this->nrows; ++row_index) {
         const MapVector<long> &row = this->matrix[row_index];
-        for (const std::pair<const long, long> &entry : row) {
+        for (const LongEntry &entry : row) {
             long col_index = entry.first;
             long value = entry.second;
             result.emplace_back(row_index, col_index, value);
@@ -90,7 +90,7 @@ std::vector<long> DictMatrix::getcol(long col) const {
     for (long row = 0; row < this->nrows; ++row) {
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
         const MapVector<long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             if (element.first == col) {
                 col_values[row] = element.second;
                 break;
@@ -106,7 +106,7 @@ MapVector<long> DictMatrix::getcol_sparse(long col) const {
     for (long row = 0; row < this->nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             if (element.first == col) {
                 col_vector[row] = element.second;
                 break;
@@ -127,7 +127,7 @@ void DictMatrix::getcol_sparse(long col, MapVector<long> &col_vector) const {
     for (long row = 0; row < this->nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             if (element.first == col) {
                 col_vector[row] = element.second;
                 break;
@@ -175,7 +175,7 @@ EdgeWeights DictMatrix::incoming_edges(long block) const {
     for (long row = 0; row < this->nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             if (element.first == block) {
                 indices.push_back(row);
                 values.push_back(element.second);
@@ -224,7 +224,7 @@ Indices DictMatrix::nonzero() const {
     for (long row = 0; row < nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        std::unordered_map<long, long> matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             row_vector.push_back(row);
             col_vector.push_back(element.first);
         }
@@ -244,7 +244,7 @@ EdgeWeights DictMatrix::outgoing_edges(long block) const {
     std::vector<long> values;
     const MapVector<long> &block_row = this->matrix[block];
 //    const std::unordered_map<long, long> &block_row = this->matrix[block];
-    for (const std::pair<const long, long> &element : block_row) {
+    for (const LongEntry &element : block_row) {
         indices.push_back(element.first);
         values.push_back(element.second);
     }
@@ -279,7 +279,7 @@ long DictMatrix::edges() const {
     for (long row = 0; row < nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             total += element.second;
         }
         // for (long col = 0; col < ncols; ++col) {
@@ -308,7 +308,7 @@ std::vector<long> DictMatrix::sum(long axis) const {
         // for (const std::unordered_map<long, long> &row : this->matrix) {
             const MapVector<long> &row = this->matrix[row_index];
 //            const std::unordered_map<long, long> &row = this->matrix[row_index];
-            for (const std::pair<const long, long> &element : row) {
+            for (const LongEntry &element : row) {
                 totals[element.first] += totals[element.second];
             }
         }
@@ -323,7 +323,7 @@ std::vector<long> DictMatrix::sum(long axis) const {
         for (long row = 0; row < this->nrows; ++row) {
             const MapVector<long> &matrix_row = this->matrix[row];
 //            const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-            for (const std::pair<const long, long> &element : matrix_row) {
+            for (const LongEntry &element : matrix_row) {
                 totals[row] += element.second;
             }
             // for (long col = 0; col < this->ncols; ++col) {
@@ -423,7 +423,7 @@ std::vector<long> DictMatrix::values() const {
     for (long row = 0; row < nrows; ++row) {
         const MapVector<long> &matrix_row = this->matrix[row];
 //        const std::unordered_map<long, long> &matrix_row = this->matrix[row];
-        for (const std::pair<const long, long> &element : matrix_row) {
+        for (const LongEntry &element : matrix_row) {
             values.push_back(element.second);
         }
         // for (long col = 0; col < ncols; ++col) {

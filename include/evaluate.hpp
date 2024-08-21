@@ -27,6 +27,8 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel);
 
 Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel);
 
+void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime);
+
 }
 
 #endif // SBP_EVALUATE_HPP

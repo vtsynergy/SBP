@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "args.hpp"
-#include "blockmodel/sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "fs.hpp"
 
 namespace utils {
@@ -42,7 +42,7 @@ std::vector<long> argsort(const std::vector<long>& v);
 
 /// Divides all elements in a MapVector<long> by a scalar, and stores the result in `result`
 inline void div(const MapVector<long> &lhs, const double &rhs, SparseVector<double> &result) {
-    for (const std::pair<const long, long> &pair : lhs) {
+    for (const LongEntry &pair : lhs) {
         result.idx.push_back(pair.first);
         result.data.push_back((double) pair.second / rhs);
     }
@@ -319,6 +319,9 @@ template <typename T> inline void print_short(const std::vector<T> &vector) {
     }
     std::cout << vector[vector.size() - 1] << "]" << std::endl;
 }
+
+/// Adds PartialProfile results to be later saved in a CSV file.
+void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl);
 
 /// Write the block assignment to JSON
 void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,

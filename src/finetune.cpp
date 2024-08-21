@@ -9,19 +9,13 @@
 
 #include <algorithm>
 #include <cassert>
-#include <fenv.h>
+//#include <fenv.h>
 #include <iostream>
 
 namespace finetune {
 
-long MCMC_iterations = 0;
-double MCMC_time = 0.0;
-double MCMC_sequential_time = 0.0;
-double MCMC_parallel_time = 0.0;
-double MCMC_vertex_move_time = 0.0;
-ulong MCMC_moves = 0;
 long num_surrounded = 0;
-std::ofstream my_file;
+//std::ofstream my_file;
 
 bool accept(double delta_entropy, double hastings_correction) {
     if (args.greedy) {
@@ -67,23 +61,23 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
                 moves[vertex] = proposal;
             }
             double parallel_t = MPI_Wtime();
-            MCMC_parallel_time += parallel_t - start_t;
+            timers::MCMC_parallel_time += parallel_t - start_t;
             for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
                 blockmodel.move_vertex(move);
             }
-            MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
+            timers::MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
         }
         double entropy = entropy::mdl(blockmodel, graph);
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
         last_entropy = entropy;
         vertex_moves.push_back(_vertex_moves);
-        MCMC_moves += _vertex_moves;
+        timers::MCMC_moves += _vertex_moves;
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << _vertex_moves << ", delta S: ";
         std::cout << delta_entropy / initial_entropy << std::endl;
         total_vertex_moves += _vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, golden_ratio_not_reached, initial_entropy, delta_entropies)) {
             break;
@@ -210,7 +204,7 @@ bool early_stop(long iteration, double initial_entropy, std::vector<double> &del
 bool early_stop_parallel(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                          std::vector<double> &delta_entropies, std::vector<long> &vertex_moves) {
     size_t last_index = delta_entropies.size() - 1;
-    if (vertex_moves[last_index] == 0.0) {
+    if (vertex_moves[last_index] == 0) {
         return true;
     }
     if (iteration < 4) {
@@ -407,7 +401,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                 }
             }
             double sequential_t = MPI_Wtime();
-            MCMC_sequential_time += sequential_t - start_t;
+            timers::MCMC_sequential_time += sequential_t - start_t;
             std::pair<std::vector<long>, long> block_neighbors = count_low_degree_block_neighbors(graph, blockmodel);
             // TODO: make sure that with batches, we still go over every vertex in the graph
             for (long batch = 0; batch < num_low_degree_vertices / batch_size; ++batch) {
@@ -428,7 +422,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
 //                    std::vector<bool> my_blocks = load_balance(blockmodel, block_neighbors);
 //                    std::vector<bool> my_vertices = load_balance_vertices(graph, vertex_properties);
 //                    std::vector<bool> my_vertices = load_balance_block_neighbors(graph, blockmodel, block_neighbors);
-                    long num_processed = 0;
+//                    long num_processed = 0;
                     for (long index = start; index < end; ++index) {
                         if (block_neighbors.first[index] != thread_id) continue;
                         long vertex = graph.low_degree_vertices()[index];
@@ -445,23 +439,23 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
                             block_assignment[vertex] = proposal.proposed_block;
                         }
                         moves[vertex] = proposal;
-                        num_processed++;
+//                        num_processed++;
                     }
 //                    std::cout << thread_id << ": " << num_processed << std::endl;
                 }
                 double parallel_t = MPI_Wtime();
-                MCMC_parallel_time += parallel_t - start_t;
+                timers::MCMC_parallel_time += parallel_t - start_t;
                 for (const VertexMove_v3 &move : moves) {
                     if (!move.did_move) continue;
                     blockmodel.move_vertex(move);
                 }
-                MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
+                timers::MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
             }
             delta_entropies.push_back(delta_entropy);
             std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
             std::cout << delta_entropy / initial_entropy << ", num surrounded vertices: " << num_surrounded << std::endl;
             total_vertex_moves += vertex_moves;
-            MCMC_iterations++;
+            timers::MCMC_iterations++;
             // Early stopping
             if (early_stop(iteration, golden_ratio_not_reached, initial_entropy, delta_entropies)) {
                 break;
@@ -470,7 +464,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
         blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
         std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
         std::cout << blockmodel.getOverall_entropy() << std::endl;
-        MCMC_moves += total_vertex_moves;
+        timers::MCMC_moves += total_vertex_moves;
         return blockmodel;
     }
 
@@ -501,7 +495,7 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
             }
         }
         double sequential_t = MPI_Wtime();
-        MCMC_sequential_time += sequential_t - start_t;
+        timers::MCMC_sequential_time += sequential_t - start_t;
 //        assert(blockmodel.validate(graph));
         for (long batch = 0; batch < num_low_degree_vertices / batch_size; ++batch) {
             start_t = MPI_Wtime();
@@ -522,12 +516,12 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
                 moves[vertex] = proposal;
             }
             double parallel_t = MPI_Wtime();
-            MCMC_parallel_time += parallel_t - start_t;
+            timers::MCMC_parallel_time += parallel_t - start_t;
             for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
                 blockmodel.move_vertex(move);
             }
-            MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
+            timers::MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
 //            assert(blockmodel.validate(graph));
         }
         double entropy = entropy::mdl(blockmodel, graph);
@@ -538,14 +532,14 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << _vertex_moves << ", delta S: ";
         std::cout << delta_entropy / initial_entropy << ", num surrounded vertices: " << num_surrounded << std::endl;
         total_vertex_moves += _vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, golden_ratio_not_reached, initial_entropy, delta_entropies)) {
             break;
         }
     }
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
-    MCMC_moves += total_vertex_moves;
+    timers::MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;
@@ -640,19 +634,19 @@ Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, bool
                 delta_entropy += proposal.delta_entropy;
             }
         }
-        MCMC_sequential_time += MPI_Wtime() - start_t;
+        timers::MCMC_sequential_time += MPI_Wtime() - start_t;
         delta_entropies.push_back(delta_entropy);
         std::cout << "Itr: " << iteration << ", number of vertex moves: " << vertex_moves << ", delta S: ";
         std::cout << delta_entropy << std::endl;
         total_vertex_moves += vertex_moves;
-        MCMC_iterations++;
+        timers::MCMC_iterations++;
         // Early stopping
         if (early_stop(iteration, golden_ratio_not_reached, blockmodel.getOverall_entropy(), delta_entropies)) {
             break;
         }
     }
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
-    MCMC_moves += total_vertex_moves;
+    timers::MCMC_moves += total_vertex_moves;
     std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     std::cout << blockmodel.getOverall_entropy() << std::endl;
     return blockmodel;

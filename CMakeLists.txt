@@ -47,6 +47,7 @@ add_library(SBPLIB STATIC
         src/evaluate.cpp
         src/common.cpp
         src/finetune.cpp
+        src/globals.cpp
         src/block_merge.cpp
         src/partition.cpp
         src/sample.cpp

@@ -101,7 +101,7 @@ double block_merge_delta_mdl(long current_block, const Blockmodel &blockmodel, c
         delta_entropy -= common::cell_entropy(matrix->get(row, col) + change, block_degrees.block_degrees_in[col],
                                               block_degrees.block_degrees_out[row]);
     }
-    for (const std::pair<const long, long> &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
+    for (const LongEntry &entry: blockmodel.blockmatrix()->getrow_sparse(proposed_block)) {
         long row = proposed_block;
         long col = entry.first;
         long value = entry.second;
@@ -112,7 +112,7 @@ double block_merge_delta_mdl(long current_block, const Blockmodel &blockmodel, c
         delta_entropy -= common::cell_entropy((double) value, (double) block_degrees.block_degrees_in[col],
                                               (double) block_degrees.block_degrees_out[row]);
     }
-    for (const std::pair<const long, long> &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
+    for (const LongEntry &entry: blockmodel.blockmatrix()->getcol_sparse(proposed_block)) {
         long row = entry.first;
         long col = proposed_block;
         long value = entry.second;

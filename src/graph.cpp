@@ -3,6 +3,7 @@
 #include <execution>
 #include "mpi.h"
 
+#include "globals.hpp"
 #include "utils.hpp"
 #include "mpi_data.hpp"
 

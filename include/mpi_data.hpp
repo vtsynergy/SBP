@@ -22,6 +22,6 @@ struct MPI_t {
     MPI_Comm comm = MPI_COMM_WORLD;      // Communicator to use
 };
 
-extern MPI_t mpi;
+//extern MPI_t mpi;
 
 #endif  // SBP_MPI_DATA_HPP

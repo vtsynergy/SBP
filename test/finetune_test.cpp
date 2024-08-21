@@ -6,14 +6,15 @@
 #include "blockmodel/sparse/delta.hpp"
 #include "finetune.hpp"
 #include "graph.hpp"
+#include "globals.hpp"
 #include "utils.hpp"
 
 #include "toy_example.hpp"
 #include "typedefs.hpp"
 
 // TODO: figure out correct placement of these
-MPI_t mpi;  // Unused
-Args args;  // Unused
+//MPI_t mpi;  // Unused
+//Args args;  // Unused
 
 class FinetuneTest : public ToyExample {
 protected:

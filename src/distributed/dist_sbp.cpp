@@ -11,48 +11,6 @@
 
 namespace sbp::dist {
 
-double total_time = 0.0;
-
-double finetune_time = 0.0;
-
-std::vector<intermediate> intermediate_results;
-
-std::vector<intermediate> get_intermediates() {
-    return intermediate_results;
-}
-
-void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
-    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph);
-//    double modularity = -1;
-//    if (iteration == -1)
-//        modularity = graph.modularity(blockmodel.block_assignment());
-    intermediate intermediate {};
-    intermediate.iteration = iteration;
-    intermediate.mdl = mdl;
-    intermediate.normalized_mdl_v1 = normalized_mdl_v1;
-    intermediate.modularity = modularity;
-    intermediate.mcmc_iterations = finetune::MCMC_iterations;
-    intermediate.mcmc_time = finetune::MCMC_time;
-    intermediate.mcmc_sequential_time = finetune::MCMC_sequential_time;
-    intermediate.mcmc_parallel_time = finetune::MCMC_parallel_time;
-    intermediate.mcmc_vertex_move_time = finetune::MCMC_vertex_move_time;
-    intermediate.mcmc_moves = finetune::MCMC_moves;
-    intermediate.block_merge_time = block_merge::BlockMerge_time;
-    intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
-    intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
-    intermediate.finetune_time = finetune_time;
-    intermediate.load_balancing_time = Load_balancing_time;
-    intermediate.sort_time = Blockmodel_sort_time;
-    intermediate.access_time = Blockmodel_access_time;
-    intermediate.total_time = total_time;
-    intermediate.update_assignment = Blockmodel_update_assignment;
-    intermediate_results.push_back(intermediate);
-    std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
-              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
-              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
-              << total_time << std::endl;
-}
-
 void record_runtime_imbalance() {
     std::cout << "Recording runtime imbalance statistics" << std::endl;
     long recvcount = (long) finetune::dist::MCMC_RUNTIMES.size();
@@ -182,11 +140,13 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         iteration++;
     }
-//    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
+//    std::cout << "Total MCMC iterations: " << timers::MCMC_iterations << std::endl;
     double modularity = -1;
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());
-    add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+    double mdl = blockmodel.getOverall_entropy();
+    utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph));
+//    save_partial_profile(-1, graph, modularity, blockmodel.getOverall_entropy());
 //    record_runtime_imbalance();
     return blockmodel;
 }

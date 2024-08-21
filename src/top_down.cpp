@@ -326,7 +326,7 @@ Blockmodel run(const Graph &graph) {
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-    sbp::add_intermediate(0, graph, -1, initial_mdl);
+    utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph));
     TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
@@ -342,8 +342,8 @@ Blockmodel run(const Graph &graph) {
         utils::print<long>(blockmodel.block_sizes());
         std::cout << "============== num blocks after split = " << blockmodel.getNum_blocks() << std::endl;
         if (iteration < 1) {
-            double mdl = entropy::nonparametric::mdl(blockmodel, graph);  // .num_vertices(), graph.num_edges());
-            sbp::add_intermediate(0.5, graph, -1, mdl);
+            double mdl = entropy::nonparametric::mdl(blockmodel, graph);
+            utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
         }
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         std::cout << "Starting MCMC vertex moves" << std::endl;
@@ -355,8 +355,9 @@ Blockmodel run(const Graph &graph) {
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
 //        iteration++;
-        finetune::MCMC_time += MPI_Wtime() - start;
-        sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
+        timers::MCMC_time += MPI_Wtime() - start;
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         std::cout << "Next iteration, we're gonna split the communities in blockmodel with B = " << blockmodel.getNum_blocks() << std::endl;
@@ -431,7 +432,7 @@ Blockmodel run_mix(const Graph &graph) {
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-    sbp::add_intermediate(0, graph, -1, initial_mdl);
+    utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph));
     TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
@@ -447,8 +448,8 @@ Blockmodel run_mix(const Graph &graph) {
         std::cout << "============== Block sizes after split" << std::endl;
         utils::print<long>(blockmodel.block_sizes());
         if (iteration < 1) {
-            double mdl = entropy::nonparametric::mdl(blockmodel, graph);  // .num_vertices(), graph.num_edges());
-            sbp::add_intermediate(0.5, graph, -1, mdl);
+            double mdl = entropy::nonparametric::mdl(blockmodel, graph);
+            utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
         }
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         std::cout << "Starting MCMC vertex moves" << std::endl;
@@ -460,8 +461,9 @@ Blockmodel run_mix(const Graph &graph) {
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, true);
 //        iteration++;
-        finetune::MCMC_time += MPI_Wtime() - start;
-        sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
+        timers::MCMC_time += MPI_Wtime() - start;
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
         std::cout << "Next iteration, we're gonna split the communities in blockmodel with B = " << blockmodel.getNum_blocks() << std::endl;
@@ -477,7 +479,7 @@ Blockmodel run_mix(const Graph &graph) {
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
-        block_merge::BlockMerge_time += MPI_Wtime() - start_bm;
+        timers::BlockMerge_time += MPI_Wtime() - start_bm;
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
@@ -489,9 +491,10 @@ Blockmodel run_mix(const Graph &graph) {
             blockmodel = finetune::hybrid_mcmc_load_balanced(blockmodel, graph, false);
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::metropolis_hastings(blockmodel, graph, false);
-        finetune::MCMC_time += MPI_Wtime() - start_mcmc;
-        sbp::total_time += MPI_Wtime() - start_bm;
-        sbp::add_intermediate(++iteration, graph, -1, blockmodel.getOverall_entropy());
+        timers::MCMC_time += MPI_Wtime() - start_mcmc;
+        timers::total_time += MPI_Wtime() - start_bm;
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
         blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel);
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
     }

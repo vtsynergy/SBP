@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "globals.hpp"
 #include "mpi_data.hpp"
 
 namespace utils {
@@ -199,6 +200,39 @@ void radix_sort(std::vector<std::pair<long, long>> &v) {
 
         std::swap(v, sorted);
     }
+}
+
+void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl) {
+//    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph);
+//    double modularity = -1;
+//    if (iteration == -1)
+//        modularity = graph.modularity(blockmodel.block_assignment());
+    PartialProfile intermediate {};
+    intermediate.iteration = iteration;
+    intermediate.mdl = mdl;
+    intermediate.normalized_mdl_v1 = norm_mdl;
+    intermediate.modularity = modularity;
+    intermediate.mcmc_iterations = timers::MCMC_iterations;
+    intermediate.mcmc_time = timers::MCMC_time;
+    intermediate.mcmc_sequential_time = timers::MCMC_sequential_time;
+    intermediate.mcmc_parallel_time = timers::MCMC_parallel_time;
+    intermediate.mcmc_vertex_move_time = timers::MCMC_vertex_move_time;
+    intermediate.mcmc_moves = timers::MCMC_moves;
+    intermediate.block_merge_time = timers::BlockMerge_time;
+    intermediate.block_merge_loop_time = timers::BlockMerge_loop_time;
+    intermediate.blockmodel_build_time = timers::BLOCKMODEL_BUILD_TIME;
+    intermediate.finetune_time = timers::finetune_time;
+    intermediate.load_balancing_time = timers::Load_balancing_time;
+    intermediate.sort_time = timers::Blockmodel_sort_time;
+    intermediate.access_time = timers::Blockmodel_access_time;
+    intermediate.total_time = timers::total_time;
+    intermediate.update_assignment = timers::Blockmodel_update_assignment;
+    timers::partial_profiles.push_back(intermediate);
+    if (mpi.rank == 0)
+        std::cout << "Iteration " << iteration << " MDL: " << mdl << " normalized MDL: " << norm_mdl
+                  << " modularity: " << modularity << " MCMC iterations: " << timers::MCMC_iterations << " MCMC time: "
+                  << timers::MCMC_time << " Block Merge time: " << timers::BlockMerge_time << " total time: "
+                  << timers::total_time << std::endl;
 }
 
 void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,

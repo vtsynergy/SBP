@@ -5,6 +5,7 @@
 #include "rng.hpp"
 
 #include "args.hpp"
+#include "globals.hpp"
 
 #include <iostream>
 
