@@ -1,5 +1,7 @@
 #include "utils.hpp"
 
+#include <nlohmann/json.hpp>
+
 #include "mpi_data.hpp"
 
 namespace utils {
@@ -199,43 +201,40 @@ void radix_sort(std::vector<std::pair<long, long>> &v) {
     }
 }
 
-//void radix_sort(std::vector<std::pair<long, long>> &v) {
-//    if (v.empty()) {
-//        return;
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = (*std::max_element(v.begin(), v.end(),
-//                                         [](const auto &p1, const auto &p2) { return p1.second > p2.second; })).second;
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//
-//    std::vector<std::pair<long, long>> sorted_v(v.size());
-//
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::fill(counts.begin(), counts.end(), 0); // reset counts
-//
-//        for (const auto &elem: v) {
-//            long byte = (max_element - (elem.second >> (num_bits * pass))) &
-//                       mask; // changed to max_element - ... to sort in descending order
-//            counts[byte]++;
-//        }
-//
-//        for (long i = num_buckets - 2; i >= 0; i--) { // changed to process buckets in reverse order
-//            counts[i] += counts[i + 1];
-//        }
-//
-//        for (long i = v.size() - 1; i >= 0; i--) {
-//            long byte = (max_element - (v[i].second >> (num_bits * pass))) &
-//                       mask; // changed to max_element - ... to sort in descending order
-//            sorted_v[--counts[byte]] = v[i];
-//        }
-//
-//        std::swap(v, sorted_v);
-//    }
-//}
+void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,
+                ulong MCMC_iterations, double runtime) {
+    nlohmann::json output;
+    output["Runtime (s)"] = runtime;
+    output["Filepath"] = args.filepath;
+    output["Tag"] = args.tag;
+    output["Algorithm"] = args.algorithm;
+    output["Degree Product Sort"] = args.degreeproductsort;
+    output["Data Distribution"] = args.distribute;
+    output["Greedy"] = args.greedy;
+    output["Metropolis-Hastings Ratio"] = args.mh_percent;
+    output["Overlap"] = args.overlap;
+    output["Block Size Variation"] = args.blocksizevar;
+    output["Sample Size"] = args.samplesize;
+    output["Sampling Algorithm"] = args.samplingalg;
+    output["Num. Subgraphs"] = args.subgraphs;
+    output["Subgraph Partition"] = args.subgraphpartition;
+    output["Num. Threads"] = args.threads;
+    output["Num. Processes"] = mpi.num_processes;
+    output["Type"] = args.type;
+    output["Undirected"] = args.undirected;
+    output["Num. Vertex Moves"] = MCMC_moves;
+    output["Num. MCMC Iterations"] = MCMC_iterations;
+    output["Results"] = block_assignment;
+    output["Description Length"] = description_length;
+    fs::create_directories(fs::path(args.json));
+    std::ostringstream output_filepath_stream;
+    output_filepath_stream << args.json << "/" << args.output_file;
+    std::string output_filepath = output_filepath_stream.str();
+    std::cout << "Saving results to file: " << output_filepath << std::endl;
+    std::ofstream output_file;
+    output_file.open(output_filepath, std::ios_base::app);
+    output_file << std::setw(4) << output << std::endl;
+    output_file.close();
+}
 
 }  // namespace utils

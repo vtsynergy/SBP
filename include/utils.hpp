@@ -169,85 +169,6 @@ template <typename T> inline std::vector<long> argsort(const std::vector<T> &uns
     return indices;
 }
 
-/// A radix sort implementation
-//static void radix_sort(std::vector<long>& v) {
-//    if (v.empty()) {
-//        return;
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = *std::max_element(v.begin(), v.end());
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//
-//    std::vector<long> sorted(v.size());
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::memset(counts.data(), 0, num_buckets * sizeof(long)); // reset counts
-//
-//        for (long i = 0; i < v.size(); i++) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            counts[byte]++;
-//        }
-//
-//        for (long i = 1; i < num_buckets; i++) {
-//            counts[i] += counts[i - 1];
-//        }
-//
-//        for (long i = v.size() - 1; i >= 0; i--) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            sorted[--counts[byte]] = v[i];
-//        }
-//
-//        std::copy(sorted.begin(), sorted.end(), v.begin());
-//    }
-//}
-
-/// A radix sort-based argsort
-//static std::vector<long> argsort(const std::vector<long>& v) {
-//    if (v.empty()) {
-//        return std::vector<long>();
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = *std::max_element(v.begin(), v.end());
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//
-//    std::vector<long> indices(v.size());
-//    std::vector<long> sorted_indices(v.size());
-//    for (long i = 0; i < v.size(); i++) {
-//        indices[i] = i;
-//    }
-//
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::memset(counts.data(), 0, num_buckets * sizeof(long)); // reset counts
-//
-//        for (long i = 0; i < v.size(); i++) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            counts[byte]++;
-//        }
-//
-//        for (long i = 1; i < num_buckets; i++) {
-//            counts[i] += counts[i - 1];
-//        }
-//
-//        for (long i = v.size() - 1; i >= 0; i--) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            sorted_indices[--counts[byte]] = indices[i];
-//        }
-//
-//        std::swap(indices, sorted_indices);
-//    }
-//
-//    return indices;
-//}
-
 /// Returns the sum of the elements in a vector, where sum and vector types are different.
 template <typename T, typename Y> inline T sum(const MapVector<Y> &vector) {
     T result = 0;
@@ -319,13 +240,6 @@ template <typename T> inline long argmax(const std::vector<T> &vector) {
 
 /// prints an array
 template <typename T> inline void print(const T vector[], size_t vector_size) {
-//    size_t vector_bytes = sizeof(vector);
-//    if (vector_bytes == 0) {
-//        std::cout << "[]" << std::endl;
-//        return;
-//    }
-//    size_t elem_bytes = sizeof(vector[0]);
-//    size_t vector_size = vector_bytes / elem_bytes;
     std::cout << "[" << vector[0] << ", ";
     for (size_t num_printed = 1; num_printed < vector_size - 1; num_printed++) {
         if (num_printed % 25 == 0) {
@@ -405,6 +319,10 @@ template <typename T> inline void print_short(const std::vector<T> &vector) {
     }
     std::cout << vector[vector.size() - 1] << "]" << std::endl;
 }
+
+/// Write the block assignment to JSON
+void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,
+                ulong MCMC_iterations, double runtime);
 
 }  // namespace utils
 

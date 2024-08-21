@@ -7,8 +7,6 @@
 //#include <signal.h>
 #include <string>
 
-#include <nlohmann/json.hpp>
-
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
 #include "entropy.hpp"
@@ -17,9 +15,10 @@
 #include "graph.hpp"
 #include "mpi_data.hpp"
 #include "partition.hpp"
-#include "sample.hpp"
+//#include "sample.hpp"
 #include "sbp.hpp"
 #include "top_down.hpp"
+#include "utils.hpp"
 
 double sample_time = 0.0;
 double sample_extend_time = 0.0;
@@ -32,41 +31,6 @@ struct Partition {
     Graph graph;
     Blockmodel blockmodel;
 };
-
-void write_json(const Blockmodel &blockmodel, double runtime) {
-    nlohmann::json output;
-    output["Runtime (s)"] = runtime;
-    output["Filepath"] = args.filepath;
-    output["Tag"] = args.tag;
-    output["Algorithm"] = args.algorithm;
-    output["Degree Product Sort"] = args.degreeproductsort;
-    output["Data Distribution"] = args.distribute;
-    output["Greedy"] = args.greedy;
-    output["Metropolis-Hastings Ratio"] = args.mh_percent;
-    output["Overlap"] = args.overlap;
-    output["Block Size Variation"] = args.blocksizevar;
-    output["Sample Size"] = args.samplesize;
-    output["Sampling Algorithm"] = args.samplingalg;
-    output["Num. Subgraphs"] = args.subgraphs;
-    output["Subgraph Partition"] = args.subgraphpartition;
-    output["Num. Threads"] = args.threads;
-    output["Num. Processes"] = mpi.num_processes;
-    output["Type"] = args.type;
-    output["Undirected"] = args.undirected;
-    output["Num. Vertex Moves"] = finetune::MCMC_moves;
-    output["Num. MCMC Iterations"] = finetune::MCMC_iterations;
-    output["Results"] = blockmodel.block_assignment();
-    output["Description Length"] = blockmodel.getOverall_entropy();
-    fs::create_directories(fs::path(args.json));
-    std::ostringstream output_filepath_stream;
-    output_filepath_stream << args.json << "/" << args.output_file;
-    std::string output_filepath = output_filepath_stream.str();
-    std::cout << "Saving results to file: " << output_filepath << std::endl;
-    std::ofstream output_file;
-    output_file.open(output_filepath, std::ios_base::app);
-    output_file << std::setw(4) << output << std::endl;
-    output_file.close();
-}
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
     std::vector<sbp::intermediate> intermediate_results = sbp::get_intermediates();
@@ -108,7 +72,8 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
 
 void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
     if (mpi.rank != 0) return;
-    write_json(blockmodel, runtime);
+    utils::write_json(blockmodel.block_assignment(), blockmodel.getOverall_entropy(), finetune::MCMC_moves,
+                      finetune::MCMC_iterations, runtime);
     if (!args.evaluate) return;
     evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
     std::cout << "Final F1 score = " << result.f1_score << std::endl;
