@@ -17,7 +17,7 @@
 #include "mpi_data.hpp"
 #include "partition.hpp"
 //#include "sample.hpp"
-#include "top_down.hpp"
+#include "divisive_sbp.hpp"
 #include "utils.hpp"
 
 //double sample_time = 0.0;
@@ -45,6 +45,24 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
     evaluate::write_results(graph, result, runtime);
 }
 
+void run(Partition &partition) {
+    timers::total_num_islands = partition.graph.num_islands();
+    if (mpi.num_processes > 1) {
+//        if (args.mix)
+//            partition.blockmodel = divisive::dist::run_mix(partition.graph);
+//        else
+        std::cout << "Distributed Divisive SBP not fully implemented yet!" << std::endl;
+//        partition.blockmodel = divisive::dist::run(partition.graph);
+    } else {
+//        if (args.mix)
+//            partition.blockmodel = divisive::run_mix(partition.graph);
+//        else
+        partition.blockmodel = divisive::run(partition.graph);
+    }
+    double mdl = partition.blockmodel.getOverall_entropy();
+    utils::save_partial_profile(-1, -1, mdl, entropy::normalize_mdl_v1(mdl, partition.graph));
+}
+
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // int rank, num_processes;
@@ -61,12 +79,7 @@ int main(int argc, char* argv[]) {
     Partition partition;
     partition.graph = Graph::load();
     double start = MPI_Wtime();
-    if (args.mix)
-        partition.blockmodel = top_down::run_mix(partition.graph);
-    else
-        partition.blockmodel = top_down::run(partition.graph);
-    double mdl = partition.blockmodel.getOverall_entropy();
-    utils::save_partial_profile(-1, -1, mdl, entropy::normalize_mdl_v1(mdl, partition.graph));
+    run(partition);
     // evaluate
     double end = MPI_Wtime();
     evaluate_partition(partition.graph, partition.blockmodel, end - start);

@@ -8,11 +8,12 @@
 #include <vector>
 
 #include "blockmodel/blockmodel.hpp"
+#include "blockmodel/blockmodel_triplet.hpp"
 #include "graph.hpp"
 
-namespace top_down {
+namespace divisive {
 
-/// Stores information about a community split.
+/// Stores information about a cluster split.
 struct Split {
     /// The blockmodel for the two split communities.
     std::shared_ptr<Blockmodel> blockmodel;
@@ -31,16 +32,20 @@ static const long NUM_AGG_PROPOSALS_PER_BLOCK = 10;  // Proposals per block
 /// Accepts or rejects a blockmodel split.
 bool accept(const Split &split, const Blockmodel &blockmodel);
 
-/// Applies the best community splits.
+/// Applies the best cluster splits.
 void apply_best_splits(const Blockmodel &blockmodel, const std::vector<Split> &best_splits,
                        const std::vector<double> &split_entropy, int target_num_communities);
 
-/// Applies the community split to `blockmodel`.
-void apply_split(const Split &split, Blockmodel &blockmodel);
+/// Applies the cluster split to `blockmodel`.
+//void apply_split(const Split &split, Blockmodel &blockmodel);
 
-/// Splits a single community into two. Returns a blockmodel containing just 2 communities that resulted from
-/// splitting community `community`.
-Split propose_split(long community, const Graph &graph, const Blockmodel &blockmodel);
+/// Returns true if end condition has not been reached. If args.mix is True, then the end condition is reaching the
+/// golden ratio. Otherwise, the end condition is idenitfying the optimal blockmodel.
+bool end_condition_not_reached(Blockmodel &blockmodel, DivisiveBlockmodelTriplet &triplet);
+
+/// Splits a single cluster into two. Returns a blockmodel containing just 2 communities that resulted from
+/// splitting cluster `cluster`.
+Split propose_split(long cluster, const Graph &graph, const Blockmodel &blockmodel);
 
 std::vector<long> propose_random_split(const Graph &subgraph);
 
@@ -50,13 +55,13 @@ std::vector<long> propose_snowball_split(const Graph &subgraph);
 
 std::vector<long> propose_single_snowball_split(const Graph &subgraph);
 
-/// Runs the top-down community detection algorithm.
+/// Runs the top-down cluster detection algorithm.
 Blockmodel run(const Graph &graph);
 
-/// Runs the top-down community detection algorithm until golden ratio is reached, then reverts to block merges.
-Blockmodel run_mix(const Graph &graph);
+/// Runs the top-down cluster detection algorithm until golden ratio is reached, then reverts to block merges.
+//Blockmodel run_mix(const Graph &graph);
 
-/// The reverse of block_merge::merge_blocks. Proposes several community splits, and applies the best ones until the
+/// The reverse of block_merge::merge_blocks. Proposes several cluster splits, and applies the best ones until the
 /// number of communities reaches `target_num_communities`.
 Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities);
 

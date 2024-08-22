@@ -51,7 +51,7 @@ add_library(SBPLIB STATIC
         src/block_merge.cpp
         src/partition.cpp
         src/sample.cpp
-        src/top_down.cpp
+        src/divisive_sbp.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
         src/blockmodel/sparse/dict_matrix.cpp
@@ -79,7 +79,7 @@ target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 add_executable(ladis src/LayerDistributedSBP.cpp)
 target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
 
-add_executable(TopDownSBP src/top_down_main.cpp)
+add_executable(TopDownSBP src/DivisiveSBPMain.cpp)
 target_include_directories(TopDownSBP PUBLIC ${INCLUDE_DIRS})
 
 if (DEBUG AND VALGRIND)
