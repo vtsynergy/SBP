@@ -13,9 +13,6 @@
 [submodule "extern/robin-map"]
 	path = extern/robin-map
 	url = https://github.com/Tessil/robin-map.git
-[submodule "scripts/gini"]
-	path = scripts/gini
-	url = https://github.com/oliviaguest/gini.git
 [submodule "extern/pcg-cpp"]
 	path = extern/pcg-cpp
 	url = git@github.com:imneme/pcg-cpp.git
