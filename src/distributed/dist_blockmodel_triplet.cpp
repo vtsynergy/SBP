@@ -103,3 +103,90 @@ void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
     this->blockmodels[index] = blockmodel;
     if (mpi.rank == 0) std::cout << "blockmodels[index] has B = " << this->blockmodels[index].getNum_blocks() << std::endl;
 }
+
+TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {
+    old_blockmodel.setNum_blocks_to_merge(0);
+    this->update(old_blockmodel);
+    this->status();
+
+    // If search has not yet reached golden ratio, continue from middle blockmodel
+    if (this->golden_ratio_not_reached()) {
+        TwoHopBlockmodel blockmodel = this->get(1).copy();
+//        blockmodel.setNum_blocks_to_merge(long(blockmodel.getNum_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
+        blockmodel.setNum_blocks_to_merge(long(ceil(blockmodel.getNum_blocks() * 1.5)));
+        if (blockmodel.getNum_blocks_to_merge() == 0 ||
+            blockmodel.getNum_blocks_to_merge() >= blockmodel.block_assignment().size()) {
+            this->optimal_num_blocks_found = true;
+        }
+        return blockmodel;
+    }
+    if (mpi.rank == 0) std::cout << "Golden ratio has been reached!" << std::endl;
+    // If community detection is done, return the middle (optimal) blockmodel
+    if (this->is_done()) {
+        return this->get(1).copy();
+    }
+    // Find which Blockmodel would serve as the starting point for the next iteration
+    long index = 1;
+    // TODO: if things get funky, look into this if/else statement
+    if (this->get(0).empty && this->get(1).getNum_blocks() < this->get(2).getNum_blocks()) {
+        index = 1;
+    } else if (this->upper_difference() <= this->lower_difference()) {
+        index = 1;
+    } else {
+        index = 0;
+    }
+//    std::cout << index + 1 << std::endl;
+    long next_num_blocks_to_try = this->get(index + 1).getNum_blocks();
+    next_num_blocks_to_try += long((this->get(index).getNum_blocks() - this->get(index + 1).getNum_blocks()) * 0.618);
+    TwoHopBlockmodel blockmodel = this->get(index).copy();
+    blockmodel.setNum_blocks_to_merge(next_num_blocks_to_try);  //  - blockmodel.getNum_blocks());
+    return blockmodel;
+}
+
+bool DistDivisiveBlockmodelTriplet::is_done() {
+    if ((!this->get(0).empty && this->get(2).getNum_blocks() - this->get(0).getNum_blocks() == 2) ||
+        (this->get(0).empty && this->get(2).getNum_blocks() - this->get(1).getNum_blocks() == 1)) {
+        this->optimal_num_blocks_found = true;
+    }
+    return this->optimal_num_blocks_found;
+}
+
+long DistDivisiveBlockmodelTriplet::lower_difference() {
+    return this->get(2).getNum_blocks() - this->get(1).getNum_blocks();
+}
+
+long DistDivisiveBlockmodelTriplet::upper_difference() {
+    return this->get(1).getNum_blocks() - this->get(0).getNum_blocks();
+}
+
+void DistDivisiveBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
+    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.getNum_blocks() << std::endl;
+    long index;
+    if (this->blockmodels[1].empty) {
+        index = 1;
+        if (mpi.rank == 0) std::cout << "placing new blockmodel in the middle (index 1)" << std::endl;
+    } else {
+        if (blockmodel.getOverall_entropy() <= this->blockmodels[1].getOverall_entropy()) {
+            long old_index;
+            if (this->get(1).getNum_blocks() < blockmodel.getNum_blocks()) {
+                old_index = 0;
+                if (mpi.rank == 0) std::cout << "moving old blockmodel to the start (index 0)" << std::endl;
+            } else {
+                old_index = 2;
+                if (mpi.rank == 0) std::cout << "moving old blockmodel to the end (index 2)" << std::endl;
+            }
+            this->blockmodels[old_index] = this->blockmodels[1].copy();
+            index = 1;
+            if (mpi.rank == 0) std::cout << "placing new blockmodel in the middle (index 1)" << std::endl;
+        } else {
+            if (this->blockmodels[1].getNum_blocks() < blockmodel.getNum_blocks()) {
+                index = 2;
+                if (mpi.rank == 0) std::cout << "placing new blockmodel in the end (index 2)" << std::endl;
+            } else {
+                index = 0;
+                if (mpi.rank == 0) std::cout << "placing new blockmodel in the start (index 0)" << std::endl;
+            }
+        }
+    }
+    this->blockmodels[index] = blockmodel.copy();
+}

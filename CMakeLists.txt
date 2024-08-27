@@ -59,6 +59,7 @@ add_library(SBPLIB STATIC
         src/distributed/dist_block_merge.cpp
         src/distributed/dist_blockmodel_triplet.cpp
         src/distributed/dist_common.cpp
+        src/distributed/dist_divisive_sbp.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
         src/distributed/divide_and_conquer.cpp

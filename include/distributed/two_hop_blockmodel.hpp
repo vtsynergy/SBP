@@ -62,6 +62,8 @@ public:
     bool owns_block(long block) const;
     /// Returns true if this blockmodel owns the compute for the requested vertex.
     bool owns_vertex(long vertex) const;
+    /// Removes empty blocks from the blockmodel
+    void prune(const Graph &graph);
     /// Returns true if this blockmodel owns storage for the requested block.
     bool stores(long block) const;
     bool validate(const Graph &graph) const;

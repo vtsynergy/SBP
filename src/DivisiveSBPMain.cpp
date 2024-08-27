@@ -9,6 +9,7 @@
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
+#include "distributed/dist_divisive_sbp.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
@@ -48,15 +49,9 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
 void run(Partition &partition) {
     timers::total_num_islands = partition.graph.num_islands();
     if (mpi.num_processes > 1) {
-//        if (args.mix)
-//            partition.blockmodel = divisive::dist::run_mix(partition.graph);
-//        else
         std::cout << "Distributed Divisive SBP not fully implemented yet!" << std::endl;
-//        partition.blockmodel = divisive::dist::run(partition.graph);
+        partition.blockmodel = divisive::dist::run(partition.graph);
     } else {
-//        if (args.mix)
-//            partition.blockmodel = divisive::run_mix(partition.graph);
-//        else
         partition.blockmodel = divisive::run(partition.graph);
     }
     double mdl = partition.blockmodel.getOverall_entropy();

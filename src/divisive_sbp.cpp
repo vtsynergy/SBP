@@ -32,10 +32,6 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
     std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
     std::cout << "the argsort result = " << std::endl;
     utils::print<long>(sorted_splits);
-//    std::cout << "entropies of sorted splits, in order. if this is fucked, everything else is fucked too. should be from negative to positive" << std::endl;
-//    for (int i = 0; i < sorted_splits.size(); ++i) {
-//        std::cout << split_entropy[sorted_splits[i]] << std::endl;
-//    }
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
     long num_blocks = blockmodel.getNum_blocks();
 //    long index_of_split = 0;

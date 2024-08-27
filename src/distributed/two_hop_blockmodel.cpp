@@ -435,6 +435,25 @@ bool TwoHopBlockmodel::owns_vertex(long vertex) const {
     return this->owns_block(block);
 }
 
+void TwoHopBlockmodel::prune(const Graph &graph) {
+    if (this->num_blocks == this->_num_nonempty_blocks) return;
+    std::vector<long> translator = utils::constant<long>(this->num_blocks, -1);
+    int counter = 0;
+    for (int block = 0; block < this->num_blocks; ++block) {
+        if (this->_block_sizes[block] == 0) continue;
+        translator[block] = counter;
+        counter++;
+    }
+    for (int vertex = 0; vertex < (int) this->_block_assignment.size(); ++vertex) {
+        long current_block = this->_block_assignment[vertex];
+        this->_block_assignment[vertex] = translator[current_block];
+    }
+    this->num_blocks = counter;
+    assert(this->num_blocks == this->_num_nonempty_blocks);
+    this->distribute(graph);
+    this->initialize_edge_counts(graph);
+}
+
 std::vector<std::pair<long,long>> TwoHopBlockmodel::sorted_block_sizes() const {
     std::vector<std::pair<long,long>> block_sizes;
     for (long i = 0; i < this->num_blocks; ++i) {

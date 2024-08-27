@@ -14,7 +14,7 @@ extern std::vector<unsigned long long> MCMC_AGGREGATE_BLOCK_DEGREES;
 void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel);
 
 /// Runs the Asynchronous Gibbs algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached);
 
 /// Runs one iteration of the asynchronous Gibbs algorithm in a distributed fashion using MPI.
 std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
@@ -22,20 +22,20 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
                                                      int batch = 0);
 
 /// If the average of the last 3 delta entropies is < threshold * initial_entropy, stop the algorithm.
-bool early_stop(long iteration, DistBlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
 /// Finetunes the partial results on a given graph.
 Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph);
 
 /// Runs the hybrid MCMC algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached);
 
 /// Records metrics that may be causing imbalance.
 void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph);
 
 /// Runs the Metropolis Hastings algorithm in a distributed fashion using MPI.
-TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels);
+TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached);
 
 /// Runs one iteration of the Metropolis-Hastings algorithm. Returns the accepted vertex moves.
 std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmodel, Graph &graph,
