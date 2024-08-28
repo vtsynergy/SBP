@@ -43,15 +43,14 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
         std::cout << "split V = " << split.num_vertices << " split subgraph V = " << split.subgraph.num_vertices() << std::endl;
 //        if (split.subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
         // TODO: fix: split.subgrpah.num_vertices() doesn't match split.num_vertices. May be as simple as initializing subgraph to an empty graph?
-        std::cout << "Looking at split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
+//        std::cout << "Looking at split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
         if (split.num_vertices > blockmodel.block_assignment().size()) continue;
-        std::cout << "Applying split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
+//        std::cout << "Applying split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
         MapVector<long> reverse_translator;
         for (const auto &entry : split.translator) {
             reverse_translator[entry.second] = entry.first;
         }
         for (long index = 0; index < split.num_vertices; ++index) {
-            if (split.subgraph.num_vertices() > 50000) std::cout << "index: " << index << " vertices: " << split.subgraph.num_vertices() << std::endl;
             long assignment = split.blockmodel->block_assignment(index);
             if (assignment == 1) {
                 long vertex = reverse_translator[index];
