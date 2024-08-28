@@ -10,7 +10,7 @@ TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &ol
         if (mpi.rank == 0) std::cout << "golden ratio NOT reached" << std::endl;
         if (mpi.rank == 0) std::cout << std::boolalpha << this->get(0).empty << " " << this->get(1).empty << " " << this->get(2).empty << std::endl;
         TwoHopBlockmodel blockmodel = this->get(1).copy();
-        blockmodel.setNum_blocks_to_merge(long(blockmodel.getNum_blocks() * BLOCK_REDUCTION_RATE));
+        blockmodel.setNum_blocks_to_merge(long(blockmodel.num_blocks() * BLOCK_REDUCTION_RATE));
         if (blockmodel.getNum_blocks_to_merge() == 0) {
             this->optimal_num_blocks_found = true;
         }
@@ -23,36 +23,36 @@ TwoHopBlockmodel DistBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &ol
     // Find which Blockmodel would serve as the starting point for the next iteration
     long index = 1;
     // TODO: if things get funky, look into this if/else statement
-    if (this->get(0).empty && this->get(1).getNum_blocks() > this->get(2).getNum_blocks()) {
+    if (this->get(0).empty && this->get(1).num_blocks() > this->get(2).num_blocks()) {
         index = 1;
     } else if (this->upper_difference() >= this->lower_difference()) {
         index = 0;
     } else {
         index = 1;
     }
-    long next_num_blocks_to_try = this->get(index + 1).getNum_blocks();
-    next_num_blocks_to_try += long((this->get(index).getNum_blocks() - this->get(index + 1).getNum_blocks()) * 0.618);
+    long next_num_blocks_to_try = this->get(index + 1).num_blocks();
+    next_num_blocks_to_try += long((this->get(index).num_blocks() - this->get(index + 1).num_blocks()) * 0.618);
     TwoHopBlockmodel blockmodel = this->get(index).copy();
-    blockmodel.setNum_blocks_to_merge(blockmodel.getNum_blocks() - next_num_blocks_to_try);
+    blockmodel.setNum_blocks_to_merge(blockmodel.num_blocks() - next_num_blocks_to_try);
     return blockmodel;
 }
 
 bool DistBlockmodelTriplet::golden_ratio_not_reached() { return this->get(2).empty; }
 
 bool DistBlockmodelTriplet::is_done() {
-    if ((!this->get(0).empty && this->get(0).getNum_blocks() - this->get(2).getNum_blocks() == 2) ||
-        (this->get(0).empty && this->get(1).getNum_blocks() - this->get(2).getNum_blocks() == 1)) {
+    if ((!this->get(0).empty && this->get(0).num_blocks() - this->get(2).num_blocks() == 2) ||
+        (this->get(0).empty && this->get(1).num_blocks() - this->get(2).num_blocks() == 1)) {
         this->optimal_num_blocks_found = true;
     }
     return this->optimal_num_blocks_found;
 }
 
 long DistBlockmodelTriplet::lower_difference() {
-    return this->get(1).getNum_blocks() - this->get(2).getNum_blocks();
+    return this->get(1).num_blocks() - this->get(2).num_blocks();
 }
 
 long DistBlockmodelTriplet::upper_difference() {
-    return this->get(0).getNum_blocks() - this->get(1).getNum_blocks();
+    return this->get(0).num_blocks() - this->get(1).num_blocks();
 }
 
 void DistBlockmodelTriplet::status() {
@@ -64,7 +64,7 @@ void DistBlockmodelTriplet::status() {
             num_blocks[i] = 0;
         } else {
             entropies[i] = this->blockmodels[i].getOverall_entropy();
-            num_blocks[i] = this->blockmodels[i].getNum_blocks();
+            num_blocks[i] = this->blockmodels[i].num_blocks();
         }
     }
     if (mpi.rank == 0) std::cout << "Overall entropy: " << entropies[0] << " " << entropies[1] << " " << entropies[2] << std::endl;
@@ -77,14 +77,14 @@ void DistBlockmodelTriplet::status() {
 }
 
 void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
-    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.getNum_blocks() << std::endl;
+    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.num_blocks() << std::endl;
     long index;
     if (this->blockmodels[1].empty) {
         index = 1;
     } else {
         if (blockmodel.getOverall_entropy() <= this->blockmodels[1].getOverall_entropy()) {
             long old_index;
-            if (this->get(1).getNum_blocks() > blockmodel.getNum_blocks()) {
+            if (this->get(1).num_blocks() > blockmodel.num_blocks()) {
                 old_index = 0;
             } else {
                 old_index = 2;
@@ -92,7 +92,7 @@ void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
             this->blockmodels[old_index] = this->blockmodels[1];
             index = 1;
         } else {
-            if (this->blockmodels[1].getNum_blocks() > blockmodel.getNum_blocks()) {
+            if (this->blockmodels[1].num_blocks() > blockmodel.num_blocks()) {
                 index = 2;
             } else {
                 index = 0;
@@ -101,7 +101,7 @@ void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
     }
     if (mpi.rank == 0) std::cout << "found the index to be = " << index << std::endl;
     this->blockmodels[index] = blockmodel;
-    if (mpi.rank == 0) std::cout << "blockmodels[index] has B = " << this->blockmodels[index].getNum_blocks() << std::endl;
+    if (mpi.rank == 0) std::cout << "blockmodels[index] has B = " << this->blockmodels[index].num_blocks() << std::endl;
 }
 
 TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {
@@ -112,8 +112,8 @@ TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockm
     // If search has not yet reached golden ratio, continue from middle blockmodel
     if (this->golden_ratio_not_reached()) {
         TwoHopBlockmodel blockmodel = this->get(1).copy();
-//        blockmodel.setNum_blocks_to_merge(long(blockmodel.getNum_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
-        blockmodel.setNum_blocks_to_merge(long(ceil(blockmodel.getNum_blocks() * 1.5)));
+//        blockmodel.setNum_blocks_to_merge(long(blockmodel.num_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
+        blockmodel.setNum_blocks_to_merge(long(ceil(blockmodel.num_blocks() * 1.5)));
         if (blockmodel.getNum_blocks_to_merge() == 0 ||
             blockmodel.getNum_blocks_to_merge() >= blockmodel.block_assignment().size()) {
             this->optimal_num_blocks_found = true;
@@ -128,7 +128,7 @@ TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockm
     // Find which Blockmodel would serve as the starting point for the next iteration
     long index = 1;
     // TODO: if things get funky, look into this if/else statement
-    if (this->get(0).empty && this->get(1).getNum_blocks() < this->get(2).getNum_blocks()) {
+    if (this->get(0).empty && this->get(1).num_blocks() < this->get(2).num_blocks()) {
         index = 1;
     } else if (this->upper_difference() <= this->lower_difference()) {
         index = 1;
@@ -136,31 +136,31 @@ TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockm
         index = 0;
     }
 //    std::cout << index + 1 << std::endl;
-    long next_num_blocks_to_try = this->get(index + 1).getNum_blocks();
-    next_num_blocks_to_try += long((this->get(index).getNum_blocks() - this->get(index + 1).getNum_blocks()) * 0.618);
+    long next_num_blocks_to_try = this->get(index + 1).num_blocks();
+    next_num_blocks_to_try += long((this->get(index).num_blocks() - this->get(index + 1).num_blocks()) * 0.618);
     TwoHopBlockmodel blockmodel = this->get(index).copy();
-    blockmodel.setNum_blocks_to_merge(next_num_blocks_to_try);  //  - blockmodel.getNum_blocks());
+    blockmodel.setNum_blocks_to_merge(next_num_blocks_to_try);  //  - blockmodel.num_blocks());
     return blockmodel;
 }
 
 bool DistDivisiveBlockmodelTriplet::is_done() {
-    if ((!this->get(0).empty && this->get(2).getNum_blocks() - this->get(0).getNum_blocks() == 2) ||
-        (this->get(0).empty && this->get(2).getNum_blocks() - this->get(1).getNum_blocks() == 1)) {
+    if ((!this->get(0).empty && this->get(2).num_blocks() - this->get(0).num_blocks() == 2) ||
+        (this->get(0).empty && this->get(2).num_blocks() - this->get(1).num_blocks() == 1)) {
         this->optimal_num_blocks_found = true;
     }
     return this->optimal_num_blocks_found;
 }
 
 long DistDivisiveBlockmodelTriplet::lower_difference() {
-    return this->get(2).getNum_blocks() - this->get(1).getNum_blocks();
+    return this->get(2).num_blocks() - this->get(1).num_blocks();
 }
 
 long DistDivisiveBlockmodelTriplet::upper_difference() {
-    return this->get(1).getNum_blocks() - this->get(0).getNum_blocks();
+    return this->get(1).num_blocks() - this->get(0).num_blocks();
 }
 
 void DistDivisiveBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
-    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.getNum_blocks() << std::endl;
+    if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.num_blocks() << std::endl;
     long index;
     if (this->blockmodels[1].empty) {
         index = 1;
@@ -168,7 +168,7 @@ void DistDivisiveBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
     } else {
         if (blockmodel.getOverall_entropy() <= this->blockmodels[1].getOverall_entropy()) {
             long old_index;
-            if (this->get(1).getNum_blocks() < blockmodel.getNum_blocks()) {
+            if (this->get(1).num_blocks() < blockmodel.num_blocks()) {
                 old_index = 0;
                 if (mpi.rank == 0) std::cout << "moving old blockmodel to the start (index 0)" << std::endl;
             } else {
@@ -179,7 +179,7 @@ void DistDivisiveBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
             index = 1;
             if (mpi.rank == 0) std::cout << "placing new blockmodel in the middle (index 1)" << std::endl;
         } else {
-            if (this->blockmodels[1].getNum_blocks() < blockmodel.getNum_blocks()) {
+            if (this->blockmodels[1].num_blocks() < blockmodel.num_blocks()) {
                 index = 2;
                 if (mpi.rank == 0) std::cout << "placing new blockmodel in the end (index 2)" << std::endl;
             } else {

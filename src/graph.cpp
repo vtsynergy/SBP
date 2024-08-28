@@ -78,9 +78,9 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
         args.undirected = true;
     }
     // Find index at which edges start
-    long index = 0;
+    ulong index = 0;
     long num_vertices, num_edges;
-    for (long i = 0; i < csv_contents.size(); ++i) {
+    for (ulong i = 0; i < csv_contents.size(); ++i) {
         const std::vector<std::string> &line = csv_contents[i];
 //        std::cout << "line: ";
 //        utils::print<std::string>(line);
@@ -97,7 +97,7 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
     NeighborList out_neighbors;
     NeighborList in_neighbors;
     std::vector<bool> self_edges = utils::constant<bool>(num_vertices, false);
-    for (long i = index; i < csv_contents.size(); ++i) {
+    for (ulong i = index; i < csv_contents.size(); ++i) {
         const std::vector<std::string> &edge = csv_contents[i];
         long from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         long to = std::stoi(edge[1]) - 1;
@@ -187,7 +187,7 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
         utils::insert_nodup(out_neighbors, from , to);
         utils::insert_nodup(in_neighbors, to, from);
-        while (self_edges.size() < num_vertices) {
+        while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
         if (from == to) {
@@ -212,7 +212,7 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         utils::insert_nodup(out_neighbors, from , to);
         if (from != to)
             utils::insert_nodup(out_neighbors, to, from);
-        while (self_edges.size() < num_vertices) {
+        while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
         if (from == to) {
@@ -267,7 +267,7 @@ void Graph::degree_product_sort() {
 //    double start_t = MPI_Wtime();
     std::vector<std::pair<std::pair<long, long>, long>> edge_info = this->sorted_edge_list();
     MapVector<bool> selected;
-    int num_to_select = int(args.mh_percent * this->_num_vertices);
+    auto num_to_select = size_t(args.mh_percent * this->_num_vertices);
     int edge_index = 0;
     while (selected.size() < num_to_select) {
         const std::pair<std::pair<long, long>, long> &edge = edge_info[edge_index];

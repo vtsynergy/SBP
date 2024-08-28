@@ -18,10 +18,10 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<double> &split_
         std::cout << "the argsort result = " << std::endl;
         utils::print<long>(sorted_splits);
     }
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     std::vector<long> translator = utils::range<long>(0, num_blocks);
     // Build translator, increasing new block id until reaching target
-    for (int index = (int) blockmodel.getNum_blocks() - 1; index > -1; --index) {
+    for (int index = (int) blockmodel.num_blocks() - 1; index > -1; --index) {
         long block = sorted_splits[index];
         double dE = split_entropy[block];
         // If split was invalid for some reason, skip. Technically, this could be a break to save some cycles, but
@@ -40,7 +40,7 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<double> &split_
         }
     }
     // Update block counts
-    blockmodel.setNum_blocks(num_blocks);
+    blockmodel.num_blocks(num_blocks);
 }
 
 TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTriplet &blockmodel_triplet,
@@ -52,15 +52,15 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTrip
     blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(2));
     while (!sbp::dist::done_blockmodeling(blockmodel, gr_blockmodel_triplet)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
-                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+            std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
+                      << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
             blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, false);
         else if (args.algorithm == "hybrid_mcmc")
@@ -70,9 +70,10 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTrip
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         timers::total_time += MPI_Wtime() - start_bm;
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     }
     return blockmodel;
 }
@@ -98,9 +99,10 @@ Blockmodel run(Graph &graph) {
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
     TwoHopBlockmodel blockmodel(1, graph, 1.5, initial_memberships);
-    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
-    utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph));
+    utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph),
+                                blockmodel.num_blocks());
     DistDivisiveBlockmodelTriplet blockmodel_triplet = DistDivisiveBlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
@@ -108,18 +110,19 @@ Blockmodel run(Graph &graph) {
         std::cout << "============= Block sizes ============" << std::endl;
         utils::print<long>(blockmodel.block_sizes());
         if (blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Splitting blocks up from " << blockmodel.getNum_blocks() << " to "
+            std::cout << "Splitting blocks up from " << blockmodel.num_blocks() << " to "
                       << blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = dist::split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
         std::cout << "============== Block sizes after split" << std::endl;
         utils::print<long>(blockmodel.block_sizes());
-        std::cout << "============== num blocks after split = " << blockmodel.getNum_blocks() << std::endl;
+        std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
         if (iteration < 1) {
             double mdl = entropy::nonparametric::mdl(blockmodel, graph);
-            utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
+            utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                        blockmodel.num_blocks());
         }
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start = MPI_Wtime();
         if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
@@ -130,9 +133,9 @@ Blockmodel run(Graph &graph) {
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
         timers::MCMC_time += MPI_Wtime() - start;
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
-        blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     }
     if (args.mix)
         blockmodel = dist::continue_agglomerative(graph, blockmodel_triplet, iteration);
@@ -142,7 +145,7 @@ Blockmodel run(Graph &graph) {
 
 TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &graph, int target_num_communities) {
     // TODO: figure out how to communicate best splits across nodes AND selectively process blocks
-    auto num_blocks = (int) blockmodel.getNum_blocks();
+    auto num_blocks = (int) blockmodel.num_blocks();
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
     std::vector<omp_lock_t> locks(num_blocks);

@@ -144,7 +144,7 @@ std::vector<long> DictMatrix::getrow(long row) const {
     // but, this could be not thread safe
     // for (long row_index = 0; row_index < this->nrows; ++row_index) {
     const MapVector<long> &matrix_row = this->matrix[row];
-    for (const std::pair<long, long> element : matrix_row) {
+    for (const LongEntry &element : matrix_row) {
         row_values[element.first] = element.second;
     }
     // for (long col = 0; col < ncols; ++col) {

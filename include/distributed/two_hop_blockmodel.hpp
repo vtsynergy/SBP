@@ -33,11 +33,11 @@ public:
     TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
             : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // If the block assignment is not provided, use round-robin assignment
-        this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-        for (long i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {  // round-robin work mapping
+        this->_my_blocks = utils::constant<bool>(this->_num_blocks, false);
+        for (long i = mpi.rank; i < this->_num_blocks; i += mpi.num_processes) {  // round-robin work mapping
             this->_my_blocks[i] = true;
         }
-        this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);  // no distribution
+        this->_in_two_hop_radius = utils::constant<bool>(this->_num_blocks, true);  // no distribution
         this->initialize_edge_counts(graph);
     }
     TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate,

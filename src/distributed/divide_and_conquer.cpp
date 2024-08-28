@@ -24,7 +24,7 @@ std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vect
     while (vertex_lists.size() > 4) {  // Magic number = 4 taken from iHeartGraph code
         std::vector<std::vector<long>> new_rank_vertices;
         std::vector<std::vector<long>> new_rank_assignment;
-        for (int piece = 0; piece < vertex_lists.size(); piece += 2) {
+        for (size_t piece = 0; piece < vertex_lists.size(); piece += 2) {
             if (piece == vertex_lists.size() - 1) {  // num pieces is odd, and this is last piece
                 new_rank_vertices.push_back(vertex_lists[piece]);
                 new_rank_assignment.push_back(assignment_lists[piece]);
@@ -45,8 +45,8 @@ std::vector<long> combine_partitions(const Graph &graph, long &offset, std::vect
     }
     // Merge remaining blockmodels together
     std::vector<long> combined_assignment = utils::constant<long>(graph.num_vertices(), -1);
-    for (int piece = 0; piece < vertex_lists.size(); ++piece) {
-        for (int index = 0; index < vertex_lists[piece].size(); ++index) {
+    for (size_t piece = 0; piece < vertex_lists.size(); ++piece) {
+        for (size_t index = 0; index < vertex_lists[piece].size(); ++index) {
             long vertex_index = vertex_lists[piece][index];
             long assignment = assignment_lists[piece][index] + offset;
             combined_assignment[vertex_index] = assignment;
@@ -60,7 +60,7 @@ std::vector<long> combine_two_blockmodels(const std::vector<long> &combined_vert
                                           const std::vector<long> &assignment_a,
                                           const std::vector<long> &assignment_b, const Graph &original_graph) {
     std::vector<long> combined_mapping = utils::constant<long>(original_graph.num_vertices(), -1);
-    for (int index = 0; index < combined_vertices.size(); ++index) {
+    for (long index = 0; index < (long) combined_vertices.size(); ++index) {
         long true_vertex_index = combined_vertices[index];
         combined_mapping[true_vertex_index] = index;
     }
@@ -96,15 +96,15 @@ Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
     auto iteration = (double) timers::partial_profiles.size();
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
-                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+            std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
+                      << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
             blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
         else if (args.algorithm == "hybrid_mcmc")
@@ -114,9 +114,10 @@ Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         timers::total_time += MPI_Wtime() - start_bm;
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph));
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     }
     return blockmodel;
 }
@@ -132,7 +133,7 @@ Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subg
         merge_from_blocks = utils::range<long>(my_num_blocks, partner_num_blocks);
         merge_to_blocks = utils::range<long>(0, my_num_blocks);
     }
-    std::vector<long> block_map = utils::range<long>(0, blockmodel.getNum_blocks());
+    std::vector<long> block_map = utils::range<long>(0, blockmodel.num_blocks());
     for (long merge_from : merge_from_blocks) {
         best_merges[merge_from] = std::make_pair<long, double>(-1, std::numeric_limits<double>::max());
         for (long merge_to : merge_to_blocks) {
@@ -144,8 +145,8 @@ Blockmodel merge_blocks(const Blockmodel &blockmodel, const sample::Sample &subg
             long k = k_out + k_in;
             utils::ProposalAndEdgeCounts proposal{merge_to, k_out, k_in, k};
             Delta delta = block_merge::blockmodel_delta(merge_from, proposal.proposal, blockmodel);
-            long proposed_block_self_edges = blockmodel.blockmatrix()->get(merge_to, merge_to)
-                                             + delta.get(merge_to, merge_to);
+//            long proposed_block_self_edges = blockmodel.blockmatrix()->get(merge_to, merge_to)
+//                                             + delta.get(merge_to, merge_to);
             double dE = entropy::block_merge_delta_mdl(merge_from, proposal, blockmodel, delta);
             if (dE < best_merges[merge_from].second) {
                 best_merges[merge_from] = std::make_pair(merge_to, dE);

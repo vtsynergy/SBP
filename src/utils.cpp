@@ -202,11 +202,7 @@ void radix_sort(std::vector<std::pair<long, long>> &v) {
     }
 }
 
-void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl) {
-//    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph);
-//    double modularity = -1;
-//    if (iteration == -1)
-//        modularity = graph.modularity(blockmodel.block_assignment());
+void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl, long num_blocks) {
     PartialProfile intermediate {};
     intermediate.iteration = iteration;
     intermediate.mdl = mdl;
@@ -227,6 +223,7 @@ void save_partial_profile(double iteration, double modularity, double mdl, doubl
     intermediate.access_time = timers::Blockmodel_access_time;
     intermediate.total_time = timers::total_time;
     intermediate.update_assignment = timers::Blockmodel_update_assignment;
+    intermediate.num_blocks = num_blocks;
     timers::partial_profiles.push_back(intermediate);
     if (mpi.rank == 0)
         std::cout << "Iteration " << iteration << " MDL: " << mdl << " normalized MDL: " << norm_mdl

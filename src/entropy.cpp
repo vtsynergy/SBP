@@ -432,7 +432,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
     std::vector<long> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
     // Fill Arrays
     long index = 0;
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     const std::vector<long> &current_block_degrees = blockmodel.degrees();
     for (auto const &entry: block_counts) {
         counts[index] = entry.second;
@@ -478,7 +478,7 @@ double hastings_correction(const Blockmodel &blockmodel, EdgeWeights &out_blocks
     std::vector<long> proposal_col = blockmodel.blockmatrix()->getcol(proposal.proposal);
     // Fill Arrays
     long index = 0;
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     const std::vector<long> &current_block_degrees = blockmodel.degrees();
     for (auto const &entry: block_counts) {
         counts[index] = entry.second;
@@ -524,7 +524,7 @@ double hastings_correction(long vertex, const Graph &graph, const Blockmodel &bl
     const MapVector<long> &proposal_col = blockmodel.blockmatrix()->getcol_sparseref(proposal.proposal);
     // Fill Arrays
     long index = 0;
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     const std::vector<long> &current_block_degrees = blockmodel.degrees();
     for (auto const &entry: block_counts) {
         counts[index] = entry.second;
@@ -550,7 +550,7 @@ double hastings_correction(long vertex, const Graph &graph, const Blockmodel &bl
             long degree_in = blockmodel.degrees_in(proposal.proposal) + proposal.num_in_neighbor_edges;
             new_block_degree = degree_out + degree_in - proposed_block_self_edges;
         }
-//        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + num_blocks;
+//        proposal_degrees[index] = new_block_degrees.block_degrees[entry.first] + _num_blocks;
         proposal_degrees[index] = new_block_degree + num_blocks;
         index++;
     }
@@ -598,18 +598,18 @@ double mdl(const Blockmodel &blockmodel, const Graph &graph) {
     if (args.nonparametric)
         return nonparametric::mdl(blockmodel, graph);
     double log_posterior_p = blockmodel.log_posterior_probability();
-    double x = pow(blockmodel.getNum_blocks(), 2) / graph.num_edges();
+    double x = pow(blockmodel.num_blocks(), 2) / graph.num_edges();
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (graph.num_edges() * h) + (graph.num_vertices() * log(blockmodel.getNum_blocks())) - log_posterior_p;
+    return (graph.num_edges() * h) + (graph.num_vertices() * log(blockmodel.num_blocks())) - log_posterior_p;
 }
 
 namespace dist {
 
 double mdl(const TwoHopBlockmodel &blockmodel, long num_vertices, long num_edges) {
     double log_posterior_p = blockmodel.log_posterior_probability();
-    double x = pow(blockmodel.getNum_blocks(), 2) / num_edges;
+    double x = pow(blockmodel.num_blocks(), 2) / num_edges;
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
-    return (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+    return (num_edges * h) + (num_vertices * log(blockmodel.num_blocks())) - log_posterior_p;
 }
 
 }  // namespace dist
@@ -625,7 +625,7 @@ double get_deg_entropy(const Graph &graph, long vertex) {  // , const simple_deg
 double sparse_entropy(const Blockmodel &blockmodel, const Graph &graph) {
     double S = 0;
 
-    for (long source = 0; source < blockmodel.getNum_blocks(); ++source) {
+    for (long source = 0; source < blockmodel.num_blocks(); ++source) {
         const MapVector<long> &row = blockmodel.blockmatrix()->getrow_sparseref(source);
         for (const std::pair<long, long> &entry : row) {
             long destination = entry.first;
@@ -635,7 +635,7 @@ double sparse_entropy(const Blockmodel &blockmodel, const Graph &graph) {
             assert(!std::isnan(S));        }
     }
 
-    for (long block = 0; block < blockmodel.getNum_blocks(); ++block) {
+    for (long block = 0; block < blockmodel.num_blocks(); ++block) {
         S += vterm_exact(blockmodel.degrees_out(block), blockmodel.degrees_in(block), blockmodel.block_size(block));
         assert(!std::isinf(S));
         assert(!std::isnan(S));    }
@@ -711,7 +711,7 @@ double get_deg_dl_dist(const Blockmodel &blockmodel) { // Rs&& rs, Ks&& ks) {  /
 
     double S = 0;
 
-    for (int block = 0; block < blockmodel.getNum_blocks(); ++block) {
+    for (int block = 0; block < blockmodel.num_blocks(); ++block) {
         S += log_q(blockmodel.degrees_out(block), blockmodel.block_size(block));
         S += log_q(blockmodel.degrees_in(block), blockmodel.block_size(block));
         size_t total = 0;

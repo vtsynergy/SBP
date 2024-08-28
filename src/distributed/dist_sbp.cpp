@@ -65,7 +65,7 @@ void record_runtime_imbalance() {
             }
         }
     }
-    for (long iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
+    for (size_t iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
         file << iteration << ", ";
         for (long rank = 0; rank < mpi.num_processes; ++rank) {
             size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
@@ -104,27 +104,27 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         omp_set_num_threads(omp_get_num_procs());
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
-    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     if (mpi.rank == 0)
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
-                  << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
+                  << " and " << blockmodel.num_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
     long iteration = 0;
     while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
-                (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
+                (blockmodel_triplet.get(0).num_blocks() > 1 && blockmodel_triplet.get(1).num_blocks() <= 1)) {
                 blockmodel_triplet.status();
                 blockmodel = blockmodel_triplet.get(0).copy();
                 break;
             }
         }
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
-                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+            std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
+                      << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
             blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
@@ -133,14 +133,14 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         else
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         iteration++;
     }
     double modularity = -1;
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());
     double mdl = blockmodel.getOverall_entropy();
-    utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph));
+    utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph), blockmodel.num_blocks());
 //    record_runtime_imbalance();
     return blockmodel;
 }
@@ -148,7 +148,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
 bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet, long min_num_blocks) {
     if (mpi.rank == 0) std::cout << "distributed done_blockmodeling" << std::endl;
     if (min_num_blocks > 0) {
-        if ((blockmodel.getNum_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
+        if ((blockmodel.num_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
             return true;
         }
     }

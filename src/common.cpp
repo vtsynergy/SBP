@@ -143,7 +143,7 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
     long k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
     long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     long k = k_out + k_in;
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     // If the current block has no neighbors, propose merge with random block
     if (k == 0) {
         long proposal = propose_random_block(current_block, num_blocks);
@@ -158,8 +158,8 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
     }
 
     // With a probability inversely proportional to block degree, propose a random block merge
-    /* if (rng::generate() <= (num_blocks / ((double) blockmodel.degrees(neighbor_block) + num_blocks))) {
-        long proposal = propose_random_block(current_block, num_blocks);
+    /* if (rng::generate() <= (_num_blocks / ((double) blockmodel.degrees(neighbor_block) + _num_blocks))) {
+        long proposal = propose_random_block(current_block, _num_blocks);
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     } */
 
@@ -197,8 +197,8 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
 }
 
 long propose_random_block(long current_block, long num_blocks) {
-    // Generate numbers 0..num_blocks-2 in order to exclude the current block
-    // std::uniform_int_distribution<long> distribution(0, num_blocks - 2);
+    // Generate numbers 0.._num_blocks-2 in order to exclude the current block
+    // std::uniform_int_distribution<long> distribution(0, _num_blocks - 2);
     // long proposed = distribution(rng::generator());
     long proposed = candidates(rng::generator());
     if (proposed >= current_block) {

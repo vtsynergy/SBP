@@ -67,7 +67,7 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
@@ -213,7 +213,7 @@ TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, bool g
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
@@ -284,7 +284,7 @@ TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
     // MPI Datatype init
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;

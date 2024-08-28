@@ -31,7 +31,7 @@ bool accept(double delta_entropy, double hastings_correction) {
 
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {
     std::cout << "Asynchronous Gibbs iteration" << std::endl;
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
@@ -144,7 +144,7 @@ Delta blockmodel_delta(long vertex, long current_block, long proposed_block, con
 
 std::pair<std::vector<long>, long> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel) {
     const std::vector<long> &low_degree_vertices = graph.low_degree_vertices();
-    std::vector<long> result = utils::constant<long>(blockmodel.getNum_blocks(), 0);
+    std::vector<long> result = utils::constant<long>(blockmodel.num_blocks(), 0);
     long total = 0;
     for (long vertex : low_degree_vertices) {
         long block = blockmodel.block_assignment(vertex);
@@ -371,7 +371,7 @@ VertexMove_v3 eval_vertex_move_v3(long vertex, long current_block, utils::Propos
 
 Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {
         std::cout << "Hybrid MCMC iteration" << std::endl;
-        if (blockmodel.getNum_blocks() == 1) {
+        if (blockmodel.num_blocks() == 1) {
             return blockmodel;
         }
         std::vector<double> delta_entropies;
@@ -470,7 +470,7 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
 
 Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {
     std::cout << "Hybrid MCMC iteration" << std::endl;
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
@@ -548,12 +548,12 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_neighbors) {
     // Decide which blocks each thread is responsible for
     long thread_id = omp_get_thread_num();
-    std::vector<bool> my_blocks = utils::constant<bool>(blockmodel.getNum_blocks(), false);
-    for (long i = thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
+    std::vector<bool> my_blocks = utils::constant<bool>(blockmodel.num_blocks(), false);
+    for (long i = thread_id; i < blockmodel.num_blocks(); i += 2 * omp_get_max_threads()) {
         long block = block_neighbors[i].first;
         my_blocks[block] = true;
     }
-    for (long i = 2 * omp_get_max_threads() - 1 - thread_id; i < blockmodel.getNum_blocks(); i += 2 * omp_get_max_threads()) {
+    for (long i = 2 * omp_get_max_threads() - 1 - thread_id; i < blockmodel.num_blocks(); i += 2 * omp_get_max_threads()) {
         long block = block_neighbors[i].first;
         my_blocks[block] = true;
     }
@@ -617,7 +617,7 @@ std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<st
 
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {
     std::cout << "Metropolis hastings iteration" << std::endl;
-    if (blockmodel.getNum_blocks() == 1) {
+    if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
     std::vector<double> delta_entropies;
@@ -764,7 +764,7 @@ VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, c
 
 std::vector<std::pair<long, long>> sort_blocks_by_neighbors(const Blockmodel &blockmodel) {
     std::vector<std::pair<long, long>> block_neighbors;
-    for (long i = 0; i < blockmodel.getNum_blocks(); ++i) {
+    for (long i = 0; i < blockmodel.num_blocks(); ++i) {
         block_neighbors.emplace_back(std::make_pair(i, blockmodel.blockmatrix()->distinct_edges(i)));
     }
     utils::radix_sort(block_neighbors);
@@ -776,7 +776,7 @@ std::vector<std::pair<long, long>> sort_blocks_by_neighbors(const Blockmodel &bl
 
 std::vector<std::pair<long, long>> sort_blocks_by_size(const Blockmodel &blockmodel) {
     std::vector<std::pair<long,long>> block_sizes;
-    for (long i = 0; i < blockmodel.getNum_blocks(); ++i) {
+    for (long i = 0; i < blockmodel.num_blocks(); ++i) {
         block_sizes.emplace_back(std::make_pair(i, 0));
     }
     for (const long &block : blockmodel.block_assignment()) {
@@ -811,7 +811,7 @@ std::vector<std::pair<long,long>> sort_vertices_by_degree(const Graph &graph) {
 //        std::cout << "nan in log posterior" << std::endl;
 //        exit(-5000);
 //    }
-//    double x = blockmodel.getNum_blocks() * (blockmodel.getNum_blocks() + 1.0) / (2.0 * num_edges);
+//    double x = blockmodel.getNum_blocks() * (blockmodel.num_blocks() + 1.0) / (2.0 * num_edges);
 //    if (std::isnan(x)) {
 //        std::cout << "nan in X" << std::endl;
 //        exit(-5000);
@@ -825,9 +825,9 @@ std::vector<std::pair<long,long>> sort_vertices_by_degree(const Graph &graph) {
 //    if (std::isnan(h)) {
 //        exit(-5000);
 //    }
-//    double first = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks()));
+//    double first = (num_edges * h) + (num_vertices * log(blockmodel.num_blocks()));
 //    std::cout << "first: " << first << " log_posterior: " << log_posterior_p << std::endl;
-//    double result = (num_edges * h) + (num_vertices * log(blockmodel.getNum_blocks())) - log_posterior_p;
+//    double result = (num_edges * h) + (num_vertices * log(blockmodel.num_blocks())) - log_posterior_p;
 //    if (std::isnan(result)) {
 //        std::cout << "nan in result" << std::endl;
 //        exit(-5000);

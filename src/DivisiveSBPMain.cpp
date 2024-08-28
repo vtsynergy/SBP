@@ -55,7 +55,8 @@ void run(Partition &partition) {
         partition.blockmodel = divisive::run(partition.graph);
     }
     double mdl = partition.blockmodel.getOverall_entropy();
-    utils::save_partial_profile(-1, -1, mdl, entropy::normalize_mdl_v1(mdl, partition.graph));
+    utils::save_partial_profile(-1, -1, mdl, entropy::normalize_mdl_v1(mdl, partition.graph),
+                                partition.blockmodel.num_blocks());
 }
 
 int main(int argc, char* argv[]) {

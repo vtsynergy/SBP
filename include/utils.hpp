@@ -321,7 +321,7 @@ template <typename T> inline void print_short(const std::vector<T> &vector) {
 }
 
 /// Adds PartialProfile results to be later saved in a CSV file.
-void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl);
+void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl, long num_blocks);
 
 /// Write the block assignment to JSON
 void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,

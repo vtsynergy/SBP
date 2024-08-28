@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     double finetune_start_t = MPI_Wtime();
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
-              << partition.blockmodel.getNum_blocks() << std::endl;
+              << partition.blockmodel.num_blocks() << std::endl;
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
     std::vector<long> local_vertices, local_assignment;
@@ -138,7 +138,8 @@ int main(int argc, char* argv[]) {
         if (args.modularity)
             modularity = graph.modularity(blockmodel.block_assignment());
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph));
+        utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         // Evaluate finetuned assignment
         double end = MPI_Wtime();
         dnc::evaluate_partition(graph, blockmodel, end - start);

@@ -46,33 +46,33 @@ typedef struct sparse_edge_count_updates_t {
 class Blockmodel {
   public:
     Blockmodel() : empty(true) {
-        this->num_blocks = 0;
+        this->_num_blocks = 0;
         this->block_reduction_rate = 0.0;
         this->num_blocks_to_merge = 0;
         this->_num_nonempty_blocks = 0;
         this->overall_entropy = std::numeric_limits<double>::max();
     }
     Blockmodel(long num_blocks, double block_reduction_rate) : empty(false) {
-        this->num_blocks = num_blocks;
+        this->_num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<double>::max();
         this->_num_nonempty_blocks = num_blocks;
         if (args.transpose) {
-            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, 36);
+            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, 36);
         } else {
-            this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+            this->_blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
         }
-        // Set the block assignment to be the range [0, this->num_blocks)
-        this->_block_assignment = utils::range<long>(0, this->num_blocks);
+        // Set the block assignment to be the range [0, this->_num_blocks)
+        this->_block_assignment = utils::range<long>(0, this->_num_blocks);
         // Set the block sizes to be 0 (empty blocks)
-        this->_block_sizes = utils::constant<long>(this->num_blocks, 0);
+        this->_block_sizes = utils::constant<long>(this->_num_blocks, 0);
         // Number of blocks to merge
         if (DIVISIVE_SBP) {
 //            std::cout << "Running divisive SBP" << std::endl;
-            this->num_blocks_to_merge = (long) (ceil(this->num_blocks * this->block_reduction_rate));
+            this->num_blocks_to_merge = (long) (ceil(this->_num_blocks * this->block_reduction_rate));
         } else {
 //            std::cout << "Running agglomerative SBP, boo..." << std::endl;
-            this->num_blocks_to_merge = (long) (this->num_blocks * this->block_reduction_rate);
+            this->num_blocks_to_merge = (long) (this->_num_blocks * this->block_reduction_rate);
         }
     }
     Blockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
@@ -181,6 +181,8 @@ class Blockmodel {
     long degrees_out(long block) const { return this->_block_degrees_out[block]; }
     void degrees_out(long block, long value) { this->_block_degrees_out[block] = value; }
     void degrees_out(std::vector<long> block_degrees_out) { this->_block_degrees_out = block_degrees_out; }
+    long num_blocks() const { return this->_num_blocks; }
+    void num_blocks(long num_blocks) { this->_num_blocks = num_blocks; }
     long num_nonempty_blocks() const { return this->_num_nonempty_blocks; }
     /// Returns the out-degree histogram for block `block`.
     const MapVector<long> &out_degree_histogram(long block) const { return this->_out_degree_histogram[block]; }
@@ -192,14 +194,12 @@ class Blockmodel {
     void setOverall_entropy(double overall_entropy) { this->overall_entropy = overall_entropy; }
     long &getNum_blocks_to_merge() { return this->num_blocks_to_merge; }
     void setNum_blocks_to_merge(long num_blocks_to_merge) { this->num_blocks_to_merge = num_blocks_to_merge; }
-    long getNum_blocks() const { return this->num_blocks; }
-    void setNum_blocks(long num_blocks) { this->num_blocks = num_blocks; }
     // Other
     bool empty;
 
   protected:
     // Structure
-    long num_blocks;
+    long _num_blocks;
     long _num_nonempty_blocks;
     std::shared_ptr<ISparseMatrix> _blockmatrix;
 //    ISparseMatrix *_blockmatrix;

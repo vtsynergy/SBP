@@ -54,6 +54,7 @@ struct PartialProfile {
     double access_time = 0.0;
     double update_assignment = 0.0;
     double total_time = 0.0;
+    long num_blocks = 0;
 };
 
 /// Used to hash a pair of integers. Source: https://codeforces.com/blog/entry/21853

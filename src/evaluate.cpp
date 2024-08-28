@@ -128,18 +128,18 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     std::cout << "Blockmodel correctness evaluation" << std::endl;
     std::cout << "Number of vertices: " << graph.num_vertices() << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
-    std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
+    std::cout << "Number of communities in alg. assignment: " << blockmodel.num_blocks() << std::endl;
     std::vector<long> rows, cols;
     long nrows, ncols;
-    if (num_true_communities < blockmodel.getNum_blocks()) {
+    if (num_true_communities < blockmodel.num_blocks()) {
         rows = true_assignment;
         cols = blockmodel.block_assignment();
         nrows = num_true_communities;
-        ncols = blockmodel.getNum_blocks();
+        ncols = blockmodel.num_blocks();
     } else {
         rows = blockmodel.block_assignment();
         cols = true_assignment;
-        nrows = blockmodel.getNum_blocks();
+        nrows = blockmodel.num_blocks();
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
@@ -175,7 +175,7 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     }
 
     // Make sure rows represent algorithm communities, columns represent true communities
-    if (num_true_communities < blockmodel.getNum_blocks()) {
+    if (num_true_communities < blockmodel.num_blocks()) {
         Hungarian::Matrix transpose_contingency_table(ncols, std::vector<int>(nrows, 0));
         for (long row = 0; row < nrows; ++row) {
             for (long col = 0; col < ncols; ++col) {
@@ -204,12 +204,6 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
 }
 
 void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
-//    std::vector<PartialProfile> &partial_profiles = timers::partial_profiles;
-//    if (mpi.num_processes > 1) {
-//        timers::partial_profiles = sbp::dist::get_intermediates();
-//    } else {
-//        timers::partial_profiles = sbp::get_intermediates();
-//    }
     std::ostringstream filepath_stream;
     filepath_stream << args.csv << args.numvertices;
     std::string filepath_dir = filepath_stream.str();
@@ -221,26 +215,26 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
     std::ofstream file;
     file.open(filepath, std::ios_base::app);
     if (!file_exists) {
-        file << "tag, numvertices, numedges, overlap, blocksizevar, undirected, algorithm, iteration, mdl, "
-             << "normalized_mdl_v1, sample_size, modularity, f1_score, nmi, true_mdl, true_mdl_v1, sampling_algorithm, "
-             << "runtime, sampling_time, sample_extend_time, finetune_time, mcmc_iterations, mcmc_time, "
-             << "sequential_mcmc_time, parallel_mcmc_time, vertex_move_time, mcmc_moves, total_num_islands, "
-             << "block_merge_time, block_merge_loop_time, blockmodel_build_time, finetune_time, "
-             << "sort_time, load_balancing_time, access_time, update_assignmnet, total_time" << std::endl;
+        file << "tag,numvertices,numedges,overlap,blocksizevar,undirected,algorithm,iteration,mdl,"
+             << "normalized_mdl_v1,sample_size,modularity,f1_score,nmi,num_blocks,true_mdl,true_mdl_v1,"
+             << "sampling_algorithm,runtime,sampling_time,sample_extend_time,finetune_time,mcmc_iterations,mcmc_time,"
+             << "sequential_mcmc_time,parallel_mcmc_time,vertex_move_time,mcmc_moves,total_num_islands,"
+             << "block_merge_time,block_merge_loop_time,blockmodel_build_time,finetune_time,sort_time,"
+             << "load_balancing_time,access_time,update_assignment,total_time" << std::endl;
     }
     for (const PartialProfile &temp : timers::partial_profiles) {
-        file << args.tag << ", " << graph.num_vertices() << ", " << graph.num_edges() << ", " << args.overlap << ", "
-             << args.blocksizevar << ", " << args.undirected << ", " << args.algorithm << ", " << temp.iteration << ", "
-             << temp.mdl << ", " << temp.normalized_mdl_v1 << ", " << args.samplesize << ", "
-             << temp.modularity << ", " << eval.f1_score << ", " << eval.nmi << ", " << eval.true_mdl << ", "
-             << entropy::normalize_mdl_v1(eval.true_mdl, graph) << ", "
-             << args.samplingalg << ", " << runtime << ", " << timers::sample_time << ", "
-             << timers::sample_extend_time << ", " << timers::sample_finetune_time << ", " << temp.mcmc_iterations << ", "
-             << temp.mcmc_time << ", " << temp.mcmc_sequential_time << ", " << temp.mcmc_parallel_time << ", "
-             << temp.mcmc_vertex_move_time << ", " << temp.mcmc_moves << ", " << timers::total_num_islands << ", "
-             << temp.block_merge_time << ", " << temp.block_merge_loop_time << ", "
-             << temp.blockmodel_build_time << ", " << temp.finetune_time << ", " << temp.sort_time << ", "
-             << temp.load_balancing_time << ", " << temp.access_time << ", " << temp.update_assignment << ", "
+        file << args.tag << "," << graph.num_vertices() << "," << graph.num_edges() << "," << args.overlap << ","
+             << args.blocksizevar << "," << args.undirected << "," << args.algorithm << "," << temp.iteration << ","
+             << temp.mdl << "," << temp.normalized_mdl_v1 << "," << args.samplesize << ","
+             << temp.modularity << "," << eval.f1_score << "," << eval.nmi << "," << temp.num_blocks << ","
+             << eval.true_mdl << "," << entropy::normalize_mdl_v1(eval.true_mdl, graph) << ","
+             << args.samplingalg << "," << runtime << "," << timers::sample_time << ","
+             << timers::sample_extend_time << "," << timers::sample_finetune_time << "," << temp.mcmc_iterations << ","
+             << temp.mcmc_time << "," << temp.mcmc_sequential_time << "," << temp.mcmc_parallel_time << ","
+             << temp.mcmc_vertex_move_time << "," << temp.mcmc_moves << "," << timers::total_num_islands << ","
+             << temp.block_merge_time << "," << temp.block_merge_loop_time << ","
+             << temp.blockmodel_build_time << "," << temp.finetune_time << "," << temp.sort_time << ","
+             << temp.load_balancing_time << "," << temp.access_time << "," << temp.update_assignment << ","
              << temp.total_time << std::endl;
     }
     file.close();

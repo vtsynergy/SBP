@@ -50,7 +50,7 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
     long num_merged = 0;
     // Block map is here so that, if you move merge block A to block C, and then block B to block A, all three blocks
     // end up with the same block assignment (C)
-    std::vector<long> block_map = utils::range<long>(0, blockmodel.getNum_blocks());
+    std::vector<long> block_map = utils::range<long>(0, blockmodel.num_blocks());
     while (num_merged < blockmodel.getNum_blocks_to_merge() && !queue.empty()) {
         merge_t merge = queue.top();
         queue.pop();
@@ -110,7 +110,7 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
         long new_block_index = mapping[block];
         blockmodel.set_block_assignment(i, new_block_index);
     }
-    blockmodel.setNum_blocks(blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge());
+    blockmodel.num_blocks(blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge());
 }
 
 EdgeCountUpdates edge_count_updates(std::shared_ptr<ISparseMatrix> blockmodel, long current_block, long proposed_block,
@@ -175,7 +175,7 @@ void edge_count_updates_sparse(ISparseMatrix *blockmodel, long current_block, lo
 Blockmodel &merge_blocks(Blockmodel &blockmodel, const Graph &graph, long num_edges) {
     assert(blockmodel.blockmatrix()->edges() == graph.num_edges());
     // TODO: add block merge timings to evaluation
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     std::vector<long> best_merge_for_each_block = utils::constant<long>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());

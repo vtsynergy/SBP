@@ -36,9 +36,9 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     MPI_Type_create_struct(3, merge_blocklengths, merge_displacements, merge_types, &Merge_t);
     MPI_Type_commit(&Merge_t);
     // MPI Datatype init
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
     std::vector<long> block_assignment = utils::range<long>(0, num_blocks);
-    // long my_blocks = ceil(((double) num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
+    // long my_blocks = ceil(((double) _num_blocks - (double) mpi.rank) / (double) mpi.num_processes);
     // merge_buffer stores best Merges as if all blocks are owned by this MPI rank. Used to avoid locks
     std::vector<Merge> merge_buffer(num_blocks);
     // long num_avoided = 0;  // number of avoided/skipped calculations
@@ -47,7 +47,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     #pragma omp parallel for schedule(dynamic) default(none) \
     shared(num_blocks, blockmodel, my_blocks, graph, block_assignment, merge_buffer) // reduction( + : num_avoided)
     for (long current_block = 0; current_block < num_blocks; ++current_block) {
-        // for (long current_block = mpi.rank; current_block < num_blocks; current_block += mpi.num_processes) {
+        // for (long current_block = mpi.rank; current_block < _num_blocks; current_block += mpi.num_processes) {
         if (!blockmodel.owns_block(current_block)) continue;
         #pragma omp atomic update
         my_blocks++;

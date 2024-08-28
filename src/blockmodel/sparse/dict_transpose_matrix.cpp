@@ -95,7 +95,7 @@ std::vector<long> DictTransposeMatrix::getcol(long col) const {
     check_col_bounds(col);
     std::vector<long> col_values(this->nrows, 0);
     const MapVector<long> &matrix_col = this->matrix_transpose[col];
-    for (const std::pair<long, long> element : matrix_col) {
+    for (const LongEntry &element : matrix_col) {
         col_values[element.first] = element.second;
     }
     return col_values;
@@ -129,7 +129,7 @@ std::vector<long> DictTransposeMatrix::getrow(long row) const {
     // but, this could be not thread safe
     // for (long row_index = 0; row_index < this->nrows; ++row_index) {
     const MapVector<long> &matrix_row = this->matrix[row];
-    for (const std::pair<long, long> element : matrix_row) {
+    for (const LongEntry &element : matrix_row) {
         row_values[element.first] = element.second;
     }
     return row_values;
