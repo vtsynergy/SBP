@@ -32,10 +32,11 @@ Gen &generator() {
 }
 
 void init_generators() {
-    pcg_extras::seed_seq_from<std::random_device> seed_source;
+//    pcg_extras::seed_seq_from<std::random_device> seed_source;
 //    std::random_device seeder;
     long num_threads = args.threads;
     for (long i = 0; i < num_threads; ++i) {
+        pcg_extras::seed_seq_from<std::random_device> seed_source;
 //        Gen generator(seeder());
         Gen generator(seed_source);
         std::uniform_real_distribution<double> distribution(0.0, 1.0);
