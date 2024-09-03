@@ -45,20 +45,21 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<double> &split_
 
 TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTriplet &blockmodel_triplet,
                                         float iteration) {
+    double start_t = MPI_Wtime();
     TwoHopBlockmodel blockmodel;
     DistBlockmodelTriplet gr_blockmodel_triplet = DistBlockmodelTriplet();
     blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(0));
     blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(1));
     blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel_triplet.get(2));
     while (!sbp::dist::done_blockmodeling(blockmodel, gr_blockmodel_triplet)) {
-        if (blockmodel.getNum_blocks_to_merge() != 0) {
+        if (blockmodel.getNum_blocks_to_merge() != 0 && mpi.rank == 0) {
             std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
                       << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
-        std::cout << "Starting MCMC vertex moves" << std::endl;
+        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
@@ -68,12 +69,13 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTrip
         else // args.algorithm == "metropolis_hastings"
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, false);
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
-        timers::total_time += MPI_Wtime() - start_bm;
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
-                                    blockmodel.num_blocks());
+        long num_blocks = blockmodel.num_blocks();
         blockmodel = gr_blockmodel_triplet.get_next_blockmodel(blockmodel);
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
+        timers::total_time += MPI_Wtime() - start_t;
+        start_t = MPI_Wtime();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph), num_blocks);
     }
     return blockmodel;
 }
@@ -96,6 +98,7 @@ Blockmodel run(Graph &graph) {
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
+    double start_t = MPI_Wtime();
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     std::vector<long> initial_memberships = utils::constant<long>(graph.num_vertices(), 0);
     TwoHopBlockmodel blockmodel(1, graph, 1.5, initial_memberships);
@@ -107,16 +110,22 @@ Blockmodel run(Graph &graph) {
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
     while (dist::end_condition_not_reached(blockmodel, blockmodel_triplet)) {
-        std::cout << "============= Block sizes ============" << std::endl;
-        utils::print<long>(blockmodel.block_sizes());
-        if (blockmodel.getNum_blocks_to_merge() != 0) {
+        if (mpi.rank == 0) {
+            std::cout << "============= Block sizes ============" << std::endl;
+            utils::print<long>(blockmodel.block_sizes());
+        }
+        if (blockmodel.getNum_blocks_to_merge() != 0 && mpi.rank == 0) {
             std::cout << "Splitting blocks up from " << blockmodel.num_blocks() << " to "
                       << blockmodel.getNum_blocks_to_merge() << std::endl;
         }
+        double block_split_t = MPI_Wtime();
         blockmodel = dist::split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
-        std::cout << "============== Block sizes after split" << std::endl;
-        utils::print<long>(blockmodel.block_sizes());
-        std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
+        timers::BlockSplit_time += MPI_Wtime() - block_split_t;
+        if (mpi.rank == 0) {
+            std::cout << "============== Block sizes after split" << std::endl;
+            utils::print<long>(blockmodel.block_sizes());
+            std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
+        }
         if (iteration < 1) {
             double mdl = entropy::nonparametric::mdl(blockmodel, graph);
             utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
@@ -133,9 +142,12 @@ Blockmodel run(Graph &graph) {
             blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
         timers::MCMC_time += MPI_Wtime() - start;
         double mdl = blockmodel.getOverall_entropy();
-        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
-                                    blockmodel.num_blocks());
+        long num_blocks = blockmodel.num_blocks();
+        blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
+        timers::total_time += MPI_Wtime() - start_t;
+        start_t = MPI_Wtime();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),num_blocks);
     }
     if (args.mix)
         blockmodel = dist::continue_agglomerative(graph, blockmodel_triplet, iteration);

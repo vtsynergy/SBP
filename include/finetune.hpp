@@ -105,6 +105,9 @@ std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<st
 std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel,
                                                const std::pair<std::vector<long>, long> &block_neighbors);
 
+/// Runs one of the available MCMC algorithms.
+Blockmodel &mcmc(int iteration, const Graph &graph, Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet);
+
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 

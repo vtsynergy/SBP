@@ -102,6 +102,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
+    double start_t = MPI_Wtime();
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
@@ -109,7 +110,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
                   << " and " << blockmodel.num_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
-    long iteration = 0;
+    int iteration = 0;
     while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
@@ -123,18 +124,19 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
             std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
                       << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
+        double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
-        if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
-            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else if (args.algorithm == "hybrid_mcmc" && iteration < args.asynciterations)
-            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else
-            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+        timers::BlockMerge_time += MPI_Wtime() - start_bm;
+        double start_mcmc = MPI_Wtime();
+        blockmodel = finetune::dist::mcmc(iteration, graph, blockmodel, blockmodel_triplet);
+        timers::MCMC_time += MPI_Wtime() - start_mcmc;
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        timers::total_time += MPI_Wtime() - start_t;
+        start_t = MPI_Wtime();
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        iteration++;
     }
     double modularity = -1;
     if (args.modularity)

@@ -25,6 +25,8 @@ extern double BlockMerge_time;
 extern double BlockMerge_loop_time;
 /// The time taken to sort potential block merges.
 extern double BlockMerge_sort_time;
+/// The time taken to split blocks.
+extern double BlockSplit_time;
 /// The time taken to build the blockmodel.
 extern double BLOCKMODEL_BUILD_TIME;
 /// The time taken to sort the vertices in the blockmodel.

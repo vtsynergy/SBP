@@ -216,6 +216,7 @@ void save_partial_profile(double iteration, double modularity, double mdl, doubl
     intermediate.mcmc_moves = timers::MCMC_moves;
     intermediate.block_merge_time = timers::BlockMerge_time;
     intermediate.block_merge_loop_time = timers::BlockMerge_loop_time;
+    intermediate.block_split_time = timers::BlockSplit_time;
     intermediate.blockmodel_build_time = timers::BLOCKMODEL_BUILD_TIME;
     intermediate.finetune_time = timers::finetune_time;
     intermediate.load_balancing_time = timers::Load_balancing_time;
@@ -230,6 +231,22 @@ void save_partial_profile(double iteration, double modularity, double mdl, doubl
                   << " modularity: " << modularity << " MCMC iterations: " << timers::MCMC_iterations << " MCMC time: "
                   << timers::MCMC_time << " Block Merge time: " << timers::BlockMerge_time << " total time: "
                   << timers::total_time << std::endl;
+    timers::MCMC_iterations = 0;
+    timers::MCMC_time = 0;
+    timers::MCMC_sequential_time = 0;
+    timers::MCMC_parallel_time = 0;
+    timers::MCMC_vertex_move_time = 0;
+    timers::MCMC_moves = 0;
+    timers::BlockMerge_time = 0;
+    timers::BlockMerge_loop_time = 0;
+    timers::BlockSplit_time = 0;
+    timers::BLOCKMODEL_BUILD_TIME = 0;
+    timers::finetune_time = 0;
+    timers::Load_balancing_time = 0;
+    timers::Blockmodel_sort_time = 0;
+    timers::Blockmodel_access_time = 0;
+    timers::total_time = 0;
+    timers::Blockmodel_update_assignment = 0;
 }
 
 void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,

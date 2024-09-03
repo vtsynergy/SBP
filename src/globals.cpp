@@ -7,6 +7,7 @@ namespace timers {
 
 double BlockMerge_time = 0.0;
 double BlockMerge_loop_time = 0.0;
+double BlockSplit_time = 0.0;
 double BLOCKMODEL_BUILD_TIME = 0.0;
 double Blockmodel_sort_time = 0.0;
 double Blockmodel_access_time = 0.0;

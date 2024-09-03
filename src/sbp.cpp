@@ -18,6 +18,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
+    double start_t = MPI_Wtime();
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
     Blockmodel blockmodel(graph.num_vertices(), graph, double(BLOCK_REDUCTION_RATE));
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
@@ -43,28 +44,21 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::merge_blocks(blockmodel, graph, graph.num_edges());
-        timers::BlockMerge_time += MPI_Wtime() - start_bm;
+        timers::BlockMerge_time = MPI_Wtime() - start_bm;
         if (iteration < 1) {
             double mdl = entropy::mdl(blockmodel, graph);
             utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph), blockmodel.num_blocks());
         }
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
-            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else if (args.algorithm == "hybrid_mcmc")
-            blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else if (args.algorithm == "hybrid_mcmc_load_balanced")
-            blockmodel = finetune::hybrid_mcmc_load_balanced(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        timers::MCMC_time += MPI_Wtime() - start_mcmc;
-        timers::total_time += MPI_Wtime() - start_bm;
+        blockmodel = finetune::mcmc(iteration, graph, blockmodel, blockmodel_triplet);
+        timers::MCMC_time = MPI_Wtime() - start_mcmc;
         double mdl = blockmodel.getOverall_entropy();
         utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
                                     blockmodel.num_blocks());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
+        timers::total_time += MPI_Wtime() - start_t;
+        start_t = MPI_Wtime();
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     }
     // only last iteration result will calculate expensive modularity

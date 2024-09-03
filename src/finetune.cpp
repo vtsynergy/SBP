@@ -43,7 +43,7 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         long _vertex_moves = 0;
         double num_batches = args.batches;
-        long batch_size = long(ceil(graph.num_vertices() / num_batches));
+        long batch_size = long(ceil(double(graph.num_vertices()) / num_batches));
         for (long batch = 0; batch < graph.num_vertices() / batch_size; ++batch) {
             long start = batch * batch_size;
             long end = std::min(graph.num_vertices(), (batch + 1) * batch_size);
@@ -613,6 +613,23 @@ std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<st
         my_vertices[vertex] = true;
     }
     return my_vertices;
+}
+
+Blockmodel &mcmc(int iteration, const Graph &graph, Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet) {
+//    timers::MCMC_moves = 0;
+//    timers::MCMC_iterations = 0;
+//    timers::MCMC_vertex_move_time = 0;
+//    timers::MCMC_parallel_time = 0;
+//    timers::MCMC_sequential_time = 0;
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
+    std::cout << "Starting MCMC vertex moves" << std::endl;
+    if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
+        blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    else if (args.algorithm == "hybrid_mcmc")
+        blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    else // args.algorithm == "metropolis_hastings"
+        blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    return blockmodel;
 }
 
 Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached) {

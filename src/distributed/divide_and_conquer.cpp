@@ -93,7 +93,7 @@ Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     BlockmodelTriplet blockmodel_triplet = BlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-    auto iteration = (double) timers::partial_profiles.size();
+    auto iteration = (int) timers::partial_profiles.size();
     while (!sbp::done_blockmodeling(blockmodel, blockmodel_triplet)) {
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
@@ -104,13 +104,7 @@ Blockmodel finetune_partition(Blockmodel &blockmodel, const Graph &graph) {
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
-            blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else if (args.algorithm == "hybrid_mcmc")
-            blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+        blockmodel = finetune::mcmc(iteration, graph, blockmodel, blockmodel_triplet);
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         timers::total_time += MPI_Wtime() - start_bm;
         double mdl = blockmodel.getOverall_entropy();

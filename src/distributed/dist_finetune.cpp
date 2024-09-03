@@ -280,6 +280,25 @@ void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &
     MCMC_AGGREGATE_BLOCK_DEGREES.push_back(num_aggregate_block_degrees);
 }
 
+/// Runs one of the available distributed MCMC algorithms.
+TwoHopBlockmodel &mcmc(int iteration, Graph &graph, TwoHopBlockmodel &blockmodel,
+                       DistBlockmodelTriplet &blockmodel_triplet) {
+//    timers::MCMC_moves = 0;
+//    timers::MCMC_iterations = 0;
+//    timers::MCMC_vertex_move_time = 0;
+//    timers::MCMC_parallel_time = 0;
+//    timers::MCMC_sequential_time = 0;
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
+    if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
+    if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
+        blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    else if (args.algorithm == "hybrid_mcmc" && iteration < args.asynciterations)
+        blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    else
+        blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    return blockmodel;
+}
+
 TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached) {
     MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
     MPI_Type_commit(&Membership_t);
