@@ -401,6 +401,7 @@ Blockmodel run(const Graph &graph) {
 }
 
 Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int target_num_communities) {
+    bool user_arg = args.no_transpose;
     int num_blocks = blockmodel.num_blocks();
     std::vector<Split> best_split_for_each_block(num_blocks);
     std::vector<double> delta_entropy_for_each_block =
@@ -409,6 +410,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     for (int i = 0; i < num_blocks; ++i) {
         omp_init_lock(&locks[i]);
     }
+    args.no_transpose = true;
     #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
     shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, best_split_for_each_block, delta_entropy_for_each_block, locks)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
@@ -423,14 +425,8 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
                 continue;
             }
             Split split = propose_split(current_block, graph, blockmodel);
-//            if (split.subgraph.num_vertices() == 1) {
-//                delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
-//                best_split_for_each_block[current_block] = split;
-//                continue;
-//            }
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel),
-                                                             split.subgraph);  // split.num_vertices, split.num_edges);
+            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.subgraph);
             double old_entropy = entropy::null_mdl_v1(split.subgraph);
             double delta_entropy = new_entropy - old_entropy;
             omp_set_lock(&locks[current_block]);
@@ -441,6 +437,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
             omp_unset_lock(&locks[current_block]);
         }
     }
+    args.no_transpose = user_arg;
     for (int i = 0; i < num_blocks; ++i) {
         omp_destroy_lock(&locks[i]);
     }

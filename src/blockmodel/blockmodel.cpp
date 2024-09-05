@@ -190,58 +190,16 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
     return Blockmodel(num_blocks, graph, block_reduction_rate, _block_assignment);
 }
 
-//void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
-//    double start = omp_get_wtime();
-////    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
-//    /// TODO: this recreates the matrix (possibly unnecessary)
-//    if (args.transpose) {
-//        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks);
-//    } else {
-//        this->_blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
-//    }
-//    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-//    this->_block_degrees_in = utils::constant<long>(this->_num_blocks, 0);
-//    this->_block_degrees_out = utils::constant<long>(this->_num_blocks, 0);
-//    this->_block_degrees = utils::constant<long>(this->_num_blocks, 0);
-//    // Initialize the blockmodel
-//    // TODO: find a way to parallelize the matrix filling step
-//    for (ulong vertex = 0; vertex < neighbors.size(); ++vertex) {
-//        std::vector<long> vertex_neighbors = neighbors[vertex];
-//        if (vertex_neighbors.empty()) {
-//            continue;
-//        }
-//        long block = this->_block_assignment[vertex];
-//        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
-//            // Get count
-//            long neighbor = vertex_neighbors[i];
-//            long neighbor_block = this->_block_assignment[neighbor];
-//            // TODO: change this once code is updated to support weighted graphs
-//            long weight = 1;
-//            // long weight = vertex_neighbors[i];
-//            // Update blockmodel
-//            this->_blockmatrix->add(block, neighbor_block, weight);
-//            // Update degrees
-//            this->_block_degrees_out[block] += weight;
-//            this->_block_degrees_in[neighbor_block] += weight;
-//            this->_block_degrees[block] += weight;
-//            if (block != neighbor_block)
-//                this->_block_degrees[neighbor_block] += weight;
-//        }
-//    }
-//    double end = omp_get_wtime();
-//    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
-//}
-
 void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
     this->_num_nonempty_blocks = 0;
     double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
     long num_buckets = graph.num_edges() / graph.num_vertices();
-    if (args.transpose) {
-        blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, num_buckets);
-    } else {
+    if (args.no_transpose) {
         blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
+    } else {
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, num_buckets);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     std::vector<long> block_degrees_in = utils::constant<long>(this->_num_blocks, 0);
@@ -293,7 +251,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
             for (long neighbor : graph.in_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 long weight = 1;
-                if (args.transpose) {
+                if (!args.no_transpose) {
                     std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
                     blockmatrix_dtm->add_transpose(neighbor_block, block, weight);
                 }
@@ -486,7 +444,7 @@ void Blockmodel::move_vertex(const VertexMove_v3 &move) {
         this->_block_degrees_out[move.proposed_block]++;
         if (out_vertex == move.vertex.id) {  // handle self edge
             this->_blockmatrix->add(move.proposed_block, move.proposed_block, 1);
-            if (args.transpose) {
+            if (!args.no_transpose) {
                 std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
                         std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
                 blockmatrix_dtm->add_transpose(move.proposed_block, move.proposed_block, 1);
@@ -495,7 +453,7 @@ void Blockmodel::move_vertex(const VertexMove_v3 &move) {
             this->_block_degrees_in[move.proposed_block]++;
         } else {
             this->_blockmatrix->add(move.proposed_block, out_block, 1);
-            if (args.transpose) {
+            if (!args.no_transpose) {
                 std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
                         std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
                 blockmatrix_dtm->add_transpose(move.proposed_block, out_block, 1);
@@ -507,7 +465,7 @@ void Blockmodel::move_vertex(const VertexMove_v3 &move) {
         this->_blockmatrix->sub(in_block, current_block, 1);
         this->_block_degrees_in[current_block]--;
         this->_blockmatrix->add(in_block, move.proposed_block, 1);
-        if (args.transpose) {
+        if (!args.no_transpose) {
             std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
             blockmatrix_dtm->add_transpose(in_block, move.proposed_block, 1);
         }

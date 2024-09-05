@@ -33,13 +33,13 @@ protected:
     Vertex V5, V6, V7;
 
     void SetUp() override {
-        ToySetUp(true);
+        ToySetUp(false);
     }
 
     void ToySetUp(bool transpose) {
         args.threads = 1;
         rng::init_generators();
-        args.transpose = transpose;
+        args.no_transpose = transpose;
         std::vector<std::vector<long>> edges {
                 {0, 0},
                 {0, 1},
@@ -171,12 +171,12 @@ protected:
 
     void SetUp() override {
         ToyExample::SetUp();
-        ToyExample::ToySetUp(true);
-        ComplexToySetUp(true);
+        ToyExample::ToySetUp(false);
+        ComplexToySetUp(false);
     }
 
     void ComplexToySetUp(bool transpose) {
-        args.transpose = transpose;
+        args.no_transpose = transpose;
         Proposal = { 0, 1, 2, 3 };
         assignment = { 0, 0, 0, 1, 2, 3, 3, 4, 5, 1, 5 };
         B = Blockmodel(6, graph, 0.5, assignment);

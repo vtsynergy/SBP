@@ -157,6 +157,7 @@ Blockmodel run(Graph &graph) {
 
 TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &graph, int target_num_communities) {
     // TODO: figure out how to communicate best splits across nodes AND selectively process blocks
+    bool user_arg = args.no_transpose;
     auto num_blocks = (int) blockmodel.num_blocks();
     std::vector<double> delta_entropy_for_each_block =
             utils::constant<double>(num_blocks, std::numeric_limits<double>::max());
@@ -167,6 +168,7 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
     // The assignment to be communicated to other nodes
     std::vector<long> comm_assignment = utils::constant<long>(graph.num_vertices(), -1);
     // for communication, can do an all_reduce (MIN) on dE for each block and an all_reduce (MAX) on comm_assignment
+    args.no_transpose = true;
     #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
     shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, comm_assignment, delta_entropy_for_each_block, locks, std::cout)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
@@ -181,8 +183,7 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
             }
             Split split = propose_split(current_block, graph, blockmodel);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel),
-                                                             split.subgraph);  // split.num_vertices, split.num_edges);
+            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.subgraph);
             double old_entropy = entropy::null_mdl_v1(split.subgraph);
             double delta_entropy = new_entropy - old_entropy;
             omp_set_lock(&locks[current_block]);
@@ -197,6 +198,7 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
             omp_unset_lock(&locks[current_block]);
         }
     }
+    args.no_transpose = user_arg;
     for (int i = 0; i < num_blocks; ++i) {
         omp_destroy_lock(&locks[i]);
     }

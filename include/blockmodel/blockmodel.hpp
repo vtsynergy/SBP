@@ -57,10 +57,10 @@ class Blockmodel {
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<double>::max();
         this->_num_nonempty_blocks = num_blocks;
-        if (args.transpose) {
-            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, 36);
-        } else {
+        if (args.no_transpose) {
             this->_blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
+        } else {
+            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, 36);
         }
         // Set the block assignment to be the range [0, this->_num_blocks)
         this->_block_assignment = utils::range<long>(0, this->_num_blocks);

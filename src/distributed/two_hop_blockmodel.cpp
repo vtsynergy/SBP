@@ -309,10 +309,10 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
     this->_num_nonempty_blocks = 0;
     std::shared_ptr<ISparseMatrix> blockmatrix;
     long num_buckets = graph.num_edges() / graph.num_vertices();
-    if (args.transpose) {
-        blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, num_buckets);
-    } else {
+    if (args.no_transpose) {
         blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
+    } else {
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, num_buckets);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
     std::vector<long> block_degrees_in = utils::constant<long>(this->_num_blocks, 0);
@@ -357,7 +357,7 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
                     continue;
                 }
                 long weight = 1;
-                if (args.transpose) {
+                if (!args.no_transpose) {
                     std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
                             std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
                     blockmatrix_dtm->add_transpose(neighbor_block, block, weight);
