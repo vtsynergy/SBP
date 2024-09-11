@@ -36,11 +36,13 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
     }
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
+    std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
     long total_vertex_moves = 0;
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        std::shuffle(vertices.begin(), vertices.end(), rng::generator());
         long _vertex_moves = 0;
         double num_batches = args.batches;
         long batch_size = long(ceil(double(graph.num_vertices()) / num_batches));
@@ -52,8 +54,9 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
             std::vector<VertexMove_v3> moves(graph.num_vertices());
             double start_t = MPI_Wtime();
             #pragma omp parallel for schedule(dynamic) default(none) \
-            shared(start, end, blockmodel, graph, _vertex_moves, moves)
-            for (long vertex = start; vertex < end; ++vertex) {
+            shared(start, end, vertices, blockmodel, graph, _vertex_moves, moves)
+            for (long vertex_index = start; vertex_index < end; ++vertex_index) {
+                long vertex = vertices[vertex_index];
                 VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
                 if (proposal.did_move) {
                     _vertex_moves++;
