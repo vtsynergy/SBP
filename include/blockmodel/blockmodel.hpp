@@ -119,6 +119,7 @@ class Blockmodel {
     double log_posterior_probability(long num_edges) const;
     /// Merges block `merge_from` into block `merge_to`
     void merge_block(long merge_from, long merge_to, const Delta &delta, utils::ProposalAndEdgeCounts proposal);
+    /// TODO: have all move_vertex return early if the block will become empty
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
@@ -142,7 +143,7 @@ class Blockmodel {
     /// Moves a vertex from one block to another. Updates the blockmodel based on the edges in `move`,
     /// and updates the block degrees, which are calculated on-the-fly. NOTE: assumes self-edges are only included in
     /// move.out_edges.
-    void move_vertex(const VertexMove_v3 &move);
+    bool move_vertex(const VertexMove_v3 &move);
     /// TODO
     void set_block_membership(long vertex, long block);
     /// TODO: Get rid of getters and setters?

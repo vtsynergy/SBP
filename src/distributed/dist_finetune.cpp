@@ -40,7 +40,7 @@ std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership>
     return collected_membership_updates;
 }
 
-void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
+bool async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), membership.vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), membership.vertex, true);
     Vertex v = { membership.vertex,
@@ -49,17 +49,20 @@ void async_move(const Membership &membership, const Graph &graph, TwoHopBlockmod
     VertexMove_v3 move {
             0.0, true, v, membership.block, out_edges, in_edges
     };
-    blockmodel.move_vertex(move);
+    return blockmodel.move_vertex(move);
 }
 
 size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
                          const std::vector<Membership> &membership_updates) {
     std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
+    size_t vertex_moves = 0;
     for (const Membership &membership: collected_membership_updates) {
         if (membership.block == blockmodel.block_assignment(membership.vertex)) continue;
-        async_move(membership, graph, blockmodel);
+        if (async_move(membership, graph, blockmodel)) {
+            vertex_moves++;
+        }
     }
-    size_t vertex_moves = collected_membership_updates.size();
+//    size_t vertex_moves = collected_membership_updates.size();
     return vertex_moves;
 }
 
@@ -88,12 +91,15 @@ TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph,
         // START MPI COMMUNICATION
         std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
         // END MPI COMMUNICATION
-        long vertex_moves = 0;
-        for (const Membership &membership: collected_membership_updates) {
-            if (block_assignment[membership.vertex] == membership.block) continue;
-            vertex_moves++;
-            async_move(membership, graph, blockmodel);
-        }
+        long vertex_moves = update_blockmodel(graph, blockmodel, collected_membership_updates);
+//        long vertex_moves = 0;
+//        for (const Membership &membership: collected_membership_updates) {
+//            if (block_assignment[membership.vertex] == membership.block) continue;
+//            vertex_moves++;
+//            if (async_move(membership, graph, blockmodel)) {
+//                vertex_moves++;
+//            }
+//        }
         new_entropy = args.nonparametric ?
                 entropy::nonparametric::mdl(blockmodel, graph) :
                 entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());

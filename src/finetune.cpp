@@ -58,16 +58,15 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
             for (long vertex_index = start; vertex_index < end; ++vertex_index) {
                 long vertex = vertices[vertex_index];
                 VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
-                if (proposal.did_move) {
-                    _vertex_moves++;
-                }
                 moves[vertex] = proposal;
             }
             double parallel_t = MPI_Wtime();
             timers::MCMC_parallel_time += parallel_t - start_t;
             for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
-                blockmodel.move_vertex(move);
+                if (blockmodel.move_vertex(move)) {
+                    _vertex_moves++;
+                }
             }
             timers::MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
         }
@@ -512,17 +511,19 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
             for (long index = start; index < end; ++index) {
                 long vertex = graph.low_degree_vertices()[index];
                 VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
-                if (proposal.did_move) {
-                    #pragma omp atomic
-                    _vertex_moves++;
-                }
+//                if (proposal.did_move) {
+//                    #pragma omp atomic
+//                    _vertex_moves++;
+//                }
                 moves[vertex] = proposal;
             }
             double parallel_t = MPI_Wtime();
             timers::MCMC_parallel_time += parallel_t - start_t;
             for (const VertexMove_v3 &move : moves) {
                 if (!move.did_move) continue;
-                blockmodel.move_vertex(move);
+                if (blockmodel.move_vertex(move)) {
+                    _vertex_moves++;
+                }
             }
             timers::MCMC_vertex_move_time += MPI_Wtime() - parallel_t;
 //            assert(blockmodel.validate(graph));
@@ -696,7 +697,7 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
     if (blockmodel.block_size(current_block) == 1) {
-        return VertexMove{0.0, did_move, -1, -1 };
+        return VertexMove{std::numeric_limits<double>::max(), did_move, -1, -1 };
     }
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);
@@ -724,9 +725,11 @@ VertexMove propose_move(Blockmodel &blockmodel, long vertex, const Graph &graph)
 VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph) {
     bool did_move = false;
     long current_block = blockmodel.block_assignment(vertex);
-    if (blockmodel.block_size(current_block) <= args.threads) {
-        return VertexMove_v3{ 0.0, did_move, InvalidVertex, -1 };
-    }
+    // TODO: need to do this more intelligently. Instead of preventing moves here, prevent them in the code that
+    // actually does the moves.
+//    if (blockmodel.block_size(current_block) <= args.threads) {
+//        return VertexMove_v3{ 0.0, did_move, InvalidVertex, -1 };
+//    }
 
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), vertex, false);
     EdgeWeights in_edges = edge_weights(graph.in_neighbors(), vertex, true);

@@ -374,7 +374,6 @@ void Blockmodel::move_vertex(Vertex vertex, long current_block, long new_block, 
     this->_block_sizes[new_block]++;
     if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
     if (this->_block_sizes[new_block] == 1) this->_num_nonempty_blocks++;
-    
 }
 
 void Blockmodel::move_vertex(Vertex vertex, long current_block, long new_block, SparseEdgeCountUpdates &updates,
@@ -435,8 +434,9 @@ void Blockmodel::move_vertex(Vertex vertex, const Delta &delta, utils::ProposalA
     this->_in_degree_histogram[delta.proposed_block()][proposal.num_in_neighbor_edges]++;
 }
 
-void Blockmodel::move_vertex(const VertexMove_v3 &move) {
+bool Blockmodel::move_vertex(const VertexMove_v3 &move) {
     long current_block = this->_block_assignment[move.vertex.id];
+    if (this->_block_sizes[current_block] == 1) return false;
     for (const long &out_vertex : move.out_edges.indices) {  // Edge: vertex --> out_vertex
         long out_block = this->_block_assignment[out_vertex];
         this->_blockmatrix->sub(current_block, out_block, 1);
@@ -486,6 +486,7 @@ void Blockmodel::move_vertex(const VertexMove_v3 &move) {
     this->_in_degree_histogram[current_block][move.vertex.in_degree]--;
     this->_out_degree_histogram[move.proposed_block][move.vertex.out_degree]++;
     this->_in_degree_histogram[move.proposed_block][move.vertex.in_degree]++;
+    return true;
 }
 
 void Blockmodel::print_blockmatrix() const {
