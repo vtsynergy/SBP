@@ -91,6 +91,72 @@ Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool 
     return blockmodel;
 }
 
+Blockmodel &asynchronous_gibbs_load_balanced(Blockmodel &blockmodel, const Graph &graph,
+                                             bool golden_ratio_not_reached) {
+    std::cout << "Load Balanced Asynchronous Gibbs iteration" << std::endl;
+    if (blockmodel.num_blocks() == 1) {
+        return blockmodel;
+    }
+    std::vector<std::vector<long>> thread_vertices = load_balance(graph);
+    std::vector<double> delta_entropies;
+    std::vector<long> vertex_moves;
+
+    long total_vertex_moves = 0;
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
+    double initial_entropy = blockmodel.getOverall_entropy();
+    double last_entropy = initial_entropy;
+    for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        long _vertex_moves = 0;
+        size_t num_batches = args.batches;
+        for (size_t batch = 0; batch < num_batches; ++batch) {
+            std::vector<VertexMove_v3> moves(graph.num_vertices());
+            double parallel_start_t = MPI_Wtime();
+            #pragma omp parallel default(none) shared(args, batch, blockmodel, std::cout, graph, moves, \
+            num_batches, thread_vertices)
+            {
+                assert(omp_get_num_threads() == (int) thread_vertices.size());
+                std::vector<long> &vertices = thread_vertices[omp_get_thread_num()];
+                auto batch_size = size_t(ceil(double(vertices.size()) / double(num_batches)));
+                size_t start = batch * batch_size;
+                size_t end = std::min(vertices.size(), (batch + 1) * batch_size);
+                std::shuffle(vertices.begin() + long(start), vertices.begin() + long(end), rng::generator());
+                for (size_t vertex_index = start; vertex_index < end; ++vertex_index) {
+                    long vertex = vertices[vertex_index];
+                    VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
+                    moves[vertex] = proposal;
+                }
+            }
+            double end_parallel_t = MPI_Wtime();
+            timers::MCMC_parallel_time += end_parallel_t - parallel_start_t;
+            for (const VertexMove_v3 &move: moves) {
+                if (!move.did_move) continue;
+                if (blockmodel.move_vertex(move)) {
+                    _vertex_moves++;
+                }
+            }
+            timers::MCMC_vertex_move_time += MPI_Wtime() - end_parallel_t;
+        }
+        double entropy = entropy::mdl(blockmodel, graph);
+        double delta_entropy = entropy - last_entropy;
+        delta_entropies.push_back(delta_entropy);
+        last_entropy = entropy;
+        vertex_moves.push_back(_vertex_moves);
+        timers::MCMC_moves += _vertex_moves;
+        std::cout << "Itr: " << iteration << ", number of vertex moves: " << _vertex_moves << ", delta S: ";
+        std::cout << delta_entropy / initial_entropy << std::endl;
+        total_vertex_moves += _vertex_moves;
+        timers::MCMC_iterations++;
+        // Early stopping
+        if (early_stop(iteration, golden_ratio_not_reached, initial_entropy, delta_entropies)) {
+            break;
+        }
+    }
+    blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
+    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+    std::cout << blockmodel.getOverall_entropy() << std::endl;
+    return blockmodel;
+}
+
 EdgeWeights block_edge_weights(const std::vector<long> &block_assignment, const EdgeWeights &neighbor_weights) {
     std::map<long, long> block_counts;
     for (ulong i = 0; i < neighbor_weights.indices.size(); ++i) {
@@ -549,6 +615,29 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
     return blockmodel;
 }
 
+std::vector<std::vector<long>> load_balance(const Graph &graph) {
+    std::vector<std::vector<long>> thread_vertices(args.threads);
+    std::vector<long> vertex_degrees = graph.degrees();
+    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
+    for (size_t index = 0; index < size_t(graph.num_vertices()); ++index) {
+        long vertex = sorted_indices[index];
+        size_t thread_id = vertex % (2 * args.threads);
+        if (thread_id >= size_t(args.threads))
+            thread_id = ((2 * args.threads) - 1) - thread_id;
+        thread_vertices[thread_id].push_back(vertex);
+    }
+    return thread_vertices;
+    // std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
+//    for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+//        long vertex = sorted_indices[i];
+//        Rank_indices[vertex] = 1;
+//    }
+//    for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
+//        long vertex = sorted_indices[i];
+//        Rank_indices[vertex] = 1;
+//    }
+}
+
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_neighbors) {
     // Decide which blocks each thread is responsible for
     long thread_id = omp_get_thread_num();
@@ -629,6 +718,8 @@ Blockmodel &mcmc(int iteration, const Graph &graph, Blockmodel &blockmodel, Bloc
     std::cout << "Starting MCMC vertex moves" << std::endl;
     if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
         blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+    if (args.algorithm == "async_gibbs_load_balanced" && iteration < args.asynciterations)
+        blockmodel = finetune::asynchronous_gibbs_load_balanced(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
     else if (args.algorithm == "hybrid_mcmc")
         blockmodel = finetune::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
     else // args.algorithm == "metropolis_hastings"

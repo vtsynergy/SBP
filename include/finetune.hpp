@@ -37,6 +37,9 @@ bool accept(double delta_entropy, double hastings_correction);
 
 Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
+Blockmodel &asynchronous_gibbs_load_balanced(Blockmodel &blockmodel, const Graph &graph,
+                                             bool golden_ratio_not_reached);
+
 //Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 EdgeWeights block_edge_weights(const std::vector<long> &block_assignment, const EdgeWeights &neighbor_weights);
@@ -94,6 +97,9 @@ Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_
 Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
+/// Returns a vector of vectors, containing the vertices to be processed by each OpenMP thread.
+std::vector<std::vector<long>> load_balance(const Graph &graph);
 
 /// Returns a vector which determines which blocks a thread is responsible for.
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_properties);
