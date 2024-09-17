@@ -136,6 +136,7 @@ Blockmodel &asynchronous_gibbs_load_balanced(Blockmodel &blockmodel, const Graph
             }
             timers::MCMC_vertex_move_time += MPI_Wtime() - end_parallel_t;
         }
+        assert(num_processed_vertices == graph.num_vertices());
         double entropy = entropy::mdl(blockmodel, graph);
         double delta_entropy = entropy - last_entropy;
         delta_entropies.push_back(delta_entropy);
@@ -715,7 +716,7 @@ Blockmodel &mcmc(int iteration, const Graph &graph, Blockmodel &blockmodel, Bloc
 //    timers::MCMC_parallel_time = 0;
 //    timers::MCMC_sequential_time = 0;
     common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-    std::cout << "Starting MCMC vertex moves" << std::endl;
+//    std::cout << "Starting MCMC vertex moves" << std::endl;
     if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
         blockmodel = finetune::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
     if (args.algorithm == "async_gibbs_load_balanced" && iteration < args.asynciterations)

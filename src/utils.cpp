@@ -98,6 +98,10 @@ std::vector<std::vector<std::string>> read_csv(fs::path &filepath) {
 }
 
 void insert(NeighborList &neighbors, long from, long to) {
+    if (args.noduplicates) {
+        insert_nodup(neighbors, from, to);
+        return;
+    }
     if (from >= (long) neighbors.size()) {
         std::vector<std::vector<long>> padding(from - neighbors.size() + 1, std::vector<long>());
         neighbors.insert(neighbors.end(), padding.begin(), padding.end());

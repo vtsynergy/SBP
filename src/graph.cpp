@@ -8,8 +8,8 @@
 #include "mpi_data.hpp"
 
 void Graph::add_edge(long from, long to) {
-    utils::insert_nodup(this->_out_neighbors, from , to);
-    utils::insert_nodup(this->_in_neighbors, to, from);
+    utils::insert(this->_out_neighbors, from , to);
+    utils::insert(this->_in_neighbors, to, from);
     this->_num_edges++;
     if (from == to) {
         this->_self_edges[from] = true;
@@ -103,11 +103,11 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
-        utils::insert_nodup(in_neighbors, to , from);
+        utils::insert(out_neighbors, from , to);
+        utils::insert(in_neighbors, to , from);
         if (args.undirected && from != to) {  // Force symmetric graph to be directed by including reverse edges.
-            utils::insert_nodup(out_neighbors, to, from);
-            utils::insert_nodup(in_neighbors, from , to);
+            utils::insert(out_neighbors, to, from);
+            utils::insert(in_neighbors, from , to);
             num_edges++;
         }
         if (from == to) {
@@ -185,8 +185,8 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
-        utils::insert_nodup(in_neighbors, to, from);
+        utils::insert(out_neighbors, from , to);
+        utils::insert(in_neighbors, to, from);
         while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
@@ -209,9 +209,9 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
+        utils::insert(out_neighbors, from , to);
         if (from != to)
-            utils::insert_nodup(out_neighbors, to, from);
+            utils::insert(out_neighbors, to, from);
         while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
