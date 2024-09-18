@@ -97,33 +97,41 @@ Blockmodel &asynchronous_gibbs_load_balanced(Blockmodel &blockmodel, const Graph
     if (blockmodel.num_blocks() == 1) {
         return blockmodel;
     }
-    std::vector<std::vector<long>> thread_vertices = load_balance(graph);
+//    std::vector<std::vector<long>> thread_vertices = load_balance(graph);
     std::vector<double> delta_entropies;
     std::vector<long> vertex_moves;
-
+    std::vector<long> all_vertices = utils::range<long>(0, graph.num_vertices());
     long total_vertex_moves = 0;
     blockmodel.setOverall_entropy(entropy::mdl(blockmodel, graph));
     double initial_entropy = blockmodel.getOverall_entropy();
     double last_entropy = initial_entropy;
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+        std::shuffle(all_vertices.begin(), all_vertices.end(), rng::generator());
         long _vertex_moves = 0;
         size_t num_batches = args.batches;
+        auto batch_size = size_t(ceil(double(graph.num_vertices()) / double(num_batches)));
+        long num_processed_vertices = 0;
         for (size_t batch = 0; batch < num_batches; ++batch) {
+            size_t start = batch * batch_size;
+            size_t end = std::min(all_vertices.size(), (batch + 1) * batch_size);
             std::vector<VertexMove_v3> moves(graph.num_vertices());
+            std::vector<std::vector<long>> thread_vertices = load_balance(graph, all_vertices, start, end);
             double parallel_start_t = MPI_Wtime();
             #pragma omp parallel default(none) shared(args, batch, blockmodel, std::cout, graph, moves, \
-            num_batches, thread_vertices)
+            num_batches, thread_vertices, num_processed_vertices)
             {
                 assert(omp_get_num_threads() == (int) thread_vertices.size());
                 std::vector<long> &vertices = thread_vertices[omp_get_thread_num()];
-                auto batch_size = size_t(ceil(double(vertices.size()) / double(num_batches)));
-                size_t start = batch * batch_size;
-                size_t end = std::min(vertices.size(), (batch + 1) * batch_size);
-                std::shuffle(vertices.begin() + long(start), vertices.begin() + long(end), rng::generator());
-                for (size_t vertex_index = start; vertex_index < end; ++vertex_index) {
-                    long vertex = vertices[vertex_index];
+//                auto batch_size = size_t(ceil(double(vertices.size()) / double(num_batches)));
+//                size_t start = batch * batch_size;
+//                size_t end = std::min(vertices.size(), (batch + 1) * batch_size);
+//                std::shuffle(vertices.begin() + long(start), vertices.begin() + long(end), rng::generator());
+                for (long vertex : vertices) { // size_t vertex_index = start; vertex_index < end; ++vertex_index) {
+//                    long vertex = vertices[vertex_index];
                     VertexMove_v3 proposal = propose_gibbs_move_v3(blockmodel, vertex, graph);
                     moves[vertex] = proposal;
+                    #pragma omp atomic
+                    num_processed_vertices++;
                 }
             }
             double end_parallel_t = MPI_Wtime();
@@ -622,22 +630,35 @@ std::vector<std::vector<long>> load_balance(const Graph &graph) {
     std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
     for (size_t index = 0; index < size_t(graph.num_vertices()); ++index) {
         long vertex = sorted_indices[index];
-        size_t thread_id = vertex % (2 * args.threads);
+        size_t thread_id = index % (2 * args.threads);
         if (thread_id >= size_t(args.threads))
             thread_id = ((2 * args.threads) - 1) - thread_id;
         thread_vertices[thread_id].push_back(vertex);
     }
     return thread_vertices;
-    // std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
-//    for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-//        long vertex = sorted_indices[i];
-//        Rank_indices[vertex] = 1;
-//    }
-//    for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-//        long vertex = sorted_indices[i];
-//        Rank_indices[vertex] = 1;
-//    }
 }
+
+std::vector<std::vector<long>> load_balance(const Graph &graph, const std::vector<long> &all_vertices,
+                                            size_t start_index, size_t end_index) {
+    std::vector<std::vector<long>> thread_vertices(args.threads);
+    std::vector<long> vertex_degrees;
+    for (size_t i = start_index; i < end_index; ++i) {
+        long vertex = all_vertices[i];
+        vertex_degrees.push_back(graph.degree(vertex));
+    }
+    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
+    for (size_t index = 0; index < vertex_degrees.size(); ++index) {
+        size_t sorted_index = sorted_indices[index];
+        size_t vertex_index = sorted_index + start_index;
+        long vertex = all_vertices[vertex_index];
+        size_t thread_id = sorted_index % (2 * args.threads);
+        if (thread_id >= size_t(args.threads))
+            thread_id = ((2 * args.threads) - 1) - thread_id;
+        thread_vertices[thread_id].push_back(vertex);
+    }
+    return thread_vertices;
+}
+
 
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_neighbors) {
     // Decide which blocks each thread is responsible for

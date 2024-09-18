@@ -101,6 +101,11 @@ Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph
 /// Returns a vector of vectors, containing the vertices to be processed by each OpenMP thread.
 std::vector<std::vector<long>> load_balance(const Graph &graph);
 
+/// Returns a vector of vectors, containing the vertices to be processed by each OpenMP thread. The load balancing is
+/// performed on the subset of `all_vertices` bounded by `start_index` and `end_index`.
+std::vector<std::vector<long>> load_balance(const Graph &graph, const std::vector<long> &all_vertices,
+                                            size_t start_index, size_t end_index);
+
 /// Returns a vector which determines which blocks a thread is responsible for.
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_properties);
 

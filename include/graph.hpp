@@ -62,6 +62,8 @@ public:
     long assignment(long v) const { return this->_assignment[v]; }
     /// Sets the assignment of vertex `v` to block `b`
     void assign(long v, long b) { this->_assignment[v] = b; }
+    /// Returns the degree of a given vertex `v`
+    long degree(size_t v) const;
     /// Returns a vector containing the vertex degrees for every vertex in the graph
     std::vector<long> degrees() const;
     /// Returns a const reference to the in neighbors

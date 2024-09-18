@@ -17,6 +17,10 @@ void Graph::add_edge(long from, long to) {
     // TODO: undirected version?
 }
 
+long Graph::degree(size_t v) const {
+    return long(this->_out_neighbors[v].size() + this->_in_neighbors[v].size() - this->_self_edges[v]);
+}
+
 std::vector<long> Graph::degrees() const {
     std::vector<long> vertex_degrees;
     for (long vertex = 0; vertex < this->_num_vertices; ++vertex) {
