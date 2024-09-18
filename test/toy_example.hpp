@@ -77,8 +77,8 @@ protected:
         for (const std::vector<long> &edge : edges) {
             long from = edge[0];
             long to = edge[1];
-            utils::insert_nodup(out_neighbors, from , to);
-            utils::insert_nodup(in_neighbors, to, from);
+            utils::insert(out_neighbors, from , to);
+            utils::insert(in_neighbors, to, from);
         }
         graph = Graph(out_neighbors, in_neighbors, num_vertices, num_edges, self_edges, assignment);
         B = Blockmodel(3, graph, 0.5, assignment);
