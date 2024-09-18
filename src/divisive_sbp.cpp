@@ -108,7 +108,7 @@ Split propose_split(long cluster, const Graph &graph, const Blockmodel &blockmod
     }
     split.num_vertices = long(cluster_vertices.size());
     std::vector<long> split_assignment;
-    Graph subgraph(split.num_vertices);
+    Graph subgraph(split.num_vertices, graph.num_edges() / graph.num_vertices());
     if (subgraph.num_vertices() < 2) {
         split.subgraph = subgraph;
         split_assignment = utils::constant<long>(1, 0);

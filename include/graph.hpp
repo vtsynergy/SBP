@@ -26,6 +26,22 @@ public:
             this->_in_neighbors.push_back(std::vector<long>());
         }
     }
+    Graph(long num_vertices, size_t reserve) {
+        this->_num_vertices = num_vertices;
+        this->_num_edges = 0;
+        this->_self_edges = utils::constant<bool>(num_vertices, false);
+        this->_assignment = utils::constant<long>(num_vertices, -1);
+        size_t current_vertex = 0;
+        while (this->_out_neighbors.size() < size_t(num_vertices)) {
+            this->_out_neighbors.push_back(std::vector<long>());
+            this->_out_neighbors[current_vertex].reserve(reserve);
+        }
+        current_vertex = 0;
+        while (this->_in_neighbors.size() < size_t(num_vertices)) {
+            this->_in_neighbors.push_back(std::vector<long>());
+            this->_in_neighbors[current_vertex].reserve(reserve);
+        }
+    }
     Graph(NeighborList &out_neighbors, NeighborList &in_neighbors, long num_vertices, long num_edges,
           const std::vector<bool> &self_edges = std::vector<bool>(),
           const std::vector<long> &assignment = std::vector<long>()) {
