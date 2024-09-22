@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     Partition partition;
     partition.graph = Graph::load();
     double start = MPI_Wtime();
-    if (args.samplesize <= 0.0) {
+    if (args.samplesize <= 1.0) {
         double sample_start_t = MPI_Wtime();
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
         sample::Sample s = sample::sample(partition.graph);
