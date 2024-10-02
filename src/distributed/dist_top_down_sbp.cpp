@@ -1,8 +1,8 @@
-#include "dist_divisive_sbp.hpp"
+#include "dist_top_down_sbp.hpp"
 
 #include "common.hpp"
 #include "distributed/dist_block_merge.hpp"
-#include "distributed/dist_divisive_sbp.hpp"
+#include "distributed/dist_top_down_sbp.hpp"
 #include "distributed/dist_finetune.hpp"
 #include "distributed/dist_sbp.hpp"
 #include "distributed/two_hop_blockmodel.hpp"
@@ -14,10 +14,10 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<double> &split_
                        const std::vector<long> &comm_assignment, int target_num_communities) {
     // Sort entropies in descending order; best split ends up in the last spot
     std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
-    if (mpi.rank == 0) {
-        std::cout << "the argsort result = " << std::endl;
-        utils::print<long>(sorted_splits);
-    }
+//    if (mpi.rank == 0) {
+//        std::cout << "the argsort result = " << std::endl;
+//        utils::print<long>(sorted_splits);
+//    }
     long num_blocks = blockmodel.num_blocks();
     std::vector<long> translator = utils::range<long>(0, num_blocks);
     // Build translator, increasing new block id until reaching target
@@ -43,7 +43,7 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<double> &split_
     blockmodel.num_blocks(num_blocks);
 }
 
-TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTriplet &blockmodel_triplet,
+TwoHopBlockmodel continue_agglomerative(Graph &graph, DistTopDownBlockmodelTriplet &blockmodel_triplet,
                                         float iteration) {
     double start_t = MPI_Wtime();
     TwoHopBlockmodel blockmodel;
@@ -61,13 +61,7 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTrip
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        if (args.algorithm == "async_gibbs" && iteration < double(args.asynciterations))
-            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, false);
-        else if (args.algorithm == "hybrid_mcmc")
-            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, false);
-        else // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, false);
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         double mdl = blockmodel.getOverall_entropy();
         long num_blocks = blockmodel.num_blocks();
@@ -80,7 +74,7 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTrip
     return blockmodel;
 }
 
-bool end_condition_not_reached(TwoHopBlockmodel &blockmodel, DistDivisiveBlockmodelTriplet &triplet) {
+bool end_condition_not_reached(TwoHopBlockmodel &blockmodel, DistTopDownBlockmodelTriplet &triplet) {
     if (args.mix) {
         return triplet.golden_ratio_not_reached();
     }
@@ -106,7 +100,7 @@ Blockmodel run(Graph &graph) {
     double initial_mdl = entropy::nonparametric::mdl(blockmodel, graph);
     utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph),
                                 blockmodel.num_blocks());
-    DistDivisiveBlockmodelTriplet blockmodel_triplet = DistDivisiveBlockmodelTriplet();
+    DistTopDownBlockmodelTriplet blockmodel_triplet = DistTopDownBlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
     while (dist::end_condition_not_reached(blockmodel, blockmodel_triplet)) {
@@ -134,12 +128,13 @@ Blockmodel run(Graph &graph) {
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
         std::cout << "Starting MCMC vertex moves" << std::endl;
         double start = MPI_Wtime();
-        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
-            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else if (args.algorithm == "hybrid_mcmc")
-            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        else // args.algorithm == "metropolis_hastings"
-            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+//        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
+//            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+//        else if (args.algorithm == "hybrid_mcmc")
+//            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+//        else // args.algorithm == "metropolis_hastings"
+//            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
         timers::MCMC_time += MPI_Wtime() - start;
         double mdl = blockmodel.getOverall_entropy();
         long num_blocks = blockmodel.num_blocks();
@@ -203,10 +198,10 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
         omp_destroy_lock(&locks[i]);
     }
     mpi_get_best_splits(delta_entropy_for_each_block, comm_assignment);
-    if (mpi.rank == 0) {
-        utils::print<double>(delta_entropy_for_each_block);
-        utils::print<long>(blockmodel.block_sizes());
-    }
+//    if (mpi.rank == 0) {
+//        utils::print<double>(delta_entropy_for_each_block);
+//        utils::print<long>(blockmodel.block_sizes());
+//    }
     dist::apply_best_splits(blockmodel, delta_entropy_for_each_block, comm_assignment, target_num_communities);
     blockmodel.distribute(graph);
     blockmodel.initialize_edge_counts(graph);

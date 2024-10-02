@@ -41,7 +41,7 @@ void apply_best_splits(const Blockmodel &blockmodel, const std::vector<Split> &b
 
 /// Returns true if end condition has not been reached. If args.mix is True, then the end condition is reaching the
 /// golden ratio. Otherwise, the end condition is idenitfying the optimal blockmodel.
-bool end_condition_not_reached(Blockmodel &blockmodel, DivisiveBlockmodelTriplet &triplet);
+bool end_condition_not_reached(Blockmodel &blockmodel, TopDownBlockmodelTriplet &triplet);
 
 /// Splits a single cluster into two. Returns a blockmodel containing just 2 communities that resulted from
 /// splitting cluster `cluster`.

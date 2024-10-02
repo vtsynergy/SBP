@@ -104,7 +104,7 @@ void BlockmodelTriplet::update(Blockmodel &blockmodel) {
     this->blockmodels[index] = blockmodel.copy();
 }
 
-Blockmodel DivisiveBlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
+Blockmodel TopDownBlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmodel) {
     old_blockmodel.setNum_blocks_to_merge(0);
     this->update(old_blockmodel);
     this->status();
@@ -143,7 +143,7 @@ Blockmodel DivisiveBlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockm
     return blockmodel;
 }
 
-bool DivisiveBlockmodelTriplet::is_done() {
+bool TopDownBlockmodelTriplet::is_done() {
     if ((!this->get(0).empty && this->get(2).num_blocks() - this->get(0).num_blocks() == 2) ||
         (this->get(0).empty && this->get(2).num_blocks() - this->get(1).num_blocks() == 1)) {
         this->optimal_num_blocks_found = true;
@@ -151,15 +151,15 @@ bool DivisiveBlockmodelTriplet::is_done() {
     return this->optimal_num_blocks_found;
 }
 
-long DivisiveBlockmodelTriplet::lower_difference() {
+long TopDownBlockmodelTriplet::lower_difference() {
     return this->get(2).num_blocks() - this->get(1).num_blocks();
 }
 
-long DivisiveBlockmodelTriplet::upper_difference() {
+long TopDownBlockmodelTriplet::upper_difference() {
     return this->get(1).num_blocks() - this->get(0).num_blocks();
 }
 
-void DivisiveBlockmodelTriplet::update(Blockmodel &blockmodel) {
+void TopDownBlockmodelTriplet::update(Blockmodel &blockmodel) {
     std::cout << "Received blockmodel with blocks = " << blockmodel.num_blocks() << std::endl;
     long index;
     if (this->blockmodels[1].empty) {

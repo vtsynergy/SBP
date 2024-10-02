@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cmath>
 #include <execution>
+#include <mpi.h>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -207,6 +208,15 @@ template <typename T> inline std::vector<float> to_float(const std::vector<T> &v
 /// Relies on an implicit cast from vector type T to long.
 template <typename T> inline std::vector<long> to_long(const std::vector<T> &vector) {
     return std::vector<long>(vector.begin(), vector.end());
+}
+
+/// Wraps an MPI call with an exception handler
+inline void MPI(int result) {
+    if (result == MPI_SUCCESS) return;
+    char error_string[MPI_MAX_ERROR_STRING];
+    int error_length;
+    MPI_Error_string(result, error_string, &error_length);
+    throw std::runtime_error(std::string(error_string));
 }
 
 /// Returns the natural log of every value in vector.

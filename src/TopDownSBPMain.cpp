@@ -9,9 +9,9 @@
 
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
-#include "distributed/dist_divisive_sbp.hpp"
+#include "distributed/dist_top_down_sbp.hpp"
 #include "distributed/dist_finetune.hpp"
-#include "divisive_sbp.hpp"
+#include "top_down_sbp.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
@@ -50,7 +50,7 @@ void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
 void run(Partition &partition) {
     timers::total_num_islands = partition.graph.num_islands();
     if (mpi.num_processes > 1) {
-        std::cout << "Distributed Divisive SBP not fully implemented yet!" << std::endl;
+        std::cout << "Distributed TopDown SBP not fully implemented yet!" << std::endl;
         partition.blockmodel = divisive::dist::run(partition.graph);
     } else {
         partition.blockmodel = divisive::run(partition.graph);
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     Partition partition;
     partition.graph = Graph::load();
     double start = MPI_Wtime();
-    if (args.samplesize <= 1.0) {
+    if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
         sample::Sample s = sample::sample(partition.graph);

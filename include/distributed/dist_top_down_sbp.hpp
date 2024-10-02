@@ -7,7 +7,7 @@
 #include "blockmodel.hpp"
 #include "distributed/dist_blockmodel_triplet.hpp"
 #include "distributed/two_hop_blockmodel.hpp"
-#include "divisive_sbp.hpp"
+#include "top_down_sbp.hpp"
 
 #include <vector>
 
@@ -19,12 +19,12 @@ void apply_best_splits(const Blockmodel &blockmodel, const std::vector<double> &
 
 /// Use agglomerative SBP to continue execution.
 /// TODO: add a way to start SBP from a given blockmodel or triplet
-TwoHopBlockmodel continue_agglomerative(Graph &graph, DistDivisiveBlockmodelTriplet &blockmodel_triplet,
+TwoHopBlockmodel continue_agglomerative(Graph &graph, DistTopDownBlockmodelTriplet &blockmodel_triplet,
                                         float iteration);
 
 /// Returns true if end condition has not been reached. If args.mix is True, then the end condition is reaching the
 /// golden ratio. Otherwise, the end condition is identifying the optimal blockmodel.
-bool end_condition_not_reached(TwoHopBlockmodel &blockmodel, DistDivisiveBlockmodelTriplet &triplet);
+bool end_condition_not_reached(TwoHopBlockmodel &blockmodel, DistTopDownBlockmodelTriplet &triplet);
 
 /// Communicates the best split information across all nodes using MPI_Allreduce calls
 void mpi_get_best_splits(std::vector<double> &delta_entropy_for_each_block, std::vector<long> &comm_assignment);

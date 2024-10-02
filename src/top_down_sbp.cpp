@@ -2,7 +2,7 @@
 // The town-down alternative approach to stochastic block blockmodeling.
 // Created by wanye on 5/11/2022.
 //
-#include "divisive_sbp.hpp"
+#include "top_down_sbp.hpp"
 
 #include <iostream>
 #include <limits>
@@ -64,7 +64,7 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
     blockmodel.num_blocks(num_blocks);
 }
 
-Blockmodel continue_agglomerative(const Graph &graph, DivisiveBlockmodelTriplet &blockmodel_triplet, float iteration) {
+Blockmodel continue_agglomerative(const Graph &graph, TopDownBlockmodelTriplet &blockmodel_triplet, float iteration) {
     double start_t = MPI_Wtime();
     Blockmodel blockmodel;
     BlockmodelTriplet gr_blockmodel_triplet = BlockmodelTriplet();
@@ -340,7 +340,7 @@ std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
     return split_assignment;
 }
 
-bool end_condition_not_reached(Blockmodel &blockmodel, DivisiveBlockmodelTriplet &triplet) {
+bool end_condition_not_reached(Blockmodel &blockmodel, TopDownBlockmodelTriplet &triplet) {
     if (args.mix) {
         return triplet.golden_ratio_not_reached();
     }
@@ -362,7 +362,7 @@ Blockmodel run(const Graph &graph) {
 //    double initial_mdl = entropy::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
     utils::save_partial_profile(0, -1, initial_mdl, entropy::normalize_mdl_v1(initial_mdl, graph),
                                 blockmodel.num_blocks());
-    DivisiveBlockmodelTriplet blockmodel_triplet = DivisiveBlockmodelTriplet();
+    TopDownBlockmodelTriplet blockmodel_triplet = TopDownBlockmodelTriplet();
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     int iteration = 0;
     while (end_condition_not_reached(blockmodel, blockmodel_triplet)) {
@@ -376,9 +376,9 @@ Blockmodel run(const Graph &graph) {
         double block_split_t = MPI_Wtime();
         blockmodel = split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
         timers::BlockSplit_time = MPI_Wtime() - block_split_t;
-        std::cout << "============== Block sizes after split" << std::endl;
-        utils::print<long>(blockmodel.block_sizes());
-        std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
+//        std::cout << "============== Block sizes after split" << std::endl;
+//        utils::print<long>(blockmodel.block_sizes());
+//        std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
         if (iteration < 1) {
             double mdl = entropy::nonparametric::mdl(blockmodel, graph);
             utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph), blockmodel.num_blocks());
@@ -441,12 +441,12 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     for (int i = 0; i < num_blocks; ++i) {
         omp_destroy_lock(&locks[i]);
     }
-    utils::print<double>(delta_entropy_for_each_block);
-    std::cout << "splits =================" << std::endl;
-    for (size_t i = 0; i < best_split_for_each_block.size(); ++i) {
-        std::cout << "V = " << best_split_for_each_block[i].num_vertices << " dE = " << delta_entropy_for_each_block[i] << std::endl;
-    }
-    std::cout << "Applying best splits" << std::endl;
+//    utils::print<double>(delta_entropy_for_each_block);
+//    std::cout << "splits =================" << std::endl;
+//    for (size_t i = 0; i < best_split_for_each_block.size(); ++i) {
+//        std::cout << "V = " << best_split_for_each_block[i].num_vertices << " dE = " << delta_entropy_for_each_block[i] << std::endl;
+//    }
+//    std::cout << "Applying best splits" << std::endl;
     apply_best_splits(blockmodel, best_split_for_each_block, delta_entropy_for_each_block, target_num_communities);
     blockmodel.initialize_edge_counts(graph);
     return blockmodel;

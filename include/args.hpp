@@ -36,6 +36,7 @@ public:  // Everything in here is public, because why not?
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
     bool noduplicates;
+    bool nonblocking;
     bool nonparametric;
     int numvertices;
     std::string output_file;
@@ -120,6 +121,7 @@ public:  // Everything in here is public, because why not?
             TCLAP::SwitchArg _noduplicates("", "noduplicates", "If set, will check for duplicate edges in the graph "
                                            "and ensure that they're not inserted twice. Otherwise, the graph needs to "
                                            "be manually checked to ensure that it's not a multigraph.", parser, false);
+            TCLAP::SwitchArg _nonblocking("", "nonblocking", "If set, will use MPI nonblocking single-sided communication in the MCMC phase.", parser, false);
             TCLAP::SwitchArg _nonparametric("", "nonparametric", "If set, will use the nonparametric blockmodel entropy computations.",
                                             parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
@@ -175,6 +177,7 @@ public:  // Everything in here is public, because why not?
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
             this->noduplicates = _noduplicates.getValue();
+            this->nonblocking = _nonblocking.getValue();
             this->nonparametric = _nonparametric.getValue();
             this->numvertices = _numvertices.getValue();
             this->output_file = _output_file.getValue();

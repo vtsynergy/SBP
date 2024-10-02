@@ -104,7 +104,7 @@ void DistBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
     if (mpi.rank == 0) std::cout << "blockmodels[index] has B = " << this->blockmodels[index].num_blocks() << std::endl;
 }
 
-TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {
+TwoHopBlockmodel DistTopDownBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmodel &old_blockmodel) {
     old_blockmodel.setNum_blocks_to_merge(0);
     this->update(old_blockmodel);
     this->status();
@@ -143,7 +143,7 @@ TwoHopBlockmodel DistDivisiveBlockmodelTriplet::get_next_blockmodel(TwoHopBlockm
     return blockmodel;
 }
 
-bool DistDivisiveBlockmodelTriplet::is_done() {
+bool DistTopDownBlockmodelTriplet::is_done() {
     if ((!this->get(0).empty && this->get(2).num_blocks() - this->get(0).num_blocks() == 2) ||
         (this->get(0).empty && this->get(2).num_blocks() - this->get(1).num_blocks() == 1)) {
         this->optimal_num_blocks_found = true;
@@ -151,15 +151,15 @@ bool DistDivisiveBlockmodelTriplet::is_done() {
     return this->optimal_num_blocks_found;
 }
 
-long DistDivisiveBlockmodelTriplet::lower_difference() {
+long DistTopDownBlockmodelTriplet::lower_difference() {
     return this->get(2).num_blocks() - this->get(1).num_blocks();
 }
 
-long DistDivisiveBlockmodelTriplet::upper_difference() {
+long DistTopDownBlockmodelTriplet::upper_difference() {
     return this->get(1).num_blocks() - this->get(0).num_blocks();
 }
 
-void DistDivisiveBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
+void DistTopDownBlockmodelTriplet::update(TwoHopBlockmodel &blockmodel) {
     if (mpi.rank == 0) std::cout << "updating triplet with BM with B = " << blockmodel.num_blocks() << std::endl;
     long index;
     if (this->blockmodels[1].empty) {

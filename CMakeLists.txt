@@ -51,7 +51,7 @@ add_library(SBPLIB STATIC
         src/block_merge.cpp
         src/partition.cpp
         src/sample.cpp
-        src/divisive_sbp.cpp
+        src/top_down_sbp.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
         src/blockmodel/sparse/dict_matrix.cpp
@@ -59,7 +59,7 @@ add_library(SBPLIB STATIC
         src/distributed/dist_block_merge.cpp
         src/distributed/dist_blockmodel_triplet.cpp
         src/distributed/dist_common.cpp
-        src/distributed/dist_divisive_sbp.cpp
+        src/distributed/dist_top_down_sbp.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
         src/distributed/divide_and_conquer.cpp
@@ -80,14 +80,14 @@ target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 add_executable(ladis src/LayerDistributedSBP.cpp)
 target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
 
-add_executable(TopDownSBP src/DivisiveSBPMain.cpp)
+add_executable(TopDownSBP src/TopDownSBPMain.cpp)
 target_include_directories(TopDownSBP PUBLIC ${INCLUDE_DIRS})
 
 if (DEBUG AND VALGRIND)
     set(COMPILE_OPTS -g3 -static-libasan)
     message("Compiling with -g3 and -static-libasan. Valgrind cannot run with -fsanitize=address")
 elseif (DEBUG)
-    set(COMPILE_OPTS -g3 -fsanitize=address)
+    set(COMPILE_OPTS -g -fsanitize=address -fsanitize=undefined)
     message("Compiling with -g3 and -fsanitize=address. Valgrind will not work with these executables")
 else()
     set(COMPILE_OPTS -O3)

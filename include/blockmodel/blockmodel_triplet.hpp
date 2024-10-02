@@ -41,7 +41,7 @@ protected:
     virtual long upper_difference();
 };
 
-class DivisiveBlockmodelTriplet : public BlockmodelTriplet {
+class TopDownBlockmodelTriplet : public BlockmodelTriplet {
 public:
     void update(Blockmodel &blockmodel) override;
     bool is_done() override;

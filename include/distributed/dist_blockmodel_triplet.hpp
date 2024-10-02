@@ -37,7 +37,7 @@ protected:
     virtual long upper_difference();
 };
 
-class DistDivisiveBlockmodelTriplet : public DistBlockmodelTriplet {
+class DistTopDownBlockmodelTriplet : public DistBlockmodelTriplet {
  public:
     /// Selects a blockmodel on which to perform the next SBP iteration. Always selects the "middle" blockmodel until
     /// the golden ratio has been reached.

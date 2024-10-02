@@ -65,8 +65,10 @@ int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
     // long rank, num_processes;
     MPI_Init(&argc, &argv);
+    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
     MPI_Comm_rank(mpi.comm, &mpi.rank);
     MPI_Comm_size(mpi.comm, &mpi.num_processes);
+
     // std::cout << "rank: " << mpi.rank << " np: " << mpi.num_processes << std::endl;
 
     args = Args(argc, argv);
@@ -147,6 +149,6 @@ int main(int argc, char* argv[]) {
     // evaluate
     double end = MPI_Wtime();
     evaluate_partition(graph, partition.blockmodel, end - start);
-
+//    finetune::dist::free_mpi_window();
     MPI_Finalize();
 }
