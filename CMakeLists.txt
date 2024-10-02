@@ -95,11 +95,11 @@ else()
 endif()
 
 target_compile_options(SBPLIB PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
-target_link_libraries(SBPLIB PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb "${COMPILE_OPTS}")
-target_link_libraries(DistributedSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(DivideAndConquerSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(TopDownSBP PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(ladis PUBLIC SBPLIB absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_link_libraries(SBPLIB PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs "${COMPILE_OPTS}")
+target_link_libraries(DistributedSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(DivideAndConquerSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(TopDownSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(ladis PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
 
 # Google Test Suite
 enable_testing()
