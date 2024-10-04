@@ -366,14 +366,19 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
         }
         size_t vertex_moves = 0;
         if (args.algorithm == "hybrid_mcmc") {
+            std::vector<long> active_set = graph.high_degree_vertices();
+            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, &next_assignment, mcmc_window, graph.high_degree_vertices(), -1);
             vertex_moves = update_blockmodel(graph, blockmodel, membership_updates, &next_assignment, mcmc_window);
+            active_set = graph.low_degree_vertices();
+            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             for (int batch = 0; batch < args.batches; ++batch) {
-                std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, &next_assignment, mcmc_window, graph.low_degree_vertices(), batch);
+                std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, &next_assignment, mcmc_window, active_set, batch);
                 vertex_moves += update_blockmodel(graph, blockmodel, async_updates, &next_assignment, mcmc_window);
             }
         } else {
             std::vector<long> active_set = utils::range<long>(0, graph.num_vertices());
+            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             for (int batch = 0; batch < args.batches; ++batch) {
 //                if (mpi.rank == 0) std::cout << "processing batch = " << batch << std::endl;
                 std::vector<Membership> membership_updates;
