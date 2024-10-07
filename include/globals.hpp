@@ -20,13 +20,16 @@ namespace timers {
 
 /// The total amount of time spent performing block merges, to be dynamically updated during execution.
 extern double BlockMerge_time;
-/// The total amount of time spent in the main parallelizable loop of the block merge iterations, to by dynamically
+/// The total amount of time spent in the main parallelizable loop of the block merge iterations, to be dynamically
 /// updated during execution.
 extern double BlockMerge_loop_time;
 /// The time taken to sort potential block merges.
 extern double BlockMerge_sort_time;
 /// The time taken to split blocks.
 extern double BlockSplit_time;
+/// The total amount of time spent in the main parallelizable loop of the block merge iterations, to be dynamically
+/// updated during execution.
+extern double BlockSplit_loop_time;
 /// The time taken to build the blockmodel.
 extern double BLOCKMODEL_BUILD_TIME;
 /// The time taken to sort the vertices in the blockmodel.

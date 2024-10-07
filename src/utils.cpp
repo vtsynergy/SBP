@@ -221,6 +221,7 @@ void save_partial_profile(double iteration, double modularity, double mdl, doubl
     intermediate.block_merge_time = timers::BlockMerge_time;
     intermediate.block_merge_loop_time = timers::BlockMerge_loop_time;
     intermediate.block_split_time = timers::BlockSplit_time;
+    intermediate.block_split_loop_time = timers::BlockSplit_loop_time;
     intermediate.blockmodel_build_time = timers::BLOCKMODEL_BUILD_TIME;
     intermediate.finetune_time = timers::finetune_time;
     intermediate.load_balancing_time = timers::Load_balancing_time;
@@ -244,6 +245,7 @@ void save_partial_profile(double iteration, double modularity, double mdl, doubl
     timers::BlockMerge_time = 0;
     timers::BlockMerge_loop_time = 0;
     timers::BlockSplit_time = 0;
+    timers::BlockSplit_loop_time = 0;
     timers::BLOCKMODEL_BUILD_TIME = 0;
     timers::finetune_time = 0;
     timers::Load_balancing_time = 0;

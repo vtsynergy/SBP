@@ -48,6 +48,7 @@ struct PartialProfile {
     double block_merge_time = 0.0;
     double block_merge_loop_time = 0.0;
     double block_split_time = 0.0;
+    double block_split_loop_time = 0.0;
     double blockmodel_build_time = 0.0;
     double finetune_time = 0.0;
     double load_balancing_time = 0.0;

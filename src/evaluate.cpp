@@ -219,12 +219,13 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << "normalized_mdl_v1,sample_size,modularity,f1_score,nmi,num_blocks,true_mdl,true_mdl_v1,"
              << "sampling_algorithm,runtime,sampling_time,sample_extend_time,finetune_time,mcmc_iterations,mcmc_time,"
              << "sequential_mcmc_time,parallel_mcmc_time,vertex_move_time,mcmc_moves,total_num_islands,"
-             << "block_merge_time,block_merge_loop_time,block_split_time,blockmodel_build_time,finetune_time,sort_time,"
-             << "load_balancing_time,access_time,update_assignment,total_time" << std::endl;
+             << "block_merge_time,block_merge_loop_time,block_split_time,block_split_loop_time,blockmodel_build_time,"
+             << "finetune_time,sort_time,load_balancing_time,access_time,update_assignment,total_time" << std::endl;
     }
     double total_block_merge_time = 0.0;
     double total_block_merge_loop_time = 0.0;
     double total_block_split_time = 0.0;
+    double total_block_split_loop_time = 0.0;
     double total_blockmodel_build_time = 0.0;
     double total_mcmc_time = 0.0;
     long total_mcmc_iterations = 0;
@@ -242,6 +243,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
             total_block_merge_time += temp.block_merge_time;
             total_block_merge_loop_time += temp.block_merge_loop_time;
             total_block_split_time += temp.block_split_time;
+            total_block_split_loop_time += temp.block_split_loop_time;
             total_blockmodel_build_time += temp.blockmodel_build_time;
             total_mcmc_time += temp.mcmc_time;
             total_mcmc_iterations += temp.mcmc_iterations;
@@ -258,6 +260,7 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
             temp.block_merge_time = total_block_merge_time;
             temp.block_merge_loop_time = total_block_merge_loop_time;
             temp.block_split_time = total_block_split_time;
+            temp.block_split_loop_time = total_block_split_loop_time;
             temp.blockmodel_build_time = total_blockmodel_build_time;
             temp.mcmc_time = total_mcmc_time;
             temp.mcmc_iterations = total_mcmc_iterations;
@@ -281,9 +284,9 @@ void write_results(const Graph &graph, const evaluate::Eval &eval, double runtim
              << temp.mcmc_time << "," << temp.mcmc_sequential_time << "," << temp.mcmc_parallel_time << ","
              << temp.mcmc_vertex_move_time << "," << temp.mcmc_moves << "," << timers::total_num_islands << ","
              << temp.block_merge_time << "," << temp.block_merge_loop_time << "," << temp.block_split_time << ","
-             << temp.blockmodel_build_time << "," << temp.finetune_time << "," << temp.sort_time << ","
-             << temp.load_balancing_time << "," << temp.access_time << "," << temp.update_assignment << ","
-             << temp.total_time << std::endl;
+             << temp.block_split_loop_time << "," << temp.blockmodel_build_time << "," << temp.finetune_time << ","
+             << temp.sort_time << "," << temp.load_balancing_time << "," << temp.access_time << ","
+             << temp.update_assignment << "," << temp.total_time << std::endl;
     }
     file.close();
 }

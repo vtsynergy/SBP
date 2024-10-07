@@ -19,6 +19,7 @@
 #include "common.hpp"
 #include "entropy.hpp"
 #include "finetune.hpp"
+#include "globals.hpp"
 #include "graph.hpp"
 #include "sbp.hpp"
 #include "rng.hpp"
@@ -411,6 +412,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
         omp_init_lock(&locks[i]);
     }
     args.no_transpose = true;
+    double loop_start_t = MPI_Wtime();
     #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
     shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, best_split_for_each_block, delta_entropy_for_each_block, locks)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
@@ -437,6 +439,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
             omp_unset_lock(&locks[current_block]);
         }
     }
+    timers::BlockSplit_loop_time += MPI_Wtime() - loop_start_t;
     args.no_transpose = user_arg;
     for (int i = 0; i < num_blocks; ++i) {
         omp_destroy_lock(&locks[i]);
