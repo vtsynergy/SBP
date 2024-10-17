@@ -126,6 +126,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
         }
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
+//        if (mpi.rank == 0) blockmodel.print_blockmatrix();
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         double start_mcmc = MPI_Wtime();
         blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);

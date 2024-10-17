@@ -178,6 +178,7 @@ std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmode
     size_t start = batch * batch_size;
     size_t end = std::min(vertices.size(), (batch + 1) * batch_size);
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         utils::MPI(MPI_Win_fence(0, mcmc_window));
     }
     #pragma omp parallel for schedule(dynamic) default(none) \
@@ -217,6 +218,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     MPI_Win mcmc_window;
     std::vector<long> next_assignment;
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         std::cout << mpi.rank << " | initializing the MPI single-sided comm window" << std::endl;
         next_assignment = blockmodel.block_assignment();
         auto win_size = long(next_assignment.size() * sizeof(long));
@@ -239,6 +241,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
         double start_t = MPI_Wtime();
         if (args.nonblocking) {
+            if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
             next_assignment.assign(blockmodel.block_assignment().begin(), blockmodel.block_assignment().end());
         }
 //        for (const long &b: block_assignment) {
@@ -274,6 +277,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     if (mpi.rank == 0) std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
     if (mpi.rank == 0) std::cout << blockmodel.getOverall_entropy() << std::endl;
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         utils::MPI(MPI_Win_free(&mcmc_window));
     } else {
         MPI_Type_free(&Membership_t);
@@ -343,6 +347,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
     MPI_Win mcmc_window;
     std::vector<long> next_assignment;
     if (args.nonblocking) {
+//        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         std::cout << mpi.rank << " | initializing the MPI single-sided comm window" << std::endl;
         next_assignment = blockmodel.block_assignment();
         auto win_size = long(next_assignment.size() * sizeof(long));
@@ -367,6 +372,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
         // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
         // asynchronous Gibbs sampling
         if (args.nonblocking) {
+//            if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
             next_assignment.assign(blockmodel.block_assignment().begin(), blockmodel.block_assignment().end());
         }
         size_t vertex_moves = 0;
@@ -418,6 +424,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
     }
     blockmodel.setOverall_entropy(new_entropy);
     if (args.nonblocking) {
+//        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         utils::MPI(MPI_Win_free(&mcmc_window));
     } else {
         MPI_Type_free(&Membership_t);
@@ -498,6 +505,7 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
         end = (long) vertices.size();
     }
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         utils::MPI(MPI_Win_fence(0, mcmc_window));
     }
     for (size_t index = start; index < end; ++index) {  // long vertex : vertices) {
@@ -563,6 +571,7 @@ void remote_update_membership(long vertex, long new_block, std::vector<Membershi
                               std::vector<long> *next_assignment, MPI_Win mcmc_window) {
 //    std::cout << mpi.rank << " | attempting to move " << vertex << " to " << new_block << std::endl;
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
         (*next_assignment)[vertex] = new_block;
         for (int rank = 0; rank < mpi.num_processes; ++rank) {
             if (rank == mpi.rank) continue;
@@ -595,6 +604,7 @@ size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
                          const std::vector<Membership> &membership_updates,
                          std::vector<long> *next_assignment, MPI_Win mcmc_window) {
     if (args.nonblocking) {
+        if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
 //        std::cout << mpi.rank << " | updating blockmodel!" << std::endl;
 //        std::cout << mpi.rank << " | next_assignment_addr = " << next_assignment << std::endl;
 //        assert(next_assignment != nullptr);

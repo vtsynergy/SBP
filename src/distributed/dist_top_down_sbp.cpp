@@ -205,6 +205,7 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
     dist::apply_best_splits(blockmodel, delta_entropy_for_each_block, comm_assignment, target_num_communities);
     blockmodel.distribute(graph);
     blockmodel.initialize_edge_counts(graph);
+//    if (mpi.rank == 0) blockmodel.print_blockmatrix();
     return blockmodel;
 }
 
