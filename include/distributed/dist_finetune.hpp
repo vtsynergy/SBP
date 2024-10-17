@@ -72,6 +72,8 @@ VertexMove propose_mh_move(TwoHopBlockmodel &blockmodel, long vertex, const Grap
 void remote_update_membership(long vertex, long new_block, std::vector<Membership> &membership_updates,
                               std::vector<long> *next_assignment = nullptr, MPI_Win mcmc_window = nullptr);
 
+void shuffle_active_set(std::vector<long> &active_set);
+
 size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
                          const std::vector<Membership> &membership_updates,
                          std::vector<long> *next_assignment = nullptr, MPI_Win mcmc_window = nullptr);

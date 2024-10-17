@@ -436,7 +436,11 @@ void Blockmodel::move_vertex(Vertex vertex, const Delta &delta, utils::ProposalA
 
 bool Blockmodel::move_vertex(const VertexMove_v3 &move) {
     long current_block = this->_block_assignment[move.vertex.id];
-    if (this->_block_sizes[current_block] == 1) return false;
+    if (this->_block_sizes[current_block] == 1) {
+        std::cout << "attempted to move vertex " << move.vertex.id << " from block " << current_block
+                  << " with block size == 1" << std::endl;
+        return false;
+    }
     for (const long &out_vertex : move.out_edges.indices) {  // Edge: vertex --> out_vertex
         long out_block = this->_block_assignment[out_vertex];
         this->_blockmatrix->sub(current_block, out_block, 1);

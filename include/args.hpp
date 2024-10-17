@@ -39,6 +39,7 @@ public:  // Everything in here is public, because why not?
     bool nonblocking;
     bool nonparametric;
     int numvertices;
+    bool ordered;
     std::string output_file;
     std::string overlap;
     double samplesize;
@@ -126,6 +127,7 @@ public:  // Everything in here is public, because why not?
                                             parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                               "int", parser);
+            TCLAP::SwitchArg _ordered("", "ordered", "If set, will loop through vertices in an ordered fashion", parser, false);
             TCLAP::ValueArg<std::string> _output_file("", "output_file", "The filename of the json output. Will be stored in <json>/<output_file>",
                                                       false, "", "string that ends in .json", parser);
             TCLAP::ValueArg<std::string> _overlap("o", "overlap", "The degree of overlap between communities", false,
@@ -180,6 +182,7 @@ public:  // Everything in here is public, because why not?
             this->nonblocking = _nonblocking.getValue();
             this->nonparametric = _nonparametric.getValue();
             this->numvertices = _numvertices.getValue();
+            this->ordered = _ordered.getValue();
             this->output_file = _output_file.getValue();
             if (this->output_file.empty()) {
                 std::ostringstream output_file_stream;

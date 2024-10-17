@@ -54,6 +54,7 @@ bool async_move(const Membership &membership, const Graph &graph, TwoHopBlockmod
     return blockmodel.move_vertex(move);
 }
 
+//<<<<<<< HEAD
 //TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached,
 //                                     std::vector<long> *next_assignment, MPI_Win mcmc_window) {
 //    MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
@@ -110,6 +111,59 @@ bool async_move(const Membership &membership, const Graph &graph, TwoHopBlockmod
 //    // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
 //    return blockmodel;
 //}
+//=======
+//TwoHopBlockmodel &asynchronous_gibbs(TwoHopBlockmodel &blockmodel, Graph &graph, DistBlockmodelTriplet &blockmodels) {
+//    MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
+//    MPI_Type_commit(&Membership_t);
+//    // MPI Datatype init
+//    if (blockmodel.getNum_blocks() == 1) {
+//        return blockmodel;
+//    }
+//    std::vector<double> delta_entropies;
+//    long total_vertex_moves = 0;
+//    double old_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+//    blockmodel.setOverall_entropy(old_entropy);
+//    double new_entropy = 0;
+//    for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
+//        measure_imbalance_metrics(blockmodel, graph);
+//        double start_t = MPI_Wtime();
+//        // Block assignment used to re-create the Blockmodel after each batch to improve mixing time of
+//        // asynchronous Gibbs sampling
+//        std::vector<long> block_assignment(blockmodel.block_assignment());
+//        size_t vertex_moves = 0;
+//        std::vector<long> active_set = utils::range<long>(0, graph.num_vertices());
+//        if (!args.ordered) {
+//            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+//            std::shuffle(active_set.begin(), active_set.end(), std::mt19937_64(seed));
+//        }
+//        for (int batch = 0; batch < args.batches; ++batch) {
+//            std::vector<Membership> membership_updates = asynchronous_gibbs_iteration(blockmodel, graph, active_set, batch);
+//            vertex_moves += update_blockmodel(graph, blockmodel, membership_updates);
+//        }
+//        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
+//        new_entropy = entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
+//        double delta_entropy = new_entropy - old_entropy;
+//        old_entropy = new_entropy;
+//        delta_entropies.push_back(delta_entropy);
+//        if (mpi.rank == 0) {
+//            std::cout << "Itr: " << iteration << " vertex moves: " << vertex_moves << " delta S: "
+//                      << delta_entropy / new_entropy << std::endl;
+//        }
+//        total_vertex_moves += vertex_moves;
+//        MCMC_iterations++;
+//        // Early stopping
+//        if (early_stop(iteration, blockmodels, new_entropy, delta_entropies)) {
+//            break;
+//        }
+//    }
+//    blockmodel.setOverall_entropy(new_entropy);
+//    std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
+//    std::cout << blockmodel.getOverall_entropy() << std::endl;
+//    MPI_Type_free(&Membership_t);
+//    // are there more iterations with the 2-hop blockmodel due to restricted vertex moves?
+//    return blockmodel;
+//}
+//>>>>>>> BatchedAsyncGibss
 
 std::vector<Membership> asynchronous_gibbs_iteration(TwoHopBlockmodel &blockmodel, const Graph &graph,
                                                      std::vector<long> *next_assignment, MPI_Win mcmc_window,
@@ -191,10 +245,11 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
 //            assert(b < blockmodel.num_blocks());
 //        }
         std::vector<long> vertices = utils::range<long>(0, graph.num_vertices());
+        shuffle_active_set(vertices);
         size_t vertex_moves = 0;
         for (int batch = 0; batch < args.batches; ++batch) {
             std::vector<Membership> membership_updates = metropolis_hastings_iteration(
-                    blockmodel, graph, &next_assignment, mcmc_window);
+                    blockmodel, graph, &next_assignment, mcmc_window, vertices, batch);
             vertex_moves += update_blockmodel(graph, blockmodel, membership_updates, &next_assignment, mcmc_window);
         }
         MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
@@ -225,56 +280,6 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
     }
     return blockmodel;
 }
-
-//TwoHopBlockmodel &hybrid_mcmc(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached) {
-//    MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES, &Membership_t);
-//    MPI_Type_commit(&Membership_t);
-//    // MPI Datatype init
-//    if (blockmodel.num_blocks() == 1) {
-//        return blockmodel;
-//    }
-//    std::vector<double> delta_entropies;
-//    size_t total_vertex_moves = 0;
-//    double old_entropy = args.nonparametric ?
-//            entropy::nonparametric::mdl(blockmodel, graph) :
-//            entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-//    blockmodel.setOverall_entropy(old_entropy);
-//    double new_entropy = 0;
-//    for (long iteration = 0; iteration < MAX_NUM_ITERATIONS; ++iteration) {
-//        measure_imbalance_metrics(blockmodel, graph);
-//        double start_t = MPI_Wtime();
-//        block_assignment.assign(blockmodel.block_assignment().begin(), blockmodel.block_assignment().end());
-////        for (const long &b: block_assignment) {
-////            assert(b < blockmodel.num_blocks());
-////        }
-////        std::vector<long> block_assignment(blockmodel.block_assignment());
-//        std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, nullptr, nullptr, graph.high_degree_vertices(), -1);
-//        size_t vertex_moves = update_blockmodel(graph, blockmodel, membership_updates);
-//        for (int batch = 0; batch < args.batches; ++batch) {
-//            std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, nullptr, nullptr, graph.low_degree_vertices(), batch);
-//            vertex_moves += update_blockmodel(graph, blockmodel, async_updates);
-//        }
-//        MCMC_RUNTIMES.push_back(MPI_Wtime() - start_t);
-//        new_entropy = args.nonparametric ?
-//                entropy::nonparametric::mdl(blockmodel, graph) :
-//                entropy::dist::mdl(blockmodel, graph.num_vertices(), graph.num_edges());
-//        double delta_entropy = new_entropy - old_entropy;
-//        old_entropy = new_entropy;
-//        delta_entropies.push_back(delta_entropy);
-//        std::cout << mpi.rank << " | Itr: " << iteration << " vertex moves: " << vertex_moves << " delta S: "
-//            << delta_entropy / new_entropy << std::endl;
-//        total_vertex_moves += vertex_moves;
-//        timers::MCMC_iterations++;
-//        if (early_stop(iteration, golden_ratio_not_reached, new_entropy, delta_entropies)) {
-//            break;
-//        }
-//    }
-//    blockmodel.setOverall_entropy(new_entropy);
-//    if (mpi.rank == 0) std::cout << "Total number of vertex moves: " << total_vertex_moves << ", overall entropy: ";
-//    if (mpi.rank == 0) std::cout << blockmodel.getOverall_entropy() << std::endl;
-//    MPI_Type_free(&Membership_t);
-//    return blockmodel;
-//}
 
 void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &graph) {
     std::vector<long> degrees = graph.degrees();
@@ -367,18 +372,21 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
         size_t vertex_moves = 0;
         if (args.algorithm == "hybrid_mcmc") {
             std::vector<long> active_set = graph.high_degree_vertices();
-            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
+            shuffle_active_set(active_set);
+//            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, &next_assignment, mcmc_window, graph.high_degree_vertices(), -1);
             vertex_moves = update_blockmodel(graph, blockmodel, membership_updates, &next_assignment, mcmc_window);
             active_set = graph.low_degree_vertices();
-            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
+            shuffle_active_set(active_set);
+//            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             for (int batch = 0; batch < args.batches; ++batch) {
                 std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, &next_assignment, mcmc_window, active_set, batch);
                 vertex_moves += update_blockmodel(graph, blockmodel, async_updates, &next_assignment, mcmc_window);
             }
         } else {
             std::vector<long> active_set = utils::range<long>(0, graph.num_vertices());
-            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
+            shuffle_active_set(active_set);
+//            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             for (int batch = 0; batch < args.batches; ++batch) {
 //                if (mpi.rank == 0) std::cout << "processing batch = " << batch << std::endl;
                 std::vector<Membership> membership_updates;
@@ -408,6 +416,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
             break;
         }
     }
+    blockmodel.setOverall_entropy(new_entropy);
     if (args.nonblocking) {
         utils::MPI(MPI_Win_free(&mcmc_window));
     } else {
@@ -575,6 +584,13 @@ void remote_update_membership(long vertex, long new_block, std::vector<Membershi
     }
 }
 
+void shuffle_active_set(std::vector<long> &active_set) {
+    if (!args.ordered) {
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        std::shuffle(active_set.begin(), active_set.end(), std::mt19937_64(seed));
+    }
+}
+
 size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
                          const std::vector<Membership> &membership_updates,
                          std::vector<long> *next_assignment, MPI_Win mcmc_window) {
@@ -614,6 +630,7 @@ size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
     return vertex_moves;
 }
 
-}  // namespace finetune::dist
+}
+// namespace finetune::dist
 
 #endif // SBP_DIST_FINETUNE_HPP
