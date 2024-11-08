@@ -1,8 +1,8 @@
 /***
  * Stores the current graph blockmodeling results.
  */
-#ifndef SBP_DELTA_HPP
-#define SBP_DELTA_HPP
+#ifndef SBP_BLOCKMODEL_HPP
+#define SBP_BLOCKMODEL_HPP
 
 #include <iostream>
 #include <limits>
@@ -158,7 +158,7 @@ class Blockmodel {
     /// prints the blockmodel with some additional information.
     void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
-    bool stores(long block) const { return true; }
+    bool stores([[maybe_unused]] long block) const { return true; }
     /// Updates the block assignment of all vertices in `from_block` to `to_block`.
     void update_block_assignment(long from_block, long to_block);
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
@@ -218,4 +218,4 @@ class Blockmodel {
     long num_blocks_to_merge;
 };
 
-#endif // SBP_DELTA_HPP
+#endif // SBP_BLOCKMODEL_HPP

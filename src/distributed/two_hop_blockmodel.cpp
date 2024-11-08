@@ -102,14 +102,24 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
         std::cout << mpi.rank << " | rebuilding rank indices! =============" << std::endl;
         Rank_indices = utils::constant<long>(graph.num_vertices(), 0);
         std::vector<long> vertex_degrees = graph.degrees();
-	    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
+        std::vector<std::pair<long, long>> vertex_info(graph.num_vertices());
+        for (uint i = 0; i < (uint) graph.num_vertices(); ++i) {
+            vertex_info[i] = std::make_pair(i, vertex_degrees[i]);
+        }
+//	    std::vector<long> sorted_indices = utils::argsort<long>(vertex_degrees);
+        std::stable_sort(std::execution::par_unseq, vertex_info.begin(), vertex_info.end(),
+                         [](const auto &i1, const auto &i2) {
+            return i1.second > i2.second;
+        });
         // std::vector<long> sorted_indices = utils::argsort(vertex_degrees);
         for (long i = mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-            long vertex = sorted_indices[i];
+//            long vertex = sorted_indices[i];
+            long vertex = vertex_info[i].first;
             Rank_indices[vertex] = 1;
         }
         for (long i = 2 * mpi.num_processes - 1 - mpi.rank; i < graph.num_vertices(); i += 2 * mpi.num_processes) {
-            long vertex = sorted_indices[i];
+//            long vertex = sorted_indices[i];
+            long vertex = vertex_info[i].first;
             Rank_indices[vertex] = 1;
         }
     }
@@ -117,7 +127,7 @@ void TwoHopBlockmodel::distribute_none_edge_balanced(const Graph &graph) {
     for (int rank = 0; rank < mpi.num_processes; ++rank) {
         if (mpi.rank == rank) {
             std::cout << mpi.rank << " | rank indices = ";
-            for (int j = 0; j < 25; ++j) {
+            for (int j = 0; j < std::min<int>((int)graph.num_vertices(), 25); ++j) {
                 std::cout << Rank_indices[j] << ", ";
             }
             std::cout << std::endl;
@@ -330,7 +340,7 @@ void TwoHopBlockmodel::initialize_edge_counts(const Graph &graph) {
         long my_num_blocks = ceil(double(this->_num_blocks) / double(num_threads));
         long start = my_num_blocks * tid;
         long end = start + my_num_blocks;
-        for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (ulong vertex = 0; vertex < (ulong) graph.num_vertices(); ++vertex) {
             long block = this->_block_assignment[vertex];
             if (block < start || block >= end || !this->_in_two_hop_radius[block])  // only modify blocks this thread is responsible for
                 continue;
@@ -462,7 +472,10 @@ std::vector<std::pair<long,long>> TwoHopBlockmodel::sorted_block_sizes() const {
     for (const long &block : this->_block_assignment) {
         block_sizes[block].second++;
     }
-    utils::radix_sort(block_sizes);
+//    utils::radix_sort(block_sizes);
+    std::stable_sort(std::execution::par_unseq, block_sizes.begin(), block_sizes.end(), [](const auto &i1, const auto &i2) {
+        return i1.second > i2.second;
+    });
     return block_sizes;
 //    std::sort(block_sizes.begin(), block_sizes.end(),
 //              [](const std::pair<long, long> &a, const std::pair<long, long> &b) { return a.second > b.second; });

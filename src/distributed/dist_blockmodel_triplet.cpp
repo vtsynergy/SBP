@@ -115,7 +115,7 @@ TwoHopBlockmodel DistTopDownBlockmodelTriplet::get_next_blockmodel(TwoHopBlockmo
 //        blockmodel.setNum_blocks_to_merge(long(blockmodel.num_blocks() * (1.0/BLOCK_REDUCTION_RATE)));
         blockmodel.setNum_blocks_to_merge(long(ceil(blockmodel.num_blocks() * 1.5)));
         if (blockmodel.getNum_blocks_to_merge() == 0 ||
-            blockmodel.getNum_blocks_to_merge() >= blockmodel.block_assignment().size()) {
+            blockmodel.getNum_blocks_to_merge() >= static_cast<long>(blockmodel.block_assignment().size())) {
             this->optimal_num_blocks_found = true;
         }
         return blockmodel;

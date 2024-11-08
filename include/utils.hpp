@@ -165,8 +165,8 @@ template <typename T> inline std::vector<long> argsort(const std::vector<T> &uns
     // initialize original index locations
     std::vector<long> indices = utils::range<long>(0, unsorted.size());
     // sort indexes based on comparing values in unsorted
-    std::sort(std::execution::par_unseq, indices.data(), indices.data() + indices.size(),
-              [&unsorted](size_t i1, size_t i2) { return unsorted[i1] > unsorted[i2]; });
+    std::stable_sort(std::execution::par_unseq, indices.data(), indices.data() + indices.size(),
+                     [&unsorted](size_t i1, size_t i2) { return unsorted[i1] > unsorted[i2]; });
     return indices;
 }
 
@@ -211,13 +211,16 @@ template <typename T> inline std::vector<long> to_long(const std::vector<T> &vec
 }
 
 /// Wraps an MPI call with an exception handler
-inline void MPI(int result) {
+inline void MPI_CALL(int result, const char* file, int line) {
     if (result == MPI_SUCCESS) return;
     char error_string[MPI_MAX_ERROR_STRING];
     int error_length;
     MPI_Error_string(result, error_string, &error_length);
-    throw std::runtime_error(std::string(error_string));
+    throw std::runtime_error(std::string(file) + ":" + std::to_string(line) + " - " + std::string(error_string));
 }
+
+// Macro to simplify usage
+#define MPI(call) MPI_CALL(call, __FILE__, __LINE__)
 
 /// Returns the natural log of every value in vector.
 /// Relies on an implicit conversion from type T to double.

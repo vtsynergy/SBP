@@ -564,9 +564,9 @@ double normalize_mdl_v1(double mdl, const Graph &graph) {
     return mdl / null_mdl_v1(graph);
 }
 
-double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
-    return mdl / null_mdl_v2(num_vertices, num_edges);
-}
+//double normalize_mdl_v2(double mdl, long num_vertices, long num_edges) {
+//    return mdl / null_mdl_v2(num_vertices, num_edges);
+//}
 
 double null_mdl_v1(const Graph &graph) {
     if (args.nonparametric) {
@@ -584,7 +584,7 @@ double null_mdl_v1(const Graph &graph) {
     return (graph.num_edges() * h) - log_posterior_p;
 }
 
-double null_mdl_v2(long num_vertices, long num_edges) {
+/** double null_mdl_v2(long num_vertices, long num_edges) {
     // TODO: not sure how this works in nonparametric version
     double log_posterior_p = num_edges * log(1.0 / num_edges);
     // done calculating log_posterior_probability
@@ -592,7 +592,7 @@ double null_mdl_v2(long num_vertices, long num_edges) {
     double h = ((1 + x) * log(1 + x)) - (x * log(x));
 //    std::cout << "log posterior = " << log_posterior_p << " blockmodel = " << (num_edges * h) + (num_vertices * log(num_vertices)) << std::endl;
     return (num_edges * h) + (num_vertices * log(num_vertices)) - log_posterior_p;
-}
+} */
 
 double mdl(const Blockmodel &blockmodel, const Graph &graph) {
     if (args.nonparametric)

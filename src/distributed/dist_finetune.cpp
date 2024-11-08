@@ -26,21 +26,60 @@ MPI_Datatype Membership_t;
 //MPI_Win win = MPI_WIN_NULL;
 //std::vector<long> block_assignment;
 
+//std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership> &membership_updates) {
+//    int num_moves = membership_updates.size();
+//    int rank_moves[mpi.num_processes];
+//    MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, mpi.comm);
+//    int offsets[mpi.num_processes];
+//    offsets[0] = 0;
+//    for (long i = 1; i < mpi.num_processes; ++i) {
+//        offsets[i] = offsets[i - 1] + rank_moves[i - 1];
+//    }
+//    long batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
+//    std::vector<Membership> collected_membership_updates(batch_vertex_moves);
+//    std::cout << mpi.rank << " | size of cmu: " << collected_membership_updates.size() << std::endl;
+//    for (int i = 0; i < mpi.num_processes; ++i) {
+//        std::cout << "(offset: " << offsets[i] << ",rankmoves: " << rank_moves[i] << "), ";
+//    }
+//    std::cout << std::endl;
+//    MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
+//                   rank_moves, offsets, Membership_t, mpi.comm);
+//    return collected_membership_updates;
+//}
+
 std::vector<Membership> mpi_get_assignment_updates(const std::vector<Membership> &membership_updates) {
-    int num_moves = (int) membership_updates.size();
-    int rank_moves[mpi.num_processes];
-    MPI_Allgather(&num_moves, 1, MPI_INT, &rank_moves, 1, MPI_INT, mpi.comm);
-    int offsets[mpi.num_processes];
+//    for (const auto &m : membership_updates) {
+//        if (m.vertex < 0 || m.vertex >= 50000) {
+//            std::cout << mpi.rank << " ERROR: invalid vertex " << m.vertex << std::endl;
+//            exit(-111);
+//        }
+//    }
+    int num_moves = static_cast<int>(membership_updates.size());
+    std::vector<int> rank_moves(mpi.num_processes);
+    utils::MPI(MPI_Allgather(&num_moves, 1, MPI_INT, rank_moves.data(), 1, MPI_INT, mpi.comm));
+
+    std::vector<int> offsets(mpi.num_processes);
     offsets[0] = 0;
-    for (long i = 1; i < mpi.num_processes; ++i) {
+    for (int i = 1; i < mpi.num_processes; ++i) {
         offsets[i] = offsets[i - 1] + rank_moves[i - 1];
     }
-    long batch_vertex_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
-    std::vector<Membership> collected_membership_updates(batch_vertex_moves);
-    MPI_Allgatherv(membership_updates.data(), num_moves, Membership_t, collected_membership_updates.data(),
-                   rank_moves, offsets, Membership_t, mpi.comm);
+
+    int total_moves = offsets[mpi.num_processes - 1] + rank_moves[mpi.num_processes - 1];
+    std::vector<Membership> collected_membership_updates(total_moves, {-1, -1});
+
+//    std::cout << mpi.rank << " | size of cmu: " << collected_membership_updates.size() << std::endl;
+//    for (int i = 0; i < mpi.num_processes; ++i) {
+//        std::cout << "(offset: " << offsets[i] << ", rank_moves: " << rank_moves[i] << "), ";
+//    }
+//    std::cout << std::endl;
+
+    utils::MPI(MPI_Allgatherv(
+            membership_updates.data(), num_moves, Membership_t,collected_membership_updates.data(),
+            rank_moves.data(), offsets.data(), Membership_t, mpi.comm));
+
     return collected_membership_updates;
 }
+
 
 bool async_move(const Membership &membership, const Graph &graph, TwoHopBlockmodel &blockmodel) {
     EdgeWeights out_edges = edge_weights(graph.out_neighbors(), membership.vertex, false);
@@ -224,7 +263,7 @@ Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
         auto win_size = long(next_assignment.size() * sizeof(long));
         MPI_Win_create(next_assignment.data(), win_size, sizeof(long), MPI_INFO_NULL,
                        mpi.comm, &mcmc_window);
-        assert(next_assignment.size() == graph.num_vertices());
+        assert(next_assignment.size() == (size_t) graph.num_vertices());
     } else {
         MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES,
                                &Membership_t);
@@ -353,7 +392,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
         auto win_size = long(next_assignment.size() * sizeof(long));
         MPI_Win_create(next_assignment.data(), win_size, sizeof(long), MPI_INFO_NULL,
                        mpi.comm, &mcmc_window);
-        assert(next_assignment.size() == graph.num_vertices());
+        assert(next_assignment.size() == (size_t) graph.num_vertices());
     } else {
         MPI_Type_create_struct(2, MEMBERSHIP_T_BLOCK_LENGTHS, MEMBERSHIP_T_DISPLACEMENTS, MEMBERSHIP_T_TYPES,
                                &Membership_t);
@@ -380,12 +419,15 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
             std::vector<long> active_set = graph.high_degree_vertices();
             shuffle_active_set(active_set);
 //            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
+            if (mpi.rank == 0) std::cout << mpi.rank << " | starting MH portion of hybrid MCMC =========" << std::endl;
             std::vector<Membership> membership_updates = metropolis_hastings_iteration(blockmodel, graph, &next_assignment, mcmc_window, graph.high_degree_vertices(), -1);
             vertex_moves = update_blockmodel(graph, blockmodel, membership_updates, &next_assignment, mcmc_window);
+            if (mpi.rank == 0) std::cout << mpi.rank << " | starting AG portion of hybrid MCMC =========" << std::endl;
             active_set = graph.low_degree_vertices();
             shuffle_active_set(active_set);
 //            std::shuffle(active_set.begin(), active_set.end(), rng::generator());
             for (int batch = 0; batch < args.batches; ++batch) {
+                if (mpi.rank == 0) std::cout << mpi.rank << " | starting AG batch " << batch << " portion of hybrid MCMC =========" << std::endl;
                 std::vector<Membership> async_updates = asynchronous_gibbs_iteration(blockmodel, graph, &next_assignment, mcmc_window, active_set, batch);
                 vertex_moves += update_blockmodel(graph, blockmodel, async_updates, &next_assignment, mcmc_window);
             }
@@ -498,11 +540,11 @@ std::vector<Membership> metropolis_hastings_iteration(TwoHopBlockmodel &blockmod
         vertices = active_set;
     long batch_size = long(ceil(double(vertices.size()) / args.batches));
     long start = batch * batch_size;
-    long end = std::min(long(vertices.size()), (batch + 1) * batch_size);
+    size_t end = std::min(long(vertices.size()), (batch + 1) * batch_size);
     // for hybrid_mcmc, we want to go through entire active_set in one go, regardless of number of batches
     if (batch == -1) {
         start = 0;
-        end = (long) vertices.size();
+        end = vertices.size();
     }
     if (args.nonblocking) {
         if (mpi.rank == 0) std::cout << "nonblocking call" << std::endl;
@@ -631,6 +673,10 @@ size_t update_blockmodel(const Graph &graph, TwoHopBlockmodel &blockmodel,
     std::vector<Membership> collected_membership_updates = mpi_get_assignment_updates(membership_updates);
     size_t vertex_moves = 0;
     for (const Membership &membership: collected_membership_updates) {
+        if (membership.vertex < 0 || membership.vertex >= graph.num_vertices()) {
+            std::cout << mpi.rank << " | ERROR moving " << membership.vertex << " to block " << membership.block << std::endl;
+            exit(-114);
+        }
         if (membership.block == blockmodel.block_assignment(membership.vertex)) continue;
         if (async_move(membership, graph, blockmodel)) {
             vertex_moves++;

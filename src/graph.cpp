@@ -308,7 +308,7 @@ std::vector<std::pair<std::pair<long, long>, long>> Graph::sorted_edge_list() co
             edge_info.emplace_back(std::make_pair(source, dest), information);
         }
     }
-    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
+    std::stable_sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
         return i1.second > i2.second;
     });
     return edge_info;

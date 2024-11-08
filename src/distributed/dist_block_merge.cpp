@@ -13,6 +13,7 @@ std::vector<Merge> mpi_get_best_merges(std::vector<Merge> &merge_buffer, int my_
         best_merges[index] = merge;
         index++;
     }
+//    std::cout << mpi.rank << " | num_my_blocks: " << my_blocks << " last index: " << index << std::endl;
     int numblocks[mpi.num_processes];
     MPI_Allgather(&(my_blocks), 1, MPI_INT, &numblocks, 1, MPI_INT, mpi.comm);
     int offsets[mpi.num_processes];
@@ -21,7 +22,6 @@ std::vector<Merge> mpi_get_best_merges(std::vector<Merge> &merge_buffer, int my_
         offsets[i] = offsets[i - 1] + numblocks[i - 1];
     }
     long total_blocks = offsets[mpi.num_processes - 1] + numblocks[mpi.num_processes - 1];
-    // TODO: change the size of this to total_blocks? Otherwise when there is overlapping computation there may be a segfault
     std::vector<Merge> all_best_merges(total_blocks);
     MPI_Allgatherv(best_merges.data(), my_blocks, Merge_t, all_best_merges.data(), numblocks, offsets,
                    Merge_t, mpi.comm);
@@ -43,7 +43,7 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
     std::vector<Merge> merge_buffer(num_blocks);
     // long num_avoided = 0;  // number of avoided/skipped calculations
     // long index = 0;
-    long my_blocks = 0;
+    int my_blocks = 0;
     #pragma omp parallel for schedule(dynamic) default(none) \
     shared(num_blocks, blockmodel, my_blocks, graph, block_assignment, merge_buffer) // reduction( + : num_avoided)
     for (long current_block = 0; current_block < num_blocks; ++current_block) {
@@ -64,12 +64,29 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
         }
     }
     // MPI COMMUNICATION
+//    for (long i = 0; i < blockmodel.num_blocks(); ++i) {
+//        if (blockmodel.owns_block(i) && merge_buffer[i].block == -1) {
+//            std::cerr << mpi.rank << " | ERROR: rank owns block, but didn't find a merge for it!" << std::endl;
+//            exit(-113);
+//        }
+//    }
     std::vector<Merge> all_best_merges = mpi_get_best_merges(merge_buffer, my_blocks);
+    assert(all_best_merges.size() == (size_t) blockmodel.num_blocks());
     // END MPI COMMUNICATION
     std::vector<long> best_merge_for_each_block = utils::constant<long>(num_blocks, -1);
     std::vector<double> delta_entropy_for_each_block = utils::constant<double>(num_blocks, -1);
     // TODO: use a more intelligent way to assign these when there is overlap?
+    // checking for an overlap
+//    MapVector<bool> seen;
+//    for (int i = 0; i < blockmodel.num_blocks(); ++i) {
+//        seen[i] = false;
+//    }
     for (const Merge &m: all_best_merges) {
+//        if (seen[m.block]) {
+//            std::cerr << mpi.rank << " | ERROR block " << m.block << " appears twice!" << std::endl;
+//            exit(-112);
+//        }
+//        seen[m.block] = true;
 //        std::cout << "block: " << m.block << " proposal: " << m.proposal << " dE: " << m.delta_entropy << std::endl;
 //        if (mpi.rank == 0) std::cout << "rank " << mpi.rank << " | m.block = " << m.block << " num blocks = " << best_merge_for_each_block.size() << std::endl;
         best_merge_for_each_block[m.block] = m.proposal;
@@ -81,6 +98,9 @@ TwoHopBlockmodel &merge_blocks(TwoHopBlockmodel &blockmodel, const Graph &graph)
         blockmodel.carry_out_best_merges(delta_entropy_for_each_block, best_merge_for_each_block);
     else
         carry_out_best_merges_advanced(blockmodel, delta_entropy_for_each_block, best_merge_for_each_block, graph);
+//    std::vector<long> updated_assignment = blockmodel.block_assignment();
+//    MPI_Bcast(updated_assignment.data(), (int) blockmodel.num_blocks(), MPI_LONG, 0, mpi.comm);
+//    blockmodel.set_block_assignment(updated_assignment);
     blockmodel.distribute(graph);
     blockmodel.initialize_edge_counts(graph);
     MPI_Type_free(&Merge_t);

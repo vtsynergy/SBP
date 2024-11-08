@@ -55,6 +55,9 @@ void carry_out_best_merges_advanced(Blockmodel &blockmodel, const std::vector<do
         merge_t merge = queue.top();
         queue.pop();
         long merge_from = std::get<0>(merge);
+        long newblock = std::get<1>(merge);
+        if (newblock < 0 || size_t(newblock) >= block_map.size())
+            std::cout << mpi.rank << " | block_map.size = " << block_map.size() << " nB = " << blockmodel.num_blocks() << " block = " << merge_from << " newblock = " << newblock << std::endl;
         long merge_to = block_map[std::get<1>(merge)];
 //         double delta_entropy_hlong = std::get<2>(merge);
         if (merge_from != merge_to) {

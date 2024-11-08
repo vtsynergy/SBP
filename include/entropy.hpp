@@ -74,15 +74,15 @@ double mdl(const Blockmodel &blockmodel, const Graph &graph);
 double normalize_mdl_v1(double mdl, const Graph &graph);
 
 /// Computes the normalized minimum description length using `null_mdl_v2`.
-[[deprecated("use normalize_mdl_v1 instead")]]
-double normalize_mdl_v2(double mdl, long num_vertices, long num_edges);
+//[[deprecated("use normalize_mdl_v1 instead")]]
+//double normalize_mdl_v2(double mdl, long num_vertices, long num_edges);
 
 /// Computes the minimum description length of the null model with only one block.
 double null_mdl_v1(const Graph &graph);
 
 /// Computes the minimum description length of the null model with as many blocks as there are vertices.
-[[deprecated("use null_mdl_v1 instead")]]
-double null_mdl_v2(long num_vertices, long num_edges);
+//[[deprecated("use null_mdl_v1 instead")]]
+//double null_mdl_v2(long num_vertices, long num_edges);
 
 // TODO: add an undirected mdl
 // TODO: add undirected delta_mdl functions

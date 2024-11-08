@@ -119,6 +119,8 @@ struct Vertex {
 
 const Vertex InvalidVertex { -1, 0, 0 };
 
+//const Membership NullMembership { -1, -1 };
+
 struct VertexMove {
     double delta_entropy;
     bool did_move;

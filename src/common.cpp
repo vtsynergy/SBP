@@ -26,7 +26,7 @@ long choose_neighbor(const SparseVector<double> &multinomial_distribution) {
     // std::cout << multinomial_distribution.idx.size() << std::endl;
     std::discrete_distribution<long> distribution(
         multinomial_distribution.data.begin(), multinomial_distribution.data.end());
-    long index = distribution(rng::generator());
+    size_t index = distribution(rng::generator());
     if (index >= multinomial_distribution.idx.size()) { std::cout << "ERROR: index " << index << " dist size = " << multinomial_distribution.idx.size() << std::endl; }
 //     std::cout << "index = " << index << " out of " << multinomial_distribution.idx.size() << " | " << multinomial_distribution.data.size() << std::endl;
     return multinomial_distribution.idx[index];
@@ -144,6 +144,7 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
     long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     long k = k_out + k_in;
     long num_blocks = blockmodel.num_blocks();
+
     // If the current block has no neighbors, propose merge with random block
     if (k == 0) {
         long proposal = propose_random_block(current_block, num_blocks);
