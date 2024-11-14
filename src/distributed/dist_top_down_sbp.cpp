@@ -59,7 +59,7 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistTopDownBlockmodelTripl
         double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
-        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
+//        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
         blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
@@ -104,10 +104,10 @@ Blockmodel run(Graph &graph) {
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     float iteration = 0;
     while (dist::end_condition_not_reached(blockmodel, blockmodel_triplet)) {
-        if (mpi.rank == 0) {
-            std::cout << "============= Block sizes ============" << std::endl;
-            utils::print<long>(blockmodel.block_sizes());
-        }
+//        if (mpi.rank == 0) {
+//            std::cout << "============= Block sizes ============" << std::endl;
+//            utils::print<long>(blockmodel.block_sizes());
+//        }
         if (blockmodel.getNum_blocks_to_merge() != 0 && mpi.rank == 0) {
             std::cout << "Splitting blocks up from " << blockmodel.num_blocks() << " to "
                       << blockmodel.getNum_blocks_to_merge() << std::endl;
@@ -115,18 +115,18 @@ Blockmodel run(Graph &graph) {
         double block_split_t = MPI_Wtime();
         blockmodel = dist::split_communities(blockmodel, graph, blockmodel.getNum_blocks_to_merge());
         timers::BlockSplit_time += MPI_Wtime() - block_split_t;
-        if (mpi.rank == 0) {
-            std::cout << "============== Block sizes after split" << std::endl;
-            utils::print<long>(blockmodel.block_sizes());
-            std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
-        }
+//        if (mpi.rank == 0) {
+//            std::cout << "============== Block sizes after split" << std::endl;
+//            utils::print<long>(blockmodel.block_sizes());
+//            std::cout << "============== num blocks after split = " << blockmodel.num_blocks() << std::endl;
+//        }
         if (iteration < 1) {
             double mdl = entropy::nonparametric::mdl(blockmodel, graph);
             utils::save_partial_profile(0.5, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
                                         blockmodel.num_blocks());
         }
         common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
-        std::cout << "Starting MCMC vertex moves" << std::endl;
+//        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         double start = MPI_Wtime();
 //        if (args.algorithm == "async_gibbs" && iteration < float(args.asynciterations))
 //            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
@@ -164,8 +164,15 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
     std::vector<long> comm_assignment = utils::constant<long>(graph.num_vertices(), -1);
     // for communication, can do an all_reduce (MIN) on dE for each block and an all_reduce (MAX) on comm_assignment
     args.no_transpose = true;
+    std::vector<Graph> subgraphs(blockmodel.num_blocks());
+    std::vector<MapVector<long>> translators(blockmodel.num_blocks());
+    #pragma omp parallel for schedule(dynamic) default(none) shared(graph, blockmodel, subgraphs, translators)
+    for (int block = 0; block < blockmodel.num_blocks(); ++block) {
+        if (!blockmodel.owns_block(block)) continue;
+        extract_subgraph(graph, blockmodel, subgraphs[block], translators[block], block);
+    }
     #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
-    shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, comm_assignment, delta_entropy_for_each_block, locks, std::cout)
+    shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, comm_assignment, delta_entropy_for_each_block, locks, std::cout, subgraphs, translators)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             if (!blockmodel.owns_block(current_block)) continue;
@@ -176,10 +183,11 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
                 omp_unset_lock(&locks[current_block]);
                 continue;
             }
-            Split split = propose_split(current_block, graph, blockmodel);
+            Split split = propose_split(subgraphs[current_block], translators[current_block]);
+//            Split split = propose_split(current_block, graph, blockmodel);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.subgraph);
-            double old_entropy = entropy::null_mdl_v1(split.subgraph);
+            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), subgraphs[current_block]);
+            double old_entropy = entropy::null_mdl_v1(subgraphs[current_block]);
             double delta_entropy = new_entropy - old_entropy;
             omp_set_lock(&locks[current_block]);
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {

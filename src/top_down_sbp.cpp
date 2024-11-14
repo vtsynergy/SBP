@@ -31,19 +31,19 @@ void apply_best_splits(Blockmodel &blockmodel, const std::vector<Split> &best_sp
                        const std::vector<double> &split_entropy, int target_num_communities) {
     // Sort entropies in ascending order
     std::vector<long> sorted_splits = utils::argsort<double>(split_entropy);
-    std::cout << "the argsort result = " << std::endl;
-    utils::print<long>(sorted_splits);
+//    std::cout << "the argsort result = " << std::endl;
+//    utils::print<long>(sorted_splits);
     // Modify assignment, increasing blockmodel.blockNum() until reaching target
     long num_blocks = blockmodel.num_blocks();
 //    long index_of_split = 0;
 //    while (_num_blocks < target_num_communities) {
     for (int index_of_split = best_splits.size() - 1; index_of_split > -1; --index_of_split) {  // < best_splits.size(); ++index_of_split) {
         long block = sorted_splits[index_of_split];
-        std::cout << "block = " << block << std::endl;
+//        std::cout << "block = " << block << std::endl;
         const Split& split = best_splits[block];
-        std::cout << "split V = " << split.num_vertices << " split subgraph V = " << split.subgraph.num_vertices() << std::endl;
-//        if (split.subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
-        // TODO: fix: split.subgrpah.num_vertices() doesn't match split.num_vertices. May be as simple as initializing subgraph to an empty graph?
+//        std::cout << "split V = " << split.num_vertices << " split subgraph V = " << split.extract_subgraph.num_vertices() << std::endl;
+//        if (split.extract_subgraph.num_vertices() == 1) continue;  // do not try to split block with only one vertex
+        // TODO: fix: split.subgrpah.num_vertices() doesn't match split.num_vertices. May be as simple as initializing extract_subgraph to an empty graph?
 //        std::cout << "Looking at split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
         if (split.num_vertices > (long) blockmodel.block_assignment().size()) continue;
 //        std::cout << "Applying split with index = " << index_of_split << " and num vertices " << split.num_vertices << " and entropy = " << split_entropy[index_of_split] << std::endl;
@@ -95,6 +95,43 @@ Blockmodel continue_agglomerative(const Graph &graph, TopDownBlockmodelTriplet &
     return blockmodel;
 }
 
+void extract_subgraph(const Graph &graph, const Blockmodel &blockmodel, Graph &subgraph, MapVector<long> &translator,
+                      int cluster) {
+//    Split split;
+    std::vector<bool> cluster_flag = utils::constant<bool>(graph.num_vertices(), false);
+    std::vector<long> cluster_vertices;
+    long index = 0;
+    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        if (blockmodel.block_assignment(vertex) != cluster) continue;
+        cluster_flag[vertex] = true;
+        cluster_vertices.push_back(vertex);
+//        split.translator[vertex] = index;
+        translator[vertex] = index;
+        index++;
+    }
+//    split.num_vertices = long(cluster_vertices.size());
+    long num_vertices = long(cluster_vertices.size());
+    std::vector<long> split_assignment;
+//    Graph extract_subgraph(split.num_vertices, graph.num_edges() / graph.num_vertices());
+    subgraph = Graph(num_vertices);  // , graph.num_edges() / graph.num_vertices());
+    if (subgraph.num_vertices() < 2) {
+        return;
+//        split.subgraph = extract_subgraph;
+//        split_assignment = utils::constant<long>(1, 0);
+//        split.blockmodel = std::make_shared<Blockmodel>(1, extract_subgraph, 0.5, split_assignment);
+//        return split;
+    }
+//    std::cout << "subgraph numvertices: " << extract_subgraph.num_vertices() << std::endl;
+    for (long vertex: cluster_vertices) {
+        for (long neighbor: graph.out_neighbors(vertex)) {
+            if (!cluster_flag[neighbor]) continue;
+//            extract_subgraph.add_edge(split.translator[vertex], split.translator[neighbor]);
+            subgraph.add_edge(translator[vertex], translator[neighbor]);
+        }
+    }
+//    return split;
+}
+
 Split propose_split(long cluster, const Graph &graph, const Blockmodel &blockmodel) {
     Split split;
     std::vector<bool> cluster_flag = utils::constant<bool>(graph.num_vertices(), false);
@@ -111,12 +148,12 @@ Split propose_split(long cluster, const Graph &graph, const Blockmodel &blockmod
     std::vector<long> split_assignment;
     Graph subgraph(split.num_vertices, graph.num_edges() / graph.num_vertices());
     if (subgraph.num_vertices() < 2) {
-        split.subgraph = subgraph;
+//        split.subgraph = subgraph;
         split_assignment = utils::constant<long>(1, 0);
         split.blockmodel = std::make_shared<Blockmodel>(1, subgraph, 0.5, split_assignment);
         return split;
     }
-//    std::cout << "subgraph numvertices: " << subgraph.num_vertices() << std::endl;
+//    std::cout << "subgraph numvertices: " << extract_subgraph.num_vertices() << std::endl;
     for (long vertex: cluster_vertices) {
         for (long neighbor: graph.out_neighbors(vertex)) {
             if (!cluster_flag[neighbor]) continue;
@@ -137,7 +174,54 @@ Split propose_split(long cluster, const Graph &graph, const Blockmodel &blockmod
     }
     split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
     split.num_edges = subgraph.num_edges();
-    split.subgraph = subgraph;
+//    split.subgraph = subgraph;
+    return split;
+}
+
+Split propose_split(const Graph &subgraph, const MapVector<long> &translator) {
+    Split split;
+    split.translator = translator;
+//    std::vector<bool> cluster_flag = utils::constant<bool>(graph.num_vertices(), false);
+//    std::vector<long> cluster_vertices;
+//    long index = 0;
+//    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+//        if (blockmodel.block_assignment(vertex) != cluster) continue;
+//        cluster_flag[vertex] = true;
+//        cluster_vertices.push_back(vertex);
+//        split.translator[vertex] = index;
+//        index++;
+//    }
+    split.num_vertices = subgraph.num_vertices();
+    std::vector<long> split_assignment;
+//    Graph extract_subgraph(split.num_vertices, graph.num_edges() / graph.num_vertices());
+    if (subgraph.num_vertices() < 2) {
+//        split.subgraph = extract_subgraph;
+        split_assignment = utils::constant<long>(1, 0);
+        split.blockmodel = std::make_shared<Blockmodel>(1, subgraph, 0.5, split_assignment);
+        return split;
+    }
+//    std::cout << "extract_subgraph numvertices: " << subgraph.num_vertices() << std::endl;
+//    for (long vertex: cluster_vertices) {
+//        for (long neighbor: graph.out_neighbors(vertex)) {
+//            if (!cluster_flag[neighbor]) continue;
+//            extract_subgraph.add_edge(split.translator[vertex], split.translator[neighbor]);
+//        }
+//    }
+    if (args.split == "random")
+        split_assignment = propose_random_split(subgraph);
+    else if (args.split == "connectivity-snowball")
+        split_assignment = propose_connectivity_snowball_split(subgraph);
+    else if (args.split == "snowball")
+        split_assignment = propose_snowball_split(subgraph);
+    else if (args.split == "single-snowball")
+        split_assignment = propose_single_snowball_split(subgraph);
+    else {
+        std::cerr << "Invalid split type provided." << std::endl;
+        exit(-2);
+    }
+    split.blockmodel = std::make_shared<Blockmodel>(2, subgraph, 0.5, split_assignment);
+    split.num_edges = subgraph.num_edges();
+//    split.extract_subgraph = subgraph;
     return split;
 }
 
@@ -306,13 +390,13 @@ std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
     MapVector<bool> sampled;
     MapVector<bool> frontier;
     MapVector<bool> next_frontier;
-//    std::vector<long> vertex_degrees = subgraph.degrees();
+//    std::vector<long> vertex_degrees = extract_subgraph.degrees();
     // ============= SETUP ================
 //    long start = utils::argmax<long>(vertex_degrees);
     std::vector<long> vertex_degrees = subgraph.degrees();
     std::pair<long, long> init_vertices = split_init(subgraph, vertex_degrees);
     long start = init_vertices.first;
-//    long start = common::random_integer(0, subgraph.num_vertices() - 1);
+//    long start = common::random_integer(0, extract_subgraph.num_vertices() - 1);
 //    std::cout << "vertex " << start << " has max degree of: " << vertex_degrees[start] << std::endl;
     split_assignment[start] = 1;
     sampled[start] = true;
@@ -327,7 +411,7 @@ std::vector<long> propose_single_snowball_split(const Graph &subgraph) {
     // ============= END OF SETUP ===============
     // ============= SNOWBALL ==============
     auto target_sample_size = size_t(common::random_integer(subgraph.num_vertices()*0.2, subgraph.num_vertices()*0.8));
-//    long target_sample_size = subgraph.num_vertices() / 2;
+//    long target_sample_size = extract_subgraph.num_vertices() / 2;
     while (sampled.size() < target_sample_size) {
         if (frontier.empty() && next_frontier.empty()) break;  // do not try to reach target_sample_size if ran out of vertices
         for (const std::pair<long, bool> &entry : frontier) {
@@ -367,8 +451,8 @@ Blockmodel run(const Graph &graph) {
     blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
     int iteration = 0;
     while (end_condition_not_reached(blockmodel, blockmodel_triplet)) {
-        std::cout << "============= Block sizes ============" << std::endl;
-        utils::print<long>(blockmodel.block_sizes());
+//        std::cout << "============= Block sizes ============" << std::endl;
+//        utils::print<long>(blockmodel.block_sizes());
 //        std::cout << "Next iteration, we're gonna split the communities in blockmodel with B = " << blockmodel.num_blocks() << std::endl;
         if (blockmodel.getNum_blocks_to_merge() != 0) {
             std::cout << "Splitting blocks up from " << blockmodel.num_blocks() << " to "
@@ -413,8 +497,14 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     }
     args.no_transpose = true;
     double loop_start_t = MPI_Wtime();
+    std::vector<Graph> subgraphs(blockmodel.num_blocks());
+    std::vector<MapVector<long>> translators(blockmodel.num_blocks());
+    #pragma omp parallel for schedule(dynamic) default(none) shared(graph, blockmodel, subgraphs, translators)
+    for (int block = 0; block < blockmodel.num_blocks(); ++block) {
+        extract_subgraph(graph, blockmodel, subgraphs[block], translators[block], block);
+    }
     #pragma omp parallel for schedule(dynamic) collapse(2) default(none) \
-    shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, best_split_for_each_block, delta_entropy_for_each_block, locks)
+    shared(num_blocks, NUM_AGG_PROPOSALS_PER_BLOCK, blockmodel, graph, best_split_for_each_block, delta_entropy_for_each_block, locks, subgraphs, translators)
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             // Do not attempt to split small clusters
@@ -426,10 +516,13 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
                 omp_unset_lock(&locks[current_block]);
                 continue;
             }
-            Split split = propose_split(current_block, graph, blockmodel);
+//            Split split = propose_split(current_block, graph, blockmodel);
+            Split split = propose_split(subgraphs[current_block], translators[current_block]);
             // TODO: currently computing delta entropy for the split ONLY. Can we compute dE for entire blockmodel?
-            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.subgraph);
-            double old_entropy = entropy::null_mdl_v1(split.subgraph);
+//            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), split.extract_subgraph);
+            double new_entropy = entropy::nonparametric::mdl(*(split.blockmodel), subgraphs[current_block]);
+            double old_entropy = entropy::null_mdl_v1(subgraphs[current_block]);
+//            double old_entropy = entropy::null_mdl_v1(split.extract_subgraph);
             double delta_entropy = new_entropy - old_entropy;
             omp_set_lock(&locks[current_block]);
             if (delta_entropy < delta_entropy_for_each_block[current_block]) {
@@ -468,7 +561,7 @@ std::pair<long, long> split_init(const Graph &subgraph, const std::vector<long> 
 
 std::pair<long, long> split_init_random(const Graph &subgraph) {
     std::uniform_int_distribution<long> distribution(0, subgraph.num_vertices() - 1);
-//    std::uniform_int_distribution<long> distribution(0, (subgraph.num_vertices() / 10) - 1);
+//    std::uniform_int_distribution<long> distribution(0, (extract_subgraph.num_vertices() / 10) - 1);
     long start_one = distribution(rng::generator());
     long start_two = distribution(rng::generator());
     while (start_two == start_one) start_two = distribution(rng::generator());

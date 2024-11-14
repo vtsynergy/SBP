@@ -157,7 +157,7 @@ bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blo
     }
     if (blockmodel_triplet.optimal_num_blocks_found) {
         blockmodel_triplet.status();
-        std::cout << "Optimal number of blocks was found" << std::endl;
+        if (mpi.rank == 0) std::cout << "Optimal number of blocks was found" << std::endl;
         return true;
     }
     return false;
