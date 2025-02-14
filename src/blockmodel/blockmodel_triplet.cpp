@@ -144,8 +144,8 @@ Blockmodel TopDownBlockmodelTriplet::get_next_blockmodel(Blockmodel &old_blockmo
 }
 
 bool TopDownBlockmodelTriplet::is_done() {
-    if ((!this->get(0).empty && this->get(2).num_blocks() - this->get(0).num_blocks() == 2) ||
-        (this->get(0).empty && this->get(2).num_blocks() - this->get(1).num_blocks() == 1)) {
+    if ((!this->get(0).empty && this->get(2).num_blocks() - this->get(0).num_blocks() <= 2) ||
+        (this->get(0).empty && this->get(2).num_blocks() - this->get(1).num_blocks() <= 1)) {
         this->optimal_num_blocks_found = true;
     }
     return this->optimal_num_blocks_found;
@@ -166,8 +166,9 @@ void TopDownBlockmodelTriplet::update(Blockmodel &blockmodel) {
         index = 1;
         std::cout << "placing new blockmodel in the middle (index 1)" << std::endl;
     } else {
-        if (blockmodel.getOverall_entropy() <= this->blockmodels[1].getOverall_entropy()) {
-            long old_index;
+        if ((blockmodel.getOverall_entropy() <= this->blockmodels[1].getOverall_entropy()) &
+           (abs(blockmodel.num_blocks() - this->get(1).num_blocks()) > 0.1 * this->get(1).num_blocks())) {
+	    long old_index;
             if (this->get(1).num_blocks() < blockmodel.num_blocks()) {
                 old_index = 0;
                 std::cout << "moving old blockmodel to the start (index 0)" << std::endl;

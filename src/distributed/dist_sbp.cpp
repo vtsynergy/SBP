@@ -129,7 +129,7 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
 //        if (mpi.rank == 0) blockmodel.print_blockmatrix();
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
         double start_mcmc = MPI_Wtime();
-        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet.golden_ratio_not_reached());
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         double mdl = blockmodel.getOverall_entropy();
         utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),

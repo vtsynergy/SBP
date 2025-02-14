@@ -51,7 +51,7 @@ void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &
 //                       DistBlockmodelTriplet &blockmodel_triplet);
 
 /// Runs one of the available distributed MCMC algorithms.
-TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet);
+TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, bool golden_ratio_not_reached);  // DistBlockmodelTriplet &blockmodel_triplet);
 
 /// Runs the Metropolis Hastings algorithm in a distributed fashion using MPI.
 //TwoHopBlockmodel &metropolis_hastings(TwoHopBlockmodel &blockmodel, Graph &graph, bool golden_ratio_not_reached);

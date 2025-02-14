@@ -118,6 +118,7 @@ bool early_stop(long iteration, bool golden_ratio_not_reached, double initial_en
 }
 
 Blockmodel &finetune_assignment(TwoHopBlockmodel &blockmodel, Graph &graph) {
+    return mcmc(graph, blockmodel, false);
     MPI_Win mcmc_window;
     std::vector<long> next_assignment;
     if (args.nonblocking) {
@@ -211,7 +212,7 @@ void measure_imbalance_metrics(const TwoHopBlockmodel &blockmodel, const Graph &
     MCMC_AGGREGATE_BLOCK_DEGREES.push_back(num_aggregate_block_degrees);
 }
 
-TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet) {
+TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, bool golden_ratio_not_reached) {
     if (blockmodel.num_blocks() == 1) {
         std::cout << mpi.rank << " | number of blocks is 1 for some reason..." << std::endl;
         return blockmodel;
@@ -297,7 +298,7 @@ TwoHopBlockmodel &mcmc(Graph &graph, TwoHopBlockmodel &blockmodel, DistBlockmode
 //        total_vertex_moves += vertex_moves;
         timers::MCMC_iterations++;
         // Early stopping
-        if (early_stop(iteration, blockmodel_triplet.golden_ratio_not_reached(), new_entropy, delta_entropies)) {
+        if (early_stop(iteration, golden_ratio_not_reached, new_entropy, delta_entropies)) {
             break;
         }
     }

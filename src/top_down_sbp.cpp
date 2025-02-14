@@ -508,7 +508,7 @@ Blockmodel split_communities(Blockmodel &blockmodel, const Graph &graph, int tar
     for (int current_block = 0; current_block < num_blocks; ++current_block) {
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             // Do not attempt to split small clusters
-            if ((double) blockmodel.block_size(current_block) < 0.005 * (double) graph.num_vertices()) {
+            if ((double) blockmodel.block_size(current_block) < 0.001 * (double) graph.num_vertices()) {
                 Split split;
                 omp_set_lock(&locks[current_block]);
                 best_split_for_each_block[current_block] = split;

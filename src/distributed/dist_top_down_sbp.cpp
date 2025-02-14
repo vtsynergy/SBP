@@ -61,7 +61,7 @@ TwoHopBlockmodel continue_agglomerative(Graph &graph, DistTopDownBlockmodelTripl
         timers::BlockMerge_time += MPI_Wtime() - start_bm;
 //        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
         double start_mcmc = MPI_Wtime();
-        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet.golden_ratio_not_reached());
         timers::MCMC_time += MPI_Wtime() - start_mcmc;
         double mdl = blockmodel.getOverall_entropy();
         long num_blocks = blockmodel.num_blocks();
@@ -134,7 +134,7 @@ Blockmodel run(Graph &graph) {
 //            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
 //        else // args.algorithm == "metropolis_hastings"
 //            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet.golden_ratio_not_reached());
-        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet);
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet.golden_ratio_not_reached());
         timers::MCMC_time += MPI_Wtime() - start;
         double mdl = blockmodel.getOverall_entropy();
         long num_blocks = blockmodel.num_blocks();
@@ -177,7 +177,7 @@ TwoHopBlockmodel split_communities(TwoHopBlockmodel &blockmodel, const Graph &gr
         for (int i = 0; i < NUM_AGG_PROPOSALS_PER_BLOCK; ++i) {
             if (!blockmodel.owns_block(current_block)) continue;
             // Do not attempt to split small clusters
-            if ((double) blockmodel.block_size(current_block) < 0.005 * (double) graph.num_vertices()) {
+            if ((double) blockmodel.block_size(current_block) < 0.001 * (double) graph.num_vertices()) {
                 omp_set_lock(&locks[current_block]);
                 delta_entropy_for_each_block[current_block] = std::numeric_limits<double>::max();
                 omp_unset_lock(&locks[current_block]);

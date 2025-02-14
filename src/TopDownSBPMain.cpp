@@ -106,6 +106,7 @@ int main(int argc, char* argv[]) {
         // fine-tune full graph
         double finetune_start_t = MPI_Wtime();
         if (mpi.num_processes > 1) {
+            MPI_Bcast(assignment.data(), (int) assignment.size(), MPI_LONG, 0, mpi.comm);
             Rank_indices = std::vector<long>();  // reset the rank_indices
             auto blockmodel = TwoHopBlockmodel(sample_partition.blockmodel.num_blocks(), partition.graph, 0.5, assignment);
             partition.blockmodel = finetune::dist::finetune_assignment(blockmodel, partition.graph);
