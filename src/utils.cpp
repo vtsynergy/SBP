@@ -1,48 +1,11 @@
 #include "utils.hpp"
 
+#include <nlohmann/json.hpp>
+
+#include "globals.hpp"
 #include "mpi_data.hpp"
 
 namespace utils {
-
-//std::vector<long> argsort(const std::vector<long>& v) {
-//    if (v.empty()) {
-//        return {};
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = *std::max_element(v.begin(), v.end());
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//    std::vector<long> indices(v.size());
-//    std::iota(indices.begin(), indices.end(), 0);
-//
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::fill(counts.begin(), counts.end(), 0); // reset counts
-//
-//        for (size_t i = 0; i < v.size(); i++) {
-//            long byte = (v[i] >> (num_bits * pass)) & mask;
-//            counts[byte]++;
-//        }
-//
-//        for (long i = 1; i < num_buckets; i++) {
-//            counts[i] += counts[i - 1];
-//        }
-//
-//        std::vector<long> new_indices(v.size());
-//
-//        for (long i = 0; i < v.size(); i++) {
-//            long byte = (v[indices[i]] >> (num_bits * pass)) & mask;
-//            new_indices[--counts[byte] + v.size() - counts[num_buckets - 1]] = indices[i];
-//        }
-//
-//        std::swap(indices, new_indices);
-//    }
-//
-//    return indices;
-//}
 
 std::vector<long> argsort(const std::vector<long> &v) {
     if (v.empty()) {
@@ -58,6 +21,8 @@ std::vector<long> argsort(const std::vector<long> &v) {
     std::vector<long> indices(v.size());
     std::iota(indices.begin(), indices.end(), 0);
     std::vector<long> new_indices(v.size());
+    std::vector<long> v_copy(v);
+    std::vector<long> new_v(v.size());
 
     // for each byte in integer (assuming 4-byte int).
     for (size_t i, j = 0; j < sizeof(long); j++) {
@@ -66,8 +31,8 @@ std::vector<long> argsort(const std::vector<long> &v) {
 
         // histogram.
         // count each occurrence of indexed-byte value.
-        for (i = 0; i < v.size(); i++)
-            h[255 - bmask(v[i], j)]++;
+        for (i = 0; i < v_copy.size(); i++)
+            h[255 - bmask(v_copy[i], j)]++;
 
         // accumulate.
         // generate positional offsets. adjust starting point
@@ -80,10 +45,14 @@ std::vector<long> argsort(const std::vector<long> &v) {
         // stable reordering of elements. backward to avoid shifting
         // the counter array.
         for ( i = v.size(); i > 0; i-- ) {
-            new_indices[--h[255 - bmask(v[i-1], j)]] = indices[i-1];
+            size_t k = --h[255 - bmask(v_copy[i - 1], j)];
+            new_indices[k] = indices[i - 1];
+            new_v[k] = v_copy[i - 1];
+//            new_indices[--h[255 - bmask(v[i-1], j)]] = indices[i-1];
         }
 
         std::swap(indices, new_indices);
+        std::swap(v_copy, new_v);
     }
     return indices;
 }
@@ -129,6 +98,10 @@ std::vector<std::vector<std::string>> read_csv(fs::path &filepath) {
 }
 
 void insert(NeighborList &neighbors, long from, long to) {
+    if (args.noduplicates) {
+        insert_nodup(neighbors, from, to);
+        return;
+    }
     if (from >= (long) neighbors.size()) {
         std::vector<std::vector<long>> padding(from - neighbors.size() + 1, std::vector<long>());
         neighbors.insert(neighbors.end(), padding.begin(), padding.end());
@@ -233,43 +206,89 @@ void radix_sort(std::vector<std::pair<long, long>> &v) {
     }
 }
 
-//void radix_sort(std::vector<std::pair<long, long>> &v) {
-//    if (v.empty()) {
-//        return;
-//    }
-//
-//    constexpr long num_bits = 8; // number of bits in a byte
-//    constexpr long num_buckets = 1 << num_bits; // number of possible byte values
-//    constexpr long mask = num_buckets - 1; // mask to extract the least significant byte
-//
-//    long max_element = (*std::max_element(v.begin(), v.end(),
-//                                         [](const auto &p1, const auto &p2) { return p1.second > p2.second; })).second;
-//    long num_passes = (sizeof(long) + num_bits - 1) / num_bits; // number of passes needed for all bytes
-//    std::vector<long> counts(num_buckets);
-//
-//    std::vector<std::pair<long, long>> sorted_v(v.size());
-//
-//    for (long pass = 0; pass < num_passes; pass++) {
-//        std::fill(counts.begin(), counts.end(), 0); // reset counts
-//
-//        for (const auto &elem: v) {
-//            long byte = (max_element - (elem.second >> (num_bits * pass))) &
-//                       mask; // changed to max_element - ... to sort in descending order
-//            counts[byte]++;
-//        }
-//
-//        for (long i = num_buckets - 2; i >= 0; i--) { // changed to process buckets in reverse order
-//            counts[i] += counts[i + 1];
-//        }
-//
-//        for (long i = v.size() - 1; i >= 0; i--) {
-//            long byte = (max_element - (v[i].second >> (num_bits * pass))) &
-//                       mask; // changed to max_element - ... to sort in descending order
-//            sorted_v[--counts[byte]] = v[i];
-//        }
-//
-//        std::swap(v, sorted_v);
-//    }
-//}
+void save_partial_profile(double iteration, double modularity, double mdl, double norm_mdl, long num_blocks) {
+    PartialProfile intermediate {};
+    intermediate.iteration = iteration;
+    intermediate.mdl = mdl;
+    intermediate.normalized_mdl_v1 = norm_mdl;
+    intermediate.modularity = modularity;
+    intermediate.mcmc_iterations = timers::MCMC_iterations;
+    intermediate.mcmc_time = timers::MCMC_time;
+    intermediate.mcmc_sequential_time = timers::MCMC_sequential_time;
+    intermediate.mcmc_parallel_time = timers::MCMC_parallel_time;
+    intermediate.mcmc_vertex_move_time = timers::MCMC_vertex_move_time;
+    intermediate.mcmc_moves = timers::MCMC_moves;
+    intermediate.block_merge_time = timers::BlockMerge_time;
+    intermediate.block_merge_loop_time = timers::BlockMerge_loop_time;
+    intermediate.block_split_time = timers::BlockSplit_time;
+    intermediate.block_split_loop_time = timers::BlockSplit_loop_time;
+    intermediate.blockmodel_build_time = timers::BLOCKMODEL_BUILD_TIME;
+    intermediate.finetune_time = timers::finetune_time;
+    intermediate.load_balancing_time = timers::Load_balancing_time;
+    intermediate.sort_time = timers::Blockmodel_sort_time;
+    intermediate.access_time = timers::Blockmodel_access_time;
+    intermediate.total_time = timers::total_time;
+    intermediate.update_assignment = timers::Blockmodel_update_assignment;
+    intermediate.num_blocks = num_blocks;
+    timers::partial_profiles.push_back(intermediate);
+    if (mpi.rank == 0)
+        std::cout << "Iteration " << iteration << " MDL: " << mdl << " normalized MDL: " << norm_mdl
+                  << " modularity: " << modularity << " MCMC iterations: " << timers::MCMC_iterations << " MCMC time: "
+                  << timers::MCMC_time << " Block Merge time: " << timers::BlockMerge_time << " total time: "
+                  << timers::total_time << std::endl;
+    timers::MCMC_iterations = 0;
+    timers::MCMC_time = 0;
+    timers::MCMC_sequential_time = 0;
+    timers::MCMC_parallel_time = 0;
+    timers::MCMC_vertex_move_time = 0;
+    timers::MCMC_moves = 0;
+    timers::BlockMerge_time = 0;
+    timers::BlockMerge_loop_time = 0;
+    timers::BlockSplit_time = 0;
+    timers::BlockSplit_loop_time = 0;
+    timers::BLOCKMODEL_BUILD_TIME = 0;
+    timers::finetune_time = 0;
+    timers::Load_balancing_time = 0;
+    timers::Blockmodel_sort_time = 0;
+    timers::Blockmodel_access_time = 0;
+    timers::total_time = 0;
+    timers::Blockmodel_update_assignment = 0;
+}
+
+void write_json(const std::vector<long> &block_assignment, double description_length, ulong MCMC_moves,
+                ulong MCMC_iterations, double runtime) {
+    nlohmann::json output;
+    output["Runtime (s)"] = runtime;
+    output["Filepath"] = args.filepath;
+    output["Tag"] = args.tag;
+    output["Algorithm"] = args.algorithm;
+    output["Degree Product Sort"] = args.degreeproductsort;
+    output["Data Distribution"] = args.distribute;
+    output["Greedy"] = args.greedy;
+    output["Metropolis-Hastings Ratio"] = args.mh_percent;
+    output["Overlap"] = args.overlap;
+    output["Block Size Variation"] = args.blocksizevar;
+    output["Sample Size"] = args.samplesize;
+    output["Sampling Algorithm"] = args.samplingalg;
+    output["Num. Subgraphs"] = args.subgraphs;
+    output["Subgraph Partition"] = args.subgraphpartition;
+    output["Num. Threads"] = args.threads;
+    output["Num. Processes"] = mpi.num_processes;
+    output["Type"] = args.type;
+    output["Undirected"] = args.undirected;
+    output["Num. Vertex Moves"] = MCMC_moves;
+    output["Num. MCMC Iterations"] = MCMC_iterations;
+    output["Results"] = block_assignment;
+    output["Description Length"] = description_length;
+    fs::create_directories(fs::path(args.json));
+    std::ostringstream output_filepath_stream;
+    output_filepath_stream << args.json << "/" << args.output_file;
+    std::string output_filepath = output_filepath_stream.str();
+    std::cout << "Saving results to file: " << output_filepath << std::endl;
+    std::ofstream output_file;
+    output_file.open(output_filepath, std::ios_base::app);
+    output_file << std::setw(4) << output << std::endl;
+    output_file.close();
+}
 
 }  // namespace utils

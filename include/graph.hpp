@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-#include "blockmodel/sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "fs.hpp"
 #include "utils.hpp"
 
@@ -24,6 +24,22 @@ public:
         }
         while (this->_in_neighbors.size() < size_t(num_vertices)) {
             this->_in_neighbors.push_back(std::vector<long>());
+        }
+    }
+    Graph(long num_vertices, size_t reserve) {
+        this->_num_vertices = num_vertices;
+        this->_num_edges = 0;
+        this->_self_edges = utils::constant<bool>(num_vertices, false);
+        this->_assignment = utils::constant<long>(num_vertices, -1);
+        size_t current_vertex = 0;
+        while (this->_out_neighbors.size() < size_t(num_vertices)) {
+            this->_out_neighbors.push_back(std::vector<long>());
+            this->_out_neighbors[current_vertex].reserve(reserve);
+        }
+        current_vertex = 0;
+        while (this->_in_neighbors.size() < size_t(num_vertices)) {
+            this->_in_neighbors.push_back(std::vector<long>());
+            this->_in_neighbors[current_vertex].reserve(reserve);
         }
     }
     Graph(NeighborList &out_neighbors, NeighborList &in_neighbors, long num_vertices, long num_edges,
@@ -62,6 +78,8 @@ public:
     long assignment(long v) const { return this->_assignment[v]; }
     /// Sets the assignment of vertex `v` to block `b`
     void assign(long v, long b) { this->_assignment[v] = b; }
+    /// Returns the degree of a given vertex `v`
+    long degree(size_t v) const;
     /// Returns a vector containing the vertex degrees for every vertex in the graph
     std::vector<long> degrees() const;
     /// Returns a const reference to the in neighbors
@@ -78,7 +96,7 @@ public:
     /// repeated.
     [[nodiscard]] std::vector<long> neighbors(long vertex) const;
     /// Returns the number of edges in this graph
-    long num_edges() const { return this->_num_edges; }
+    virtual long num_edges() const { return this->_num_edges; }
     /// Counts the number of island vertices in this graph
     long num_islands() const;
     /// Returns the number of vertices in this graph
@@ -93,7 +111,7 @@ public:
     [[nodiscard]] std::vector<std::pair<std::pair<long, long>, long>> sorted_edge_list() const;
     /// Sorts vertices into low and high influence vertices. Does this via vertex degree products of the graph edges
     void degree_product_sort();
-private:
+protected:
     /// For every vertex, stores the community they belong to.
     /// If assignment[v] = -1, then the community of v is not known
     std::vector<long> _assignment;

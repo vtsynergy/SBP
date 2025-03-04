@@ -179,7 +179,7 @@ std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel
             edge_counts[community]++;
         }
         if (edge_counts.empty()) {  // assign random community
-            long community = common::random_integer(0, sample_blockmodel.getNum_blocks() - 1);
+            long community = common::random_integer(0, sample_blockmodel.num_blocks() - 1);
             assignment[vertex] = community;
             continue;
         }
@@ -196,7 +196,7 @@ std::vector<long> extend(const Graph &graph, const Blockmodel &sample_blockmodel
         assignment[vertex] = likely_community;
     }
     return assignment;
-//    return Blockmodel(sample_blockmodel.getNum_blocks(), graph, 0.5, assignment);
+//    return Blockmodel(sample_blockmodel.num_blocks(), graph, 0.5, assignment);
 }
 
 Sample from_vertices(const Graph &graph, const std::vector<long> &vertices, const std::vector<long> &mapping) {
@@ -274,7 +274,8 @@ Sample snowball(const Graph &graph, int subgraph_index, int num_subgraphs) {
         std::vector<int> indices = utils::range<int>(0, graph.num_vertices());
         // I think the problem here is that the starting vertices aren't the same between ranks. Should broadcast the top n
         // vertices out to every rank, or have one rank do the sampling for all ranks and then broadcast results
-        std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + num_subgraphs,
+	// std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + num_subgraphs,
+	std::stable_sort(std::execution::par_unseq, indices.data(),
                          indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
                     return vertex_degrees[i1] > vertex_degrees[i2];
                 });
@@ -375,7 +376,7 @@ Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, con
     // Infer membership of remaining vertices
     for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
         if (assignment[vertex] != -1) continue;  // already assigned
-        long random_community = common::random_integer(0, sample_blockmodel.getNum_blocks() - 1);
+        long random_community = common::random_integer(0, sample_blockmodel.num_blocks() - 1);
         // Assign to the same community as only neighbor
         for (long neighbor : graph.out_neighbors(vertex)) {
             long community = assignment[neighbor];
@@ -400,7 +401,7 @@ Blockmodel reattach(const Graph &graph, const Blockmodel &sample_blockmodel, con
             assignment[vertex] = random_community;
         }
     }
-    return { sample_blockmodel.getNum_blocks(), graph, 0.5, assignment };
+    return {sample_blockmodel.num_blocks(), graph, 0.5, assignment };
 }
 
 }

@@ -13,13 +13,13 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
     long k_out = std::accumulate(out_blocks.values.begin(), out_blocks.values.end(), 0);
     long k_in = std::accumulate(in_blocks.values.begin(), in_blocks.values.end(), 0);
     long k = k_out + k_in;
-    long num_blocks = blockmodel.getNum_blocks();
+    long num_blocks = blockmodel.num_blocks();
 
     if (k == 0) { // If the current block has no neighbors, propose merge with random block
-        std::vector<long> blocks = utils::range<long>(0, blockmodel.getNum_blocks());
+        std::vector<long> blocks = utils::range<long>(0, blockmodel.num_blocks());
         std::vector<long> weights = utils::to_long<bool>(blockmodel.in_two_hop_radius());
         long proposal = choose_neighbor(blocks, weights);
-        // long proposal = propose_random_block(current_block, num_blocks);  // TODO: only propose blocks in 2 hop radius
+        // long proposal = propose_random_block(current_block, _num_blocks);  // TODO: only propose blocks in 2 hop radius
         assert(blockmodel.stores(proposal));
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }
@@ -34,10 +34,10 @@ utils::ProposalAndEdgeCounts propose_new_block(long current_block, EdgeWeights &
 
     // With a probability inversely proportional to block degree, propose a random block merge
     if (std::rand() <= (num_blocks / ((double) blockmodel.degrees(neighbor_block) + num_blocks))) {
-        std::vector<long> blocks = utils::range<long>(0, blockmodel.getNum_blocks());
+        std::vector<long> blocks = utils::range<long>(0, blockmodel.num_blocks());
         std::vector<long> weights = utils::to_long<bool>(blockmodel.in_two_hop_radius());
         long proposal = choose_neighbor(blocks, weights);
-        // long proposal = propose_random_block(current_block, num_blocks);
+        // long proposal = propose_random_block(current_block, _num_blocks);
         assert(blockmodel.stores(proposal));
         return utils::ProposalAndEdgeCounts{proposal, k_out, k_in, k};
     }

@@ -39,7 +39,7 @@ set(INCLUDE_DIRS
         )
 
 # add the executable
-add_library(SBP STATIC
+add_library(SBPLIB STATIC
         src/graph.cpp
         src/utils.cpp
         src/sbp.cpp
@@ -47,10 +47,11 @@ add_library(SBP STATIC
         src/evaluate.cpp
         src/common.cpp
         src/finetune.cpp
+        src/globals.cpp
         src/block_merge.cpp
         src/partition.cpp
         src/sample.cpp
-        src/top_down.cpp
+        src/top_down_sbp.cpp
         src/blockmodel/blockmodel.cpp
         src/blockmodel/blockmodel_triplet.cpp
         src/blockmodel/sparse/dict_matrix.cpp
@@ -58,14 +59,17 @@ add_library(SBP STATIC
         src/distributed/dist_block_merge.cpp
         src/distributed/dist_blockmodel_triplet.cpp
         src/distributed/dist_common.cpp
+        src/distributed/dist_top_down_sbp.cpp
         src/distributed/dist_finetune.cpp
         src/distributed/dist_sbp.cpp
         src/distributed/divide_and_conquer.cpp
         src/distributed/two_hop_blockmodel.cpp
         #    blockmodel/sparse/dist_dict_matrix.cpp
         src/fastlog.cpp
-        src/rng.cpp)
-target_include_directories(SBP PUBLIC ${INCLUDE_DIRS})
+        src/rng.cpp
+        src/fastlgamma.cpp
+        src/spence.cpp)
+target_include_directories(SBPLIB PUBLIC ${INCLUDE_DIRS})
 
 add_executable(DistributedSBP src/main.cpp)
 target_include_directories(DistributedSBP PUBLIC ${INCLUDE_DIRS})
@@ -76,22 +80,26 @@ target_include_directories(DivideAndConquerSBP PUBLIC ${INCLUDE_DIRS})
 add_executable(ladis src/LayerDistributedSBP.cpp)
 target_include_directories(ladis PUBLIC ${INCLUDE_DIRS})
 
+add_executable(TopDownSBP src/TopDownSBPMain.cpp)
+target_include_directories(TopDownSBP PUBLIC ${INCLUDE_DIRS})
+
 if (DEBUG AND VALGRIND)
     set(COMPILE_OPTS -g3 -static-libasan)
     message("Compiling with -g3 and -static-libasan. Valgrind cannot run with -fsanitize=address")
 elseif (DEBUG)
-    set(COMPILE_OPTS -g3 -fsanitize=address)
+    set(COMPILE_OPTS -g -fsanitize=address -fsanitize=undefined)
     message("Compiling with -g3 and -fsanitize=address. Valgrind will not work with these executables")
 else()
-    set(COMPILE_OPTS "")
+    set(COMPILE_OPTS -O3)
     message("Compiling without debug options")
 endif()
 
-target_compile_options(SBP PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
-target_link_libraries(SBP PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs tbb "${COMPILE_OPTS}")
-target_link_libraries(DistributedSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(DivideAndConquerSBP PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
-target_link_libraries(ladis PUBLIC SBP absl::flat_hash_map tbb "${COMPILE_OPTS}")
+target_compile_options(SBPLIB PUBLIC -Wall -no-pie -fopenmp "${COMPILE_OPTS}")
+target_link_libraries(SBPLIB PUBLIC hungarian absl::flat_hash_map -fopenmp stdc++fs "${COMPILE_OPTS}")
+target_link_libraries(DistributedSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(DivideAndConquerSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(TopDownSBP PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
+target_link_libraries(ladis PUBLIC SBPLIB absl::flat_hash_map "${COMPILE_OPTS}")
 
 # Google Test Suite
 enable_testing()
@@ -108,8 +116,9 @@ add_executable(Test
         src/rng.cpp
         test/sample_test.cpp
         test/toy_example.hpp
-        test/utils_test.cpp)
+        test/utils_test.cpp
+        test/nonparametric_entropy_test.cpp)
 target_include_directories(Test PUBLIC ${INCLUDE_DIRS})
 include(GoogleTest)
-target_link_libraries(Test SBP gtest_main hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs tbb)
+target_link_libraries(Test SBPLIB gtest_main gmock hungarian absl::hash absl::flat_hash_map -fopenmp stdc++fs)
 gtest_discover_tests(Test)

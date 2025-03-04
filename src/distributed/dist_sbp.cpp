@@ -11,48 +11,6 @@
 
 namespace sbp::dist {
 
-double total_time = 0.0;
-
-double finetune_time = 0.0;
-
-std::vector<intermediate> intermediate_results;
-
-std::vector<intermediate> get_intermediates() {
-    return intermediate_results;
-}
-
-void add_intermediate(double iteration, const Graph &graph, double modularity, double mdl) {
-    double normalized_mdl_v1 = entropy::normalize_mdl_v1(mdl, graph.num_edges());
-//    double modularity = -1;
-//    if (iteration == -1)
-//        modularity = graph.modularity(blockmodel.block_assignment());
-    intermediate intermediate {};
-    intermediate.iteration = iteration;
-    intermediate.mdl = mdl;
-    intermediate.normalized_mdl_v1 = normalized_mdl_v1;
-    intermediate.modularity = modularity;
-    intermediate.mcmc_iterations = finetune::MCMC_iterations;
-    intermediate.mcmc_time = finetune::MCMC_time;
-    intermediate.mcmc_sequential_time = finetune::MCMC_sequential_time;
-    intermediate.mcmc_parallel_time = finetune::MCMC_parallel_time;
-    intermediate.mcmc_vertex_move_time = finetune::MCMC_vertex_move_time;
-    intermediate.mcmc_moves = finetune::MCMC_moves;
-    intermediate.block_merge_time = block_merge::BlockMerge_time;
-    intermediate.block_merge_loop_time = block_merge::BlockMerge_loop_time;
-    intermediate.blockmodel_build_time = BLOCKMODEL_BUILD_TIME;
-    intermediate.finetune_time = finetune_time;
-    intermediate.load_balancing_time = Load_balancing_time;
-    intermediate.sort_time = Blockmodel_sort_time;
-    intermediate.access_time = Blockmodel_access_time;
-    intermediate.total_time = total_time;
-    intermediate.update_assignment = Blockmodel_update_assignment;
-    intermediate_results.push_back(intermediate);
-    std::cout << "Iteration " << iteration << " MDL: " << mdl << " v1 normalized: " << normalized_mdl_v1
-              << " modularity: " << modularity << " MCMC iterations: " << finetune::MCMC_iterations << " MCMC time: "
-              << finetune::MCMC_time << " Block Merge time: " << block_merge::BlockMerge_time << " total time: "
-              << total_time << std::endl;
-}
-
 void record_runtime_imbalance() {
     std::cout << "Recording runtime imbalance statistics" << std::endl;
     long recvcount = (long) finetune::dist::MCMC_RUNTIMES.size();
@@ -107,7 +65,7 @@ void record_runtime_imbalance() {
             }
         }
     }
-    for (long iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
+    for (size_t iteration = 0; iteration < finetune::dist::MCMC_RUNTIMES.size(); ++iteration) {
         file << iteration << ", ";
         for (long rank = 0; rank < mpi.num_processes; ++rank) {
             size_t position = rank * finetune::dist::MCMC_RUNTIMES.size() + iteration;
@@ -139,54 +97,53 @@ void record_runtime_imbalance() {
     file.close();
 }
 
-// Blockmodel stochastic_block_partition(Graph &graph, MPI &mpi, Args &args) {
 Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_conquer) {
     if (args.threads > 0)
         omp_set_num_threads(args.threads);
     else
         omp_set_num_threads(omp_get_num_procs());
+    double start_t = MPI_Wtime();
     std::cout << "num threads: " << omp_get_max_threads() << std::endl;
-    // DistBlockmodel blockmodel(graph, args, mpi);
     TwoHopBlockmodel blockmodel(graph.num_vertices(), graph, BLOCK_REDUCTION_RATE);
-    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
-    // Blockmodel blockmodel(graph.num_vertices(), graph.out_neighbors(), BLOCK_REDUCTION_RATE);
+    common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     if (mpi.rank == 0)
         std::cout << "Performing stochastic block blockmodeling on graph with " << graph.num_vertices() << " vertices "
-                  << " and " << blockmodel.getNum_blocks() << " blocks." << std::endl;
+                  << " and " << blockmodel.num_blocks() << " blocks." << std::endl;
     DistBlockmodelTriplet blockmodel_triplet = DistBlockmodelTriplet();
-    long iteration = 0;
+    int iteration = 0;
     while (!dist::done_blockmodeling(blockmodel, blockmodel_triplet, 0)) {
         if (divide_and_conquer) {
             if (!blockmodel_triplet.golden_ratio_not_reached() ||
-                (blockmodel_triplet.get(0).getNum_blocks() > 1 && blockmodel_triplet.get(1).getNum_blocks() <= 1)) {
-//                MPI_Barrier(mpi.comm);
+                (blockmodel_triplet.get(0).num_blocks() > 1 && blockmodel_triplet.get(1).num_blocks() <= 1)) {
                 blockmodel_triplet.status();
                 blockmodel = blockmodel_triplet.get(0).copy();
                 break;
             }
         }
         if (mpi.rank == 0 && blockmodel.getNum_blocks_to_merge() != 0) {
-            std::cout << "Merging blocks down from " << blockmodel.getNum_blocks() << " to "
-                      << blockmodel.getNum_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
+            std::cout << "Merging blocks down from " << blockmodel.num_blocks() << " to "
+                      << blockmodel.num_blocks() - blockmodel.getNum_blocks_to_merge() << std::endl;
         }
+        double start_bm = MPI_Wtime();
         blockmodel = block_merge::dist::merge_blocks(blockmodel, graph);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
-        if (mpi.rank == 0) std::cout << "Starting MCMC vertex moves" << std::endl;
-        if (args.algorithm == "async_gibbs" && iteration < args.asynciterations)
-            blockmodel = finetune::dist::asynchronous_gibbs(blockmodel, graph, blockmodel_triplet);
-        else if (args.algorithm == "hybrid_mcmc" && iteration < args.asynciterations)
-            blockmodel = finetune::dist::hybrid_mcmc(blockmodel, graph, blockmodel_triplet);
-        else
-            blockmodel = finetune::dist::metropolis_hastings(blockmodel, graph, blockmodel_triplet);
+//        if (mpi.rank == 0) blockmodel.print_blockmatrix();
+        timers::BlockMerge_time += MPI_Wtime() - start_bm;
+        double start_mcmc = MPI_Wtime();
+        blockmodel = finetune::dist::mcmc(graph, blockmodel, blockmodel_triplet.golden_ratio_not_reached());
+        timers::MCMC_time += MPI_Wtime() - start_mcmc;
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(++iteration, -1, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         blockmodel = blockmodel_triplet.get_next_blockmodel(blockmodel);
-        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.getNum_blocks() - 2);
-        iteration++;
+        timers::total_time += MPI_Wtime() - start_t;
+        start_t = MPI_Wtime();
+        common::candidates = std::uniform_int_distribution<long>(0, blockmodel.num_blocks() - 2);
     }
-//    std::cout << "Total MCMC iterations: " << finetune::MCMC_iterations << std::endl;
     double modularity = -1;
     if (args.modularity)
         modularity = graph.modularity(blockmodel.block_assignment());
-    add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+    double mdl = blockmodel.getOverall_entropy();
+    utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph), blockmodel.num_blocks());
 //    record_runtime_imbalance();
     return blockmodel;
 }
@@ -194,13 +151,13 @@ Blockmodel stochastic_block_partition(Graph &graph, Args &args, bool divide_and_
 bool done_blockmodeling(TwoHopBlockmodel &blockmodel, DistBlockmodelTriplet &blockmodel_triplet, long min_num_blocks) {
     if (mpi.rank == 0) std::cout << "distributed done_blockmodeling" << std::endl;
     if (min_num_blocks > 0) {
-        if ((blockmodel.getNum_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
+        if ((blockmodel.num_blocks() <= min_num_blocks) || !blockmodel_triplet.get(2).empty) {
             return true;
         }
     }
     if (blockmodel_triplet.optimal_num_blocks_found) {
         blockmodel_triplet.status();
-        std::cout << "Optimal number of blocks was found" << std::endl;
+        if (mpi.rank == 0) std::cout << "Optimal number of blocks was found" << std::endl;
         return true;
     }
     return false;

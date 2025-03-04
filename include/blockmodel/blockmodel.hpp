@@ -1,8 +1,8 @@
 /***
  * Stores the current graph blockmodeling results.
  */
-#ifndef SBP_DELTA_HPP
-#define SBP_DELTA_HPP
+#ifndef SBP_BLOCKMODEL_HPP
+#define SBP_BLOCKMODEL_HPP
 
 #include <iostream>
 #include <limits>
@@ -13,23 +13,18 @@
 
 // #include <Eigen/Core>
 // #include "sparse/boost_mapped_matrix.hpp"
-#include "../args.hpp"
+#include "args.hpp"
 #include "delta.hpp"
+#include "globals.hpp"
+#include "graph.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "../graph.hpp"
-#include "sparse/typedefs.hpp"
-#include "../utils.hpp"
 #include "typedefs.hpp"
 #include "utils.hpp"
 
 static const double BLOCK_REDUCTION_RATE = 0.5;
 
-// The time taken to build the blockmodel
-extern double BLOCKMODEL_BUILD_TIME;
-extern double Blockmodel_sort_time;
-extern double Blockmodel_access_time;
-extern double Blockmodel_update_assignment;
+extern bool DIVISIVE_SBP;
 
 // typedef py::EigenDRef<Eigen::Matrix<long, Eigen::Dynamic, 2>> Matrix2Column;
 
@@ -51,25 +46,34 @@ typedef struct sparse_edge_count_updates_t {
 class Blockmodel {
   public:
     Blockmodel() : empty(true) {
-        this->num_blocks = 0;
+        this->_num_blocks = 0;
         this->block_reduction_rate = 0.0;
         this->num_blocks_to_merge = 0;
+        this->_num_nonempty_blocks = 0;
         this->overall_entropy = std::numeric_limits<double>::max();
     }
     Blockmodel(long num_blocks, double block_reduction_rate) : empty(false) {
-        this->num_blocks = num_blocks;
+        this->_num_blocks = num_blocks;
         this->block_reduction_rate = block_reduction_rate;
         this->overall_entropy = std::numeric_limits<double>::max();
-        if (args.transpose) {
-            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, 36);
+        this->_num_nonempty_blocks = num_blocks;
+        if (args.no_transpose) {
+            this->_blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
         } else {
-            this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+            this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, 36);
         }
-        // Set the block assignment to be the range [0, this->num_blocks)
-        this->_block_assignment = utils::range<long>(0, this->num_blocks);
-
+        // Set the block assignment to be the range [0, this->_num_blocks)
+        this->_block_assignment = utils::range<long>(0, this->_num_blocks);
+        // Set the block sizes to be 0 (empty blocks)
+        this->_block_sizes = utils::constant<long>(this->_num_blocks, 0);
         // Number of blocks to merge
-        this->num_blocks_to_merge = (long)(this->num_blocks * this->block_reduction_rate);
+        if (DIVISIVE_SBP) {
+//            std::cout << "Running divisive SBP" << std::endl;
+            this->num_blocks_to_merge = (long) (ceil(this->_num_blocks * this->block_reduction_rate));
+        } else {
+//            std::cout << "Running agglomerative SBP, boo..." << std::endl;
+            this->num_blocks_to_merge = (long) (this->_num_blocks * this->block_reduction_rate);
+        }
     }
     Blockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
         : Blockmodel(num_blocks, block_reduction_rate) {
@@ -82,6 +86,16 @@ class Blockmodel {
         // Number of blocks to merge
         this->initialize_edge_counts(graph);
     }
+    /// Returns an immutable copy of the vertex-to-block assignment vector.
+    const std::vector<long> &block_assignment() const { return this->_block_assignment; }
+    /// Returns the block assignment for `vertex`.
+    long block_assignment(long vertex) const { return this->_block_assignment[vertex]; }
+    /// Returns the vector of block sizes.
+    const std::vector<long>& block_sizes() const { return this->_block_sizes; }
+    /// Returns the number of vertices in block `block`.
+    long block_size(long block) const { return this->_block_sizes[block]; }
+    /// Returns the normalized difference in block sizes.
+    double block_size_variation() const;
     /// TODO
     static std::vector<long> build_mapping(const std::vector<long> &values) ;
     /// Performs the block merges with the highest change in entropy/MDL
@@ -95,8 +109,6 @@ class Blockmodel {
     // TODO: move block_reduction_rate to some constants file
     static Blockmodel from_sample(long num_blocks, const Graph &graph, std::vector<long> &sample_block_membership,
                                  std::map<long, long> &mapping, double block_reduction_rate);
-    /// Returns the normalized difference in block sizes.
-    double block_size_variation() const;
     /// Difficulty score, being the geometric mean between block_size_variation() and interblock_edges().
     double difficulty_score() const;
     /// Fills the blockmodel using the edges in `graph` and the current vertex-to-block `block_assignment`.
@@ -105,39 +117,38 @@ class Blockmodel {
     double log_posterior_probability() const;
     /// TODO
     double log_posterior_probability(long num_edges) const;
+    /// Merges block `merge_from` into block `merge_to`
+    void merge_block(long merge_from, long merge_to, const Delta &delta, utils::ProposalAndEdgeCounts proposal);
+    /// TODO: have all move_vertex return early if the block will become empty
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
-    void move_vertex(long vertex, long current_block, long new_block, EdgeCountUpdates &updates,
+    void move_vertex(Vertex vertex, long current_block, long new_block, EdgeCountUpdates &updates,
                      std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                      std::vector<long> &new_block_degrees);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new rows and columns from
     /// `updates`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
-    void move_vertex(long vertex, long current_block, long new_block, SparseEdgeCountUpdates &updates,
+    void move_vertex(Vertex vertex, long current_block, long new_block, SparseEdgeCountUpdates &updates,
                      std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                      std::vector<long> &new_block_degrees);
     /// Moves `vertex` from `current_block` to `new_block`. Updates the blockmodel using the new blockmodel values from
     /// `delta`, and updates the block degrees.
     /// TODO: update block degrees on the fly.
-    void move_vertex(long vertex, long new_block, const Delta &delta, std::vector<long> &new_block_degrees_out,
+    void move_vertex(Vertex vertex, long new_block, const Delta &delta, std::vector<long> &new_block_degrees_out,
                      std::vector<long> &new_block_degrees_in, std::vector<long> &new_block_degrees);
     /// Moves `vertex` from one block to another. Updates the blockmodel using the new blockmodel values from `delta`,
     /// and updates the block degrees, which are calculated on-the-fly.
-    void move_vertex(long vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal);
+    void move_vertex(Vertex vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal);
     /// Moves a vertex from one block to another. Updates the blockmodel based on the edges in `move`,
     /// and updates the block degrees, which are calculated on-the-fly. NOTE: assumes self-edges are only included in
     /// move.out_edges.
-    void move_vertex(const VertexMove_v2 &move);
+    bool move_vertex(const VertexMove_v3 &move);
     /// TODO
     void set_block_membership(long vertex, long block);
     /// TODO: Get rid of getters and setters?
     std::shared_ptr<ISparseMatrix> blockmatrix() const { return this->_blockmatrix; }
 //    ISparseMatrix *blockmatrix() const { return this->_blockmatrix; }
-    /// Returns an immutable copy of the vertex-to-block assignment vector.
-    const std::vector<long> &block_assignment() const { return this->_block_assignment; }
-    /// Returns the block assignment for `vertex`.
-    long block_assignment(long vertex) const { return this->_block_assignment[vertex]; }
     /// Returns true if `block1` is a neighbor of `block2`.
     bool is_neighbor_of(long block1, long block2) const;
     /// Returns the percentage of edges occurring between blocks.
@@ -147,8 +158,8 @@ class Blockmodel {
     /// prints the blockmodel with some additional information.
     void print_blockmodel() const;
     /// Returns true if the blockmodel owns the current block (always returns true for non-distributed blockmodel).
-    bool stores(long block) const { return true; }
-    /// TODO
+    bool stores([[maybe_unused]] long block) const { return true; }
+    /// Updates the block assignment of all vertices in `from_block` to `to_block`.
     void update_block_assignment(long from_block, long to_block);
     /// Updates the blockmodel values for `current_block` and `proposed_block` using the rows and columns in `updates`.
     void update_edge_counts(long current_block, long proposed_block, EdgeCountUpdates &updates);
@@ -171,20 +182,26 @@ class Blockmodel {
     long degrees_out(long block) const { return this->_block_degrees_out[block]; }
     void degrees_out(long block, long value) { this->_block_degrees_out[block] = value; }
     void degrees_out(std::vector<long> block_degrees_out) { this->_block_degrees_out = block_degrees_out; }
+    long num_blocks() const { return this->_num_blocks; }
+    void num_blocks(long num_blocks) { this->_num_blocks = num_blocks; }
+    long num_nonempty_blocks() const { return this->_num_nonempty_blocks; }
+    /// Returns the out-degree histogram for block `block`.
+    const MapVector<long> &out_degree_histogram(long block) const { return this->_out_degree_histogram[block]; }
+    /// Returns the in-degree histogram for block `block`.
+    const MapVector<long> &in_degree_histogram(long block) const { return this->_in_degree_histogram[block]; }
     double &getBlock_reduction_rate() { return this->block_reduction_rate; }
     void setBlock_reduction_rate(double block_reduction_rate) { this->block_reduction_rate = block_reduction_rate; }
     double getOverall_entropy() const { return this->overall_entropy; }
     void setOverall_entropy(double overall_entropy) { this->overall_entropy = overall_entropy; }
     long &getNum_blocks_to_merge() { return this->num_blocks_to_merge; }
     void setNum_blocks_to_merge(long num_blocks_to_merge) { this->num_blocks_to_merge = num_blocks_to_merge; }
-    long getNum_blocks() const { return this->num_blocks; }
-    void setNum_blocks(long num_blocks) { this->num_blocks = num_blocks; }
     // Other
     bool empty;
 
   protected:
     // Structure
-    long num_blocks;
+    long _num_blocks;
+    long _num_nonempty_blocks;
     std::shared_ptr<ISparseMatrix> _blockmatrix;
 //    ISparseMatrix *_blockmatrix;
     // Known info
@@ -192,10 +209,13 @@ class Blockmodel {
     std::vector<long> _block_degrees;
     std::vector<long> _block_degrees_in;
     std::vector<long> _block_degrees_out;
+    std::vector<long> _block_sizes;
+    std::vector<MapVector<long>> _out_degree_histogram;
+    std::vector<MapVector<long>> _in_degree_histogram;
     double block_reduction_rate;
     // Computed info
     double overall_entropy;
     long num_blocks_to_merge;
 };
 
-#endif // SBP_DELTA_HPP
+#endif // SBP_BLOCKMODEL_HPP

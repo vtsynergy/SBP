@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "args.hpp"
-#include "blockmodel/sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "graph.hpp"
 #include "utils.hpp"
 

@@ -6,14 +6,15 @@
 #include "blockmodel/sparse/delta.hpp"
 #include "finetune.hpp"
 #include "graph.hpp"
+#include "globals.hpp"
 #include "utils.hpp"
 
 #include "toy_example.hpp"
 #include "typedefs.hpp"
 
 // TODO: figure out correct placement of these
-MPI_t mpi;  // Unused
-Args args;  // Unused
+//MPI_t mpi;  // Unused
+//Args args;  // Unused
 
 class FinetuneTest : public ToyExample {
 protected:
@@ -132,15 +133,15 @@ TEST_F(FinetuneTest, BlockmodelDeltaGivesSameBlockmatrixAsEdgeCountUpdates) {
     EdgeWeights in_edges = finetune::edge_weights(graph.in_neighbors(), vertex);
     B.print_blockmatrix();
     Blockmodel B1 = B.copy();
-    B1.move_vertex(vertex, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
+    B1.move_vertex(V7, current_block, Proposal.proposal, Updates, new_block_degrees.block_degrees_out,
                   new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B1.print_blockmatrix();
     Blockmodel B2 = B.copy();
-    B2.move_vertex(vertex, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
+    B2.move_vertex(V7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out,
                    new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
     B2.print_blockmatrix();
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B1.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)

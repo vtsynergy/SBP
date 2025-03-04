@@ -1,6 +1,8 @@
 #include "evaluate.hpp"
 
 #include "entropy.hpp"
+#include "globals.hpp"
+#include "typedefs.hpp"
 
 namespace evaluate {
 
@@ -102,7 +104,7 @@ Eval evaluate_blockmodel(const Graph &graph, Blockmodel &blockmodel) {
     std::vector<long> true_assignment(graph.assignment());
     long true_num_blocks = 1 + *std::max_element(true_assignment.begin(), true_assignment.end());
     Blockmodel true_blockmodel(true_num_blocks, graph, 0.5, true_assignment);
-    double true_entropy = entropy::mdl(true_blockmodel, graph.num_vertices(), graph.num_edges());
+    double true_entropy = entropy::mdl(true_blockmodel, graph);  // .num_vertices(), graph.num_edges());
     std::cout << "true entropy = " << true_entropy << std::endl;
     return Eval { f1_score, nmi, true_entropy };
 }
@@ -126,18 +128,18 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     std::cout << "Blockmodel correctness evaluation" << std::endl;
     std::cout << "Number of vertices: " << graph.num_vertices() << std::endl;
     std::cout << "Number of communities in true assignment: " << num_true_communities << std::endl;
-    std::cout << "Number of communities in alg. assignment: " << blockmodel.getNum_blocks() << std::endl;
+    std::cout << "Number of communities in alg. assignment: " << blockmodel.num_blocks() << std::endl;
     std::vector<long> rows, cols;
     long nrows, ncols;
-    if (num_true_communities < blockmodel.getNum_blocks()) {
+    if (num_true_communities < blockmodel.num_blocks()) {
         rows = true_assignment;
         cols = blockmodel.block_assignment();
         nrows = num_true_communities;
-        ncols = blockmodel.getNum_blocks();
+        ncols = blockmodel.num_blocks();
     } else {
         rows = blockmodel.block_assignment();
         cols = true_assignment;
-        nrows = blockmodel.getNum_blocks();
+        nrows = blockmodel.num_blocks();
         ncols = num_true_communities;
     }
     std::vector<std::vector<int>> contingency_table(nrows, std::vector<int>(ncols, 0));
@@ -173,7 +175,7 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     }
 
     // Make sure rows represent algorithm communities, columns represent true communities
-    if (num_true_communities < blockmodel.getNum_blocks()) {
+    if (num_true_communities < blockmodel.num_blocks()) {
         Hungarian::Matrix transpose_contingency_table(ncols, std::vector<int>(nrows, 0));
         for (long row = 0; row < nrows; ++row) {
             for (long col = 0; col < ncols; ++col) {
@@ -201,4 +203,91 @@ Hungarian::Matrix hungarian(const Graph &graph, Blockmodel &blockmodel) {
     return new_contingency_table;
 }
 
+void write_results(const Graph &graph, const evaluate::Eval &eval, double runtime) {
+    std::ostringstream filepath_stream;
+    filepath_stream << args.csv << args.numvertices;
+    std::string filepath_dir = filepath_stream.str();
+    filepath_stream << "/" << args.type << ".csv";
+    std::string filepath = filepath_stream.str();
+    bool file_exists = fs::exists(filepath);
+    std::cout << std::boolalpha <<  "writing results to " << filepath << " exists = " << file_exists << std::endl;
+    fs::create_directories(fs::path(filepath_dir));
+    std::ofstream file;
+    file.open(filepath, std::ios_base::app);
+    if (!file_exists) {
+        file << "tag,numvertices,numedges,overlap,blocksizevar,undirected,algorithm,iteration,mdl,"
+             << "normalized_mdl_v1,sample_size,modularity,f1_score,nmi,num_blocks,true_mdl,true_mdl_v1,"
+             << "sampling_algorithm,runtime,sampling_time,sample_extend_time,finetune_time,mcmc_iterations,mcmc_time,"
+             << "sequential_mcmc_time,parallel_mcmc_time,vertex_move_time,mcmc_moves,total_num_islands,"
+             << "block_merge_time,block_merge_loop_time,block_split_time,block_split_loop_time,blockmodel_build_time,"
+             << "finetune_time,sort_time,load_balancing_time,access_time,update_assignment,total_time" << std::endl;
+    }
+    double total_block_merge_time = 0.0;
+    double total_block_merge_loop_time = 0.0;
+    double total_block_split_time = 0.0;
+    double total_block_split_loop_time = 0.0;
+    double total_blockmodel_build_time = 0.0;
+    double total_mcmc_time = 0.0;
+    long total_mcmc_iterations = 0;
+    double total_mcmc_sequential_time = 0.0;
+    ulong total_mcmc_moves = 0;
+    double total_mcmc_parallel_time = 0.0;
+    double total_mcmc_vertex_move_time = 0.0;
+    double total_sort_time = 0.0;
+    double total_load_balancing_time = 0.0;
+    double total_access_time = 0.0;
+    double total_update_assignment_time = 0.0;
+    double total_total_time = 0.0;
+    for (PartialProfile &temp : timers::partial_profiles) {
+        if (temp.iteration > -1) {
+            total_block_merge_time += temp.block_merge_time;
+            total_block_merge_loop_time += temp.block_merge_loop_time;
+            total_block_split_time += temp.block_split_time;
+            total_block_split_loop_time += temp.block_split_loop_time;
+            total_blockmodel_build_time += temp.blockmodel_build_time;
+            total_mcmc_time += temp.mcmc_time;
+            total_mcmc_iterations += temp.mcmc_iterations;
+            total_mcmc_sequential_time += temp.mcmc_sequential_time;
+            total_mcmc_moves += temp.mcmc_moves;
+            total_mcmc_parallel_time += temp.mcmc_parallel_time;
+            total_mcmc_vertex_move_time += temp.mcmc_vertex_move_time;
+            total_sort_time += temp.sort_time;
+            total_load_balancing_time += temp.load_balancing_time;
+            total_access_time += temp.access_time;
+            total_update_assignment_time += temp.update_assignment;
+            total_total_time += temp.total_time;
+        } else {
+            temp.block_merge_time = total_block_merge_time;
+            temp.block_merge_loop_time = total_block_merge_loop_time;
+            temp.block_split_time = total_block_split_time;
+            temp.block_split_loop_time = total_block_split_loop_time;
+            temp.blockmodel_build_time = total_blockmodel_build_time;
+            temp.mcmc_time = total_mcmc_time;
+            temp.mcmc_iterations = total_mcmc_iterations;
+            temp.mcmc_sequential_time = total_mcmc_sequential_time;
+            temp.mcmc_moves = total_mcmc_moves;
+            temp.mcmc_parallel_time = total_mcmc_parallel_time;
+            temp.mcmc_vertex_move_time = total_mcmc_vertex_move_time;
+            temp.sort_time = total_sort_time;
+            temp.load_balancing_time = total_load_balancing_time;
+            temp.access_time = total_access_time;
+            temp.update_assignment = total_update_assignment_time;
+            temp.total_time = total_total_time;
+        }
+        file << args.tag << "," << graph.num_vertices() << "," << graph.num_edges() << "," << args.overlap << ","
+             << args.blocksizevar << "," << args.undirected << "," << args.algorithm << "," << temp.iteration << ","
+             << temp.mdl << "," << temp.normalized_mdl_v1 << "," << args.samplesize << ","
+             << temp.modularity << "," << eval.f1_score << "," << eval.nmi << "," << temp.num_blocks << ","
+             << eval.true_mdl << "," << entropy::normalize_mdl_v1(eval.true_mdl, graph) << ","
+             << args.samplingalg << "," << runtime << "," << timers::sample_time << ","
+             << timers::sample_extend_time << "," << timers::sample_finetune_time << "," << temp.mcmc_iterations << ","
+             << temp.mcmc_time << "," << temp.mcmc_sequential_time << "," << temp.mcmc_parallel_time << ","
+             << temp.mcmc_vertex_move_time << "," << temp.mcmc_moves << "," << timers::total_num_islands << ","
+             << temp.block_merge_time << "," << temp.block_merge_loop_time << "," << temp.block_split_time << ","
+             << temp.block_split_loop_time << "," << temp.blockmodel_build_time << "," << temp.finetune_time << ","
+             << temp.sort_time << "," << temp.load_balancing_time << "," << temp.access_time << ","
+             << temp.update_assignment << "," << temp.total_time << std::endl;
+    }
+    file.close();
+}
 } // namespace evaluate

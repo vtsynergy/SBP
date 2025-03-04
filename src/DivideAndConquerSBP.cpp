@@ -23,8 +23,8 @@
 #include "sbp.hpp"
 
 
-MPI_t mpi;
-Args args;
+//MPI_t mpi;
+//Args args;
 
 //const int NUM_VERTICES_TAG = 0;
 //const int VERTICES_TAG = 1;
@@ -78,9 +78,9 @@ int main(int argc, char* argv[]) {
     }
     long num_islands = subgraph.graph.num_islands();
     std::cout << "Rank " << mpi.rank << "'s graph has " << num_islands << " island vertices." << std::endl;
-    MPI_Reduce(&num_islands, &(sbp::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&num_islands, &(timers::total_num_islands), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if (mpi.rank == 0) {
-        std::cout << "====== Total island vertices = " << sbp::total_num_islands << std::endl;
+        std::cout << "====== Total island vertices = " << timers::total_num_islands << std::endl;
     }
     Partition partition;
     double start = MPI_Wtime();
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     double finetune_start_t = MPI_Wtime();
     std::cout << "Rank " << mpi.rank << " took " << end_blockmodeling - start << "s to finish runtime | final B = "
-              << partition.blockmodel.getNum_blocks() << std::endl;
+              << partition.blockmodel.num_blocks() << std::endl;
     std::vector<std::vector<long>> rank_vertices;
     std::vector<std::vector<long>> rank_assignment;
     std::vector<long> local_vertices, local_assignment;
@@ -132,12 +132,14 @@ int main(int argc, char* argv[]) {
         // Make this distributed?
         blockmodel = dnc::finetune_partition(blockmodel, graph);
         double finetune_end_t = MPI_Wtime();
-        sbp::finetune_time = finetune_end_t - finetune_start_t;
+        timers::finetune_time = finetune_end_t - finetune_start_t;
         // only last iteration result will calculate expensive modularity
         double modularity = -1;
         if (args.modularity)
             modularity = graph.modularity(blockmodel.block_assignment());
-        sbp::add_intermediate(-1, graph, modularity, blockmodel.getOverall_entropy());
+        double mdl = blockmodel.getOverall_entropy();
+        utils::save_partial_profile(-1, modularity, mdl, entropy::normalize_mdl_v1(mdl, graph),
+                                    blockmodel.num_blocks());
         // Evaluate finetuned assignment
         double end = MPI_Wtime();
         dnc::evaluate_partition(graph, blockmodel, end - start);

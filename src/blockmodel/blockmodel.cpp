@@ -9,27 +9,24 @@
 #include "typedefs.hpp"
 #include "utils.hpp"
 
-double BLOCKMODEL_BUILD_TIME = 0.0;
-double Blockmodel_sort_time = 0.0;
-double Blockmodel_access_time = 0.0;
-double Blockmodel_update_assignment = 0.0;
+bool DIVISIVE_SBP = false;
 
 double Blockmodel::block_size_variation() const {
     // Normalized using variance / max_variance, where max_variance = range^2 / 4
     // See: https://link.springer.com/content/pdf/10.1007/BF00143817.pdf
-    std::vector<long> block_sizes(this->num_blocks, 0);
+    std::vector<long> block_sizes(this->_num_blocks, 0);
     for (long block : this->_block_assignment) {
         block_sizes[block]++;
     }
     double total = utils::sum<long>(block_sizes);
-    double mean = total / double(this->num_blocks);
+    double mean = total / double(this->_num_blocks);
     double min = std::numeric_limits<double>::max(), max = std::numeric_limits<double>::min(), variance = 0;
     for (long block_size : block_sizes) {
         if (block_size < min) min = block_size;
         if (block_size > max) max = block_size;
         variance += double(block_size - mean) * double(block_size - mean);
     }
-    variance /= double(this->num_blocks);
+    variance /= double(this->_num_blocks);
     double max_variance = (double(max - min) * double(max - mean)) / 4.0;
     return double(variance / max_variance);
 }
@@ -71,18 +68,18 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
     std::vector<long> best_merges = utils::partial_sort_indices(delta_entropy_for_each_block,
                                                                this->num_blocks_to_merge + 1);
     double sort_end_t = MPI_Wtime();
-    Blockmodel_sort_time += sort_end_t - sort_start_t;
+    timers::Blockmodel_sort_time += sort_end_t - sort_start_t;
     // std::vector<long> best_merges = utils::argsort(delta_entropy_for_each_block);
-    std::vector<long> block_map = utils::range<long>(0, this->num_blocks);
+    std::vector<long> block_map = utils::range<long>(0, this->_num_blocks);
     if (mpi.rank == 0) std::cout << "block map size: " << block_map.size() << std::endl;
     auto translate = [&block_map](long block) -> long {
         long b = block;
         do {
-            if (b >= block_map.size())
+            if (b >= (long) block_map.size())
                 std::cout << "bm[" << b << "] = " << block_map[b] << std::endl;
             b = block_map[b];
         } while (block_map[b] != b);
-        if (b >= block_map.size())
+        if (b >= (long) block_map.size())
             std::cout << "final bm[" << block << "] = " << block_map[b] << std::endl;
         return b;
     };
@@ -110,18 +107,18 @@ void Blockmodel::carry_out_best_merges(const std::vector<double> &delta_entropy_
         }
     }
     double update_start_t = MPI_Wtime();
-    Blockmodel_access_time += update_start_t - sort_end_t;
-    for (long i = 0; i < this->_block_assignment.size(); ++i) {
+    timers::Blockmodel_access_time += update_start_t - sort_end_t;
+    for (ulong i = 0; i < this->_block_assignment.size(); ++i) {
         this->_block_assignment[i] = translate(this->_block_assignment[i]);
     }
-    Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
+    timers::Blockmodel_update_assignment += MPI_Wtime() - update_start_t;
     std::vector<long> mapping = build_mapping(this->_block_assignment);
     for (size_t i = 0; i < this->_block_assignment.size(); ++i) {
         long block = this->_block_assignment[i];
         long new_block = mapping[block];
         this->_block_assignment[i] = new_block;
     }
-    this->num_blocks -= this->num_blocks_to_merge;
+    this->_num_blocks -= this->num_blocks_to_merge;
 }
 
 Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std::vector<long> &true_block_membership) {
@@ -140,13 +137,17 @@ Blockmodel Blockmodel::clone_with_true_block_membership(const Graph &graph, std:
 }
 
 Blockmodel Blockmodel::copy() {
-    Blockmodel blockmodel_copy = Blockmodel(this->num_blocks, this->block_reduction_rate);
+    Blockmodel blockmodel_copy = Blockmodel(this->_num_blocks, this->block_reduction_rate);
     blockmodel_copy._block_assignment = std::vector<long>(this->_block_assignment);
     blockmodel_copy.overall_entropy = this->overall_entropy;
     blockmodel_copy._blockmatrix = std::shared_ptr<ISparseMatrix>(this->_blockmatrix->copy());
     blockmodel_copy._block_degrees = std::vector<long>(this->_block_degrees);
     blockmodel_copy._block_degrees_out = std::vector<long>(this->_block_degrees_out);
     blockmodel_copy._block_degrees_in = std::vector<long>(this->_block_degrees_in);
+    blockmodel_copy._block_sizes = std::vector<long>(this->_block_sizes);
+    blockmodel_copy._in_degree_histogram = std::vector<MapVector<long>>(this->_in_degree_histogram);
+    blockmodel_copy._out_degree_histogram = std::vector<MapVector<long>>(this->_out_degree_histogram);
+    blockmodel_copy._num_nonempty_blocks = this->_num_nonempty_blocks;
     blockmodel_copy.num_blocks_to_merge = 0;
     return blockmodel_copy;
 }
@@ -160,7 +161,7 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
     }
     // Every unassigned block gets assigned to the next block number
     long next_block = num_blocks;
-    for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
+    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
         if (_block_assignment[vertex] >= 0) {
             continue;
         }
@@ -168,14 +169,14 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
         next_block++;
     }
     // Every previously unassigned block gets assigned to the block it's most connected to
-    for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
+    for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {  // neighbors.size(); ++vertex) {
         if (_block_assignment[vertex] < num_blocks) {
             continue;
         }
         std::vector<long> block_counts = utils::constant<long>(num_blocks, 0);
         // TODO: this can only handle unweighted graphs
         std::vector<long> vertex_neighbors = graph.out_neighbors(vertex);  // [vertex];
-        for (ulong i = 0; i < vertex_neighbors.size(); ++i) {
+        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
             long neighbor = vertex_neighbors[i];
             long neighbor_block = _block_assignment[neighbor];
             if (neighbor_block < num_blocks) {
@@ -189,72 +190,34 @@ Blockmodel Blockmodel::from_sample(long num_blocks, const Graph &graph, std::vec
     return Blockmodel(num_blocks, graph, block_reduction_rate, _block_assignment);
 }
 
-//void Blockmodel::initialize_edge_counts(const NeighborList &neighbors) {
-//    double start = omp_get_wtime();
-////    std::cout << "OLD BLOCKMODEL BOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << std::endl;
-//    /// TODO: this recreates the matrix (possibly unnecessary)
-//    if (args.transpose) {
-//        this->_blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks);
-//    } else {
-//        this->_blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
-//    }
-//    // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-//    this->_block_degrees_in = utils::constant<long>(this->num_blocks, 0);
-//    this->_block_degrees_out = utils::constant<long>(this->num_blocks, 0);
-//    this->_block_degrees = utils::constant<long>(this->num_blocks, 0);
-//    // Initialize the blockmodel
-//    // TODO: find a way to parallelize the matrix filling step
-//    for (ulong vertex = 0; vertex < neighbors.size(); ++vertex) {
-//        std::vector<long> vertex_neighbors = neighbors[vertex];
-//        if (vertex_neighbors.empty()) {
-//            continue;
-//        }
-//        long block = this->_block_assignment[vertex];
-//        for (size_t i = 0; i < vertex_neighbors.size(); ++i) {
-//            // Get count
-//            long neighbor = vertex_neighbors[i];
-//            long neighbor_block = this->_block_assignment[neighbor];
-//            // TODO: change this once code is updated to support weighted graphs
-//            long weight = 1;
-//            // long weight = vertex_neighbors[i];
-//            // Update blockmodel
-//            this->_blockmatrix->add(block, neighbor_block, weight);
-//            // Update degrees
-//            this->_block_degrees_out[block] += weight;
-//            this->_block_degrees_in[neighbor_block] += weight;
-//            this->_block_degrees[block] += weight;
-//            if (block != neighbor_block)
-//                this->_block_degrees[neighbor_block] += weight;
-//        }
-//    }
-//    double end = omp_get_wtime();
-//    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
-//}
-
 void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel version!
+    this->_num_nonempty_blocks = 0;
     double build_start_t = MPI_Wtime();
     /// TODO: this recreates the matrix (possibly unnecessary)
     std::shared_ptr<ISparseMatrix> blockmatrix;
     long num_buckets = graph.num_edges() / graph.num_vertices();
-    if (args.transpose) {
-        blockmatrix = std::make_shared<DictTransposeMatrix>(this->num_blocks, this->num_blocks, num_buckets);
+    if (args.no_transpose) {
+        blockmatrix = std::make_shared<DictMatrix>(this->_num_blocks, this->_num_blocks);
     } else {
-        blockmatrix = std::make_shared<DictMatrix>(this->num_blocks, this->num_blocks);
+        blockmatrix = std::make_shared<DictTransposeMatrix>(this->_num_blocks, this->_num_blocks, num_buckets);
     }
     // This may or may not be faster with push_backs. TODO: test init & fill vs push_back
-    std::vector<long> block_degrees_in = utils::constant<long>(this->num_blocks, 0);
-    std::vector<long> block_degrees_out = utils::constant<long>(this->num_blocks, 0);
-    std::vector<long> block_degrees = utils::constant<long>(this->num_blocks, 0);
+    std::vector<long> block_degrees_in = utils::constant<long>(this->_num_blocks, 0);
+    std::vector<long> block_degrees_out = utils::constant<long>(this->_num_blocks, 0);
+    std::vector<long> block_degrees = utils::constant<long>(this->_num_blocks, 0);
+    std::vector<long> block_sizes = utils::constant<long>(this->_num_blocks, 0);
+    std::vector<MapVector<long>> out_degree_histogram(this->_num_blocks);
+    std::vector<MapVector<long>> in_degree_histogram(this->_num_blocks);
     // Initialize the blockmodel
     #pragma omp parallel default(none) \
-    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, graph, args)
+    shared(blockmatrix, block_degrees_in, block_degrees_out, block_degrees, block_sizes, out_degree_histogram, in_degree_histogram, graph, args)
     {
         long tid = omp_get_thread_num();
         long num_threads = omp_get_num_threads();
-        long my_num_blocks = ceil(double(this->num_blocks) / double(num_threads));
+        long my_num_blocks = ceil(double(this->_num_blocks) / double(num_threads));
         long start = my_num_blocks * tid;
         long end = start + my_num_blocks;
-        for (ulong vertex = 0; vertex < graph.num_vertices(); ++vertex) {
+        for (long vertex = 0; vertex < graph.num_vertices(); ++vertex) {
 //            std::vector<long> vertex_neighbors = graph.out_neighbors(vertex);  // neighbors[vertex];
 //            if (vertex_neighbors.empty()) {
 //                continue;
@@ -262,6 +225,14 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
             long block = this->_block_assignment[vertex];
             if (block < start || block >= end)  // only modify blocks this thread is responsible for
                 continue;
+            /// TODO: in distributed version, may need to communicate this value at the end
+            if (block_sizes[block] == 0) {
+                #pragma omp atomic
+                this->_num_nonempty_blocks++;
+            }
+            block_sizes[block]++;
+            out_degree_histogram[block][graph.out_neighbors(long(vertex)).size()]++;
+            in_degree_histogram[block][graph.in_neighbors(long(vertex)).size()]++;
             for (long neighbor : graph.out_neighbors(long(vertex))) {  // vertex_neighbors) {
 //                size_t i = 0; i < vertex_neighbors.size(); ++i) {
                 // Get count
@@ -280,7 +251,7 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
             for (long neighbor : graph.in_neighbors(long(vertex))) {
                 long neighbor_block = this->_block_assignment[neighbor];
                 long weight = 1;
-                if (args.transpose) {
+                if (!args.no_transpose) {
                     std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(blockmatrix);
                     blockmatrix_dtm->add_transpose(neighbor_block, block, weight);
                 }
@@ -296,15 +267,18 @@ void Blockmodel::initialize_edge_counts(const Graph &graph) {  // Parallel versi
     this->_block_degrees_out = std::move(block_degrees_out);
     this->_block_degrees_in = std::move(block_degrees_in);
     this->_block_degrees = std::move(block_degrees);
+    this->_block_sizes = std::move(block_sizes);
+    this->_out_degree_histogram = std::move(out_degree_histogram);
+    this->_in_degree_histogram = std::move(in_degree_histogram);
 //    double end = omp_get_wtime();
 //    std::cout << omp_get_thread_num() << "Matrix creation walltime = " << end - start << std::endl;
-    BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
+    timers::BLOCKMODEL_BUILD_TIME += MPI_Wtime() - build_start_t;
 }
 
 double Blockmodel::interblock_edges() const {
     double num_edges = utils::sum<long>(this->_block_degrees_in);
-    double longerblock_edges = num_edges - double(this->_blockmatrix->trace());
-    return longerblock_edges / num_edges;
+    double interblock_edges = num_edges - double(this->_blockmatrix->trace());
+    return interblock_edges / num_edges;
 }
 
 bool Blockmodel::is_neighbor_of(long block1, long block2) const {
@@ -357,41 +331,85 @@ void Blockmodel::update_block_assignment(long from_block, long to_block) {
             this->_block_assignment[index] = to_block;
         }
     }
-    Blockmodel_update_assignment += MPI_Wtime() - start_t;
+    timers::Blockmodel_update_assignment += MPI_Wtime() - start_t;
 }
 
-void Blockmodel::move_vertex(long vertex, long current_block, long new_block, EdgeCountUpdates &updates,
+void Blockmodel::merge_block(long merge_from, long merge_to, const Delta &delta,
+                             utils::ProposalAndEdgeCounts proposal) {
+    long proposed_block_self_edges = this->blockmatrix()->get(merge_to, merge_to)
+                                     + delta.get(merge_to, merge_to);
+    this->update_block_assignment(merge_from, merge_to);
+    // 2. Update the matrix
+    this->blockmatrix()->update_edge_counts(delta);
+//            blockmodel.degrees_out(new_block_degrees._block_degrees_out);
+//            blockmodel.degrees_in(new_block_degrees._block_degrees_in);
+//            blockmodel.degrees(new_block_degrees._block_degrees);
+    this->degrees_out(merge_from, 0);
+    this->degrees_out(merge_to, this->degrees_out(merge_to) + proposal.num_out_neighbor_edges);
+    this->degrees_in(merge_from, 0);
+    this->degrees_in(merge_to, this->degrees_in(merge_to) + proposal.num_in_neighbor_edges);
+    this->degrees(merge_from, 0);
+    this->degrees(merge_to, this->degrees_out(merge_to) + this->degrees_in(merge_to)
+                                 - proposed_block_self_edges);
+    this->_block_sizes[merge_to] += this->_block_sizes[merge_from];
+    this->_block_sizes[merge_from] = 0;
+    this->_num_nonempty_blocks--;
+    for (const std::pair<long, long> &entry : this->_in_degree_histogram[merge_from]) {
+        this->_in_degree_histogram[merge_to][entry.first] += entry.second;
+    }
+    for (const std::pair<long, long> &entry : this->_out_degree_histogram[merge_from]) {
+        this->_out_degree_histogram[merge_to][entry.first] += entry.second;
+    }
+}
+
+void Blockmodel::move_vertex(Vertex vertex, long current_block, long new_block, EdgeCountUpdates &updates,
                              std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                              std::vector<long> &new_block_degrees) {
-    this->_block_assignment[vertex] = new_block;
+    this->_block_assignment[vertex.id] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
     this->_block_degrees_out = new_block_degrees_out;
     this->_block_degrees_in = new_block_degrees_in;
     this->_block_degrees = new_block_degrees;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+    if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
+    if (this->_block_sizes[new_block] == 1) this->_num_nonempty_blocks++;
 }
 
-void Blockmodel::move_vertex(long vertex, long current_block, long new_block, SparseEdgeCountUpdates &updates,
+void Blockmodel::move_vertex(Vertex vertex, long current_block, long new_block, SparseEdgeCountUpdates &updates,
                              std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                              std::vector<long> &new_block_degrees) {
-    this->_block_assignment[vertex] = new_block;
+    this->_block_assignment[vertex.id] = new_block;
     this->update_edge_counts(current_block, new_block, updates);
     this->_block_degrees_out = new_block_degrees_out;
     this->_block_degrees_in = new_block_degrees_in;
     this->_block_degrees = new_block_degrees;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+    if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
+    if (this->_block_sizes[new_block] == 1) this->_num_nonempty_blocks++;
 }
 
-void Blockmodel::move_vertex(long vertex, long new_block, const Delta &delta,
+void Blockmodel::move_vertex(Vertex vertex, long new_block, const Delta &delta,
                              std::vector<long> &new_block_degrees_out, std::vector<long> &new_block_degrees_in,
                              std::vector<long> &new_block_degrees) {
-    this->_block_assignment[vertex] = new_block;
+    long current_block = this->_block_assignment[vertex.id];
+    this->_block_assignment[vertex.id] = new_block;
     this->_blockmatrix->update_edge_counts(delta);
     this->_block_degrees_out = new_block_degrees_out;
     this->_block_degrees_in = new_block_degrees_in;
     this->_block_degrees = new_block_degrees;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[new_block]++;
+    if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
+    if (this->_block_sizes[new_block] == 1) this->_num_nonempty_blocks++;
 }
 
-void Blockmodel::move_vertex(long vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal) {
-    this->_block_assignment[vertex] = proposal.proposal;
+void Blockmodel::move_vertex(Vertex vertex, const Delta &delta, utils::ProposalAndEdgeCounts &proposal) {
+//    std::cout << "vID = " << vertex.id << " proposal.proposal = " << proposal.proposal;
+//    utils::print(this->_block_assignment);
+    this->_block_assignment[vertex.id] = proposal.proposal;
+//    utils::print(this->_block_assignment);
     this->_blockmatrix->update_edge_counts(delta);
     long current_block = delta.current_block();
     long current_block_self_edges = this->_blockmatrix->get(current_block, current_block);
@@ -406,18 +424,31 @@ void Blockmodel::move_vertex(long vertex, const Delta &delta, utils::ProposalAnd
             this->_block_degrees_in[current_block] - current_block_self_edges;
     this->_block_degrees[proposal.proposal] = this->_block_degrees_out[proposal.proposal] +
             this->_block_degrees_in[proposal.proposal] - proposed_block_self_edges;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[proposal.proposal]++;
+    if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
+    if (this->_block_sizes[proposal.proposal] == 1) this->_num_nonempty_blocks++;
+    this->_out_degree_histogram[delta.current_block()][proposal.num_out_neighbor_edges]--;
+    this->_in_degree_histogram[delta.current_block()][proposal.num_in_neighbor_edges]--;
+    this->_out_degree_histogram[delta.proposed_block()][proposal.num_out_neighbor_edges]++;
+    this->_in_degree_histogram[delta.proposed_block()][proposal.num_in_neighbor_edges]++;
 }
 
-void Blockmodel::move_vertex(const VertexMove_v2 &move) {
-    long current_block = this->_block_assignment[move.vertex];
+bool Blockmodel::move_vertex(const VertexMove_v3 &move) {
+    long current_block = this->_block_assignment[move.vertex.id];
+    if (this->_block_sizes[current_block] == 1) {
+//        std::cout << "attempted to move vertex " << move.vertex.id << " from block " << current_block
+//                  << " with block size == 1" << std::endl;
+        return false;
+    }
     for (const long &out_vertex : move.out_edges.indices) {  // Edge: vertex --> out_vertex
         long out_block = this->_block_assignment[out_vertex];
         this->_blockmatrix->sub(current_block, out_block, 1);
         this->_block_degrees_out[current_block]--;
         this->_block_degrees_out[move.proposed_block]++;
-        if (out_vertex == move.vertex) {  // handle self edge
+        if (out_vertex == move.vertex.id) {  // handle self edge
             this->_blockmatrix->add(move.proposed_block, move.proposed_block, 1);
-            if (args.transpose) {
+            if (!args.no_transpose) {
                 std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
                         std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
                 blockmatrix_dtm->add_transpose(move.proposed_block, move.proposed_block, 1);
@@ -426,19 +457,19 @@ void Blockmodel::move_vertex(const VertexMove_v2 &move) {
             this->_block_degrees_in[move.proposed_block]++;
         } else {
             this->_blockmatrix->add(move.proposed_block, out_block, 1);
-            if (args.transpose) {
+            if (!args.no_transpose) {
                 std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm =
                         std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
                 blockmatrix_dtm->add_transpose(move.proposed_block, out_block, 1);
             }
         }
     }
-    for (const long &in_vertex : move.in_edges.indices) {  // Edge: in_vertex --> out_vertex
+    for (const long &in_vertex : move.in_edges.indices) {  // Edge: in_vertex --> vertex
         long in_block = this->_block_assignment[in_vertex];
         this->_blockmatrix->sub(in_block, current_block, 1);
         this->_block_degrees_in[current_block]--;
         this->_blockmatrix->add(in_block, move.proposed_block, 1);
-        if (args.transpose) {
+        if (!args.no_transpose) {
             std::shared_ptr<DictTransposeMatrix> blockmatrix_dtm = std::dynamic_pointer_cast<DictTransposeMatrix>(this->_blockmatrix);
             blockmatrix_dtm->add_transpose(in_block, move.proposed_block, 1);
         }
@@ -450,7 +481,16 @@ void Blockmodel::move_vertex(const VertexMove_v2 &move) {
     this->_block_degrees[move.proposed_block] = this->_block_degrees_in[move.proposed_block] +
                                           this->_block_degrees_out[move.proposed_block] -
                                           this->_blockmatrix->get(move.proposed_block, move.proposed_block);
-    this->_block_assignment[move.vertex] = move.proposed_block;
+    this->_block_assignment[move.vertex.id] = move.proposed_block;
+    this->_block_sizes[current_block]--;
+    this->_block_sizes[move.proposed_block]++;
+    if (this->_block_sizes[current_block] == 0) this->_num_nonempty_blocks--;
+    if (this->_block_sizes[move.proposed_block] == 1) this->_num_nonempty_blocks++;
+    this->_out_degree_histogram[current_block][move.vertex.out_degree]--;
+    this->_in_degree_histogram[current_block][move.vertex.in_degree]--;
+    this->_out_degree_histogram[move.proposed_block][move.vertex.out_degree]++;
+    this->_in_degree_histogram[move.proposed_block][move.vertex.in_degree]++;
+    return true;
 }
 
 void Blockmodel::print_blockmatrix() const {
@@ -468,6 +508,8 @@ void Blockmodel::print_blockmodel() const {
     utils::print<long>(this->_block_degrees);
     std::cout << "Assignment: ";
     utils::print<long>(this->_block_assignment);
+    std::cout << "Block sizes: ";
+    utils::print<long>(this->_block_sizes);
 }
 
 void Blockmodel::set_block_membership(long vertex, long block) { this->_block_assignment[vertex] = block; }
@@ -485,9 +527,9 @@ void Blockmodel::update_edge_counts(long current_block, long proposed_block, Spa
 bool Blockmodel::validate(const Graph &graph) const {
     std::cout << "Validating..." << std::endl;
     std::vector<long> assignment(this->_block_assignment);
-    Blockmodel correct(this->num_blocks, graph, this->block_reduction_rate, assignment);
-    for (long row = 0; row < this->num_blocks; ++row) {
-        for (long col = 0; col < this->num_blocks; ++col) {
+    Blockmodel correct(this->_num_blocks, graph, this->block_reduction_rate, assignment);
+    for (long row = 0; row < this->_num_blocks; ++row) {
+        for (long col = 0; col < this->_num_blocks; ++col) {
 //            long this_val = this->blockmatrix()->get(row, col);
             long correct_val = correct.blockmatrix()->get(row, col);
             if (!this->blockmatrix()->validate(row, col, correct_val)) {
@@ -498,7 +540,7 @@ bool Blockmodel::validate(const Graph &graph) const {
 //            if (this_val != correct_val) return false;
         }
     }
-    for (long block = 0; block < this->num_blocks; ++block) {
+    for (long block = 0; block < this->_num_blocks; ++block) {
         bool valid = true;
         if (this->_block_degrees[block] != correct.degrees(block)) {
             std::cout << "ERROR::block degrees of " << block << " is " << this->_block_degrees[block] <<
@@ -515,28 +557,75 @@ bool Blockmodel::validate(const Graph &graph) const {
             " when it should be " << correct.degrees_in(block) << std::endl;
             valid = false;
         }
+        if (this->_block_sizes[block] != correct.block_size(block)) {
+            std::cout << "ERROR::block size of " << block << " is " << this->_block_sizes[block] <<
+                      " when it should be " << correct.block_size(block) << std::endl;
+            valid = false;
+        }
         if (!valid) {
-            std::cout << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
+            std::cerr << "ERROR::error state | d_out: " << this->_block_degrees_out[block] << " d_in: " <<
                       this->_block_degrees_in[block] << " d: " << this->_block_degrees[block] <<
-                      " self_edges: " << this->blockmatrix()->get(block, block) << std::endl;
-            std::cout << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
+                      " self_edges: " << this->blockmatrix()->get(block, block) << " block size: " <<
+                      this->_block_sizes[block] << std::endl;
+            std::cerr << "ERROR::correct state | d_out: " << correct.degrees_out(block) << " d_in: " <<
                       correct.degrees_in(block) << " d: " << correct.degrees(block) <<
-                      " self_edges: " << correct.blockmatrix()->get(block, block) << std::endl;
-            std::cout << "ERROR::Checking matrix for errors..." << std::endl;
-            for (long row = 0; row < this->num_blocks; ++row) {
-                for (long col = 0; col < this->num_blocks; ++col) {
+                      " self_edges: " << correct.blockmatrix()->get(block, block) << " block size: " <<
+                      correct.block_size(block) << std::endl;
+            std::cerr << "ERROR::Checking matrix for errors..." << std::endl;
+            for (long row = 0; row < this->_num_blocks; ++row) {
+                for (long col = 0; col < this->_num_blocks; ++col) {
         //            long this_val = this->blockmatrix()->get(row, col);
                     long correct_val = correct.blockmatrix()->get(row, col);
                     if (!this->blockmatrix()->validate(row, col, correct_val)) {
-                        std::cout << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
+                        std::cerr << "matrix[" << row << "," << col << "] is " << this->blockmatrix()->get(row, col) <<
                         " but should be " << correct_val << std::endl;
                         return false;
                     }
         //            if (this_val != correct_val) return false;
                 }
             }
-            std::cout << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
+            std::cerr << "ERROR::Block degrees not valid, but no errors were found in matrix" << std::endl;
             return false;
+        }
+    }
+    if (this->_in_degree_histogram.size() != correct._in_degree_histogram.size()) {
+        std::cerr << "ERROR::in degree histogram sizes don't match: " << this->_in_degree_histogram.size() << " != "
+        << correct._in_degree_histogram.size() << std::endl;
+        return false;
+    }
+    if (this->_out_degree_histogram.size() != correct._out_degree_histogram.size()) {
+        std::cerr << "ERROR::out degree histogram sizes don't match: " << this->_out_degree_histogram.size() << " != "
+                  << correct._out_degree_histogram.size() << std::endl;
+        return false;
+    }
+    for (long block = 0; block < this->_num_blocks; ++block) {
+        if (this->_in_degree_histogram[block].size() != correct._in_degree_histogram[block].size()) {
+            std::cerr << "ERROR::in degree histogram[" << block << "] sizes don't match: "
+                      << this->_in_degree_histogram[block].size() << " != "
+                      << correct._in_degree_histogram[block].size() << std::endl;
+            return false;
+        }
+        if (this->_out_degree_histogram[block].size() != correct._out_degree_histogram[block].size()) {
+            std::cerr << "ERROR::out degree histogram[" << block << "] sizes don't match: "
+                      << this->_out_degree_histogram[block].size() << " != "
+                      << correct._out_degree_histogram[block].size() << std::endl;
+            return false;
+        }
+        for (const std::pair<long, long> &bar : this->_in_degree_histogram[block]) {
+            if (bar.second != correct._in_degree_histogram[block][bar.first]) {
+                std::cerr << "ERROR: in_degree histogram does not match at [" << block << "][" << bar.first << "]: "
+                          << "expected value = " << correct._in_degree_histogram[block][bar.first] << " but got: "
+                          << bar.second << std::endl;
+                return false;
+            }
+        }
+        for (const std::pair<long, long> &bar : this->_out_degree_histogram[block]) {
+            if (bar.second != correct._out_degree_histogram[block][bar.first]) {
+                std::cerr << "ERROR: out_degree histogram does not match at [" << block << "][" << bar.first << "]: "
+                          << "expected value = " << correct._out_degree_histogram[block][bar.first] << " but got: "
+                          << bar.second << std::endl;
+                return false;
+            }
         }
     }
     return true;

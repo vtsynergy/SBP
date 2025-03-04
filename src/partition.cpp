@@ -33,7 +33,7 @@ Graph partition::partition_round_robin(const Graph &graph, long rank, long num_p
                 utils::insert(out_neighbors, from, to);
                 utils::insert(in_neighbors, to, from);
                 num_edges++;
-                while (self_edges.size() < num_vertices) {
+                while (self_edges.size() < (ulong) num_vertices) {
                     self_edges.push_back(false);
                 }
                 if (from == to) {
@@ -77,7 +77,7 @@ Graph partition::partition_random(const Graph &graph, long rank, long num_proces
             utils::insert(out_neighbors, from, to);
             utils::insert(in_neighbors, to, from);
             num_edges++;
-            while (self_edges.size() < num_vertices) {
+            while (self_edges.size() < (ulong) num_vertices) {
                 self_edges.push_back(false);
             }
             if (from == to) {
@@ -153,7 +153,7 @@ Graph partition::partition_snowball(const Graph &graph, long rank, long num_proc
             utils::insert(out_neighbors, from, to);
             utils::insert(in_neighbors, to, from);
             num_edges++;
-            while (self_edges.size() < num_vertices) {
+            while (self_edges.size() < (ulong) num_vertices) {
                 self_edges.push_back(false);
             }
             if (from == to) {

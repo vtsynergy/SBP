@@ -19,10 +19,8 @@
 #include "mpi_data.hpp"
 #include "sparse/dict_matrix.hpp"
 #include "sparse/dict_transpose_matrix.hpp"
-#include "sparse/typedefs.hpp"
+#include "typedefs.hpp"
 #include "../utils.hpp"
-
-extern double Load_balancing_time;
 
 extern std::vector<long> Rank_indices;
 
@@ -35,11 +33,11 @@ public:
     TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate)
             : TwoHopBlockmodel(num_blocks, block_reduction_rate) {
         // If the block assignment is not provided, use round-robin assignment
-        this->_my_blocks = utils::constant<bool>(this->num_blocks, false);
-        for (long i = mpi.rank; i < this->num_blocks; i += mpi.num_processes) {  // round-robin work mapping
+        this->_my_blocks = utils::constant<bool>(this->_num_blocks, false);
+        for (long i = mpi.rank; i < this->_num_blocks; i += mpi.num_processes) {  // round-robin work mapping
             this->_my_blocks[i] = true;
         }
-        this->_in_two_hop_radius = utils::constant<bool>(this->num_blocks, true);  // no distribution
+        this->_in_two_hop_radius = utils::constant<bool>(this->_num_blocks, true);  // no distribution
         this->initialize_edge_counts(graph);
     }
     TwoHopBlockmodel(long num_blocks, const Graph &graph, double block_reduction_rate,
@@ -64,6 +62,8 @@ public:
     bool owns_block(long block) const;
     /// Returns true if this blockmodel owns the compute for the requested vertex.
     bool owns_vertex(long vertex) const;
+    /// Removes empty blocks from the blockmodel
+    void prune(const Graph &graph);
     /// Returns true if this blockmodel owns storage for the requested block.
     bool stores(long block) const;
     bool validate(const Graph &graph) const;

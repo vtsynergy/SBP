@@ -1,37 +1,33 @@
 
-//#include <chrono>
+#include <chrono>
 //#include <execinfo.h>
-//#include <fenv.h>  // break on nan or infinity
+//#include <fenv.h>  // break on nans or infs
 #include <iostream>
 #include <mpi.h>
 //#include <signal.h>
 #include <string>
 
-//#include <nlohmann/json.hpp>
-
 #include "args.hpp"
 #include "blockmodel/blockmodel.hpp"
-#include "distributed/dist_sbp.hpp"
+#include "distributed/dist_top_down_sbp.hpp"
 #include "distributed/dist_finetune.hpp"
+#include "top_down_sbp.hpp"
 #include "entropy.hpp"
 #include "evaluate.hpp"
 #include "finetune.hpp"
-#include "globals.hpp"
 #include "graph.hpp"
-//#include "mpi_data.hpp"
+#include "globals.hpp"
+#include "mpi_data.hpp"
 #include "partition.hpp"
-#include "rng.hpp"
 #include "sample.hpp"
-#include "sbp.hpp"
-//#include "typedefs.hpp"
 #include "utils.hpp"
-
-//MPI_t mpi;
-//Args args;
 
 //double sample_time = 0.0;
 //double sample_extend_time = 0.0;
 //double finetune_time = 0.0;
+
+//MPI_t mpi;
+//Args args;
 
 struct Partition {
     Graph graph;
@@ -40,65 +36,49 @@ struct Partition {
 
 void evaluate_partition(Graph &graph, Blockmodel &blockmodel, double runtime) {
     if (mpi.rank != 0) return;
-    utils::write_json(blockmodel.block_assignment(), blockmodel.getOverall_entropy(),
-                      timers::MCMC_moves,timers::MCMC_iterations, runtime);
+    utils::write_json(blockmodel.block_assignment(), blockmodel.getOverall_entropy(), timers::MCMC_moves,
+                      timers::MCMC_iterations, runtime);
+    std::cout << std::boolalpha << "args.evaluate: " << args.evaluate << std::endl;
     if (!args.evaluate) return;
+    std::cout << "evaluatin' ..." << std::endl;
     evaluate::Eval result = evaluate::evaluate_blockmodel(graph, blockmodel);
     std::cout << "Final F1 score = " << result.f1_score << std::endl;
     std::cout << "Community detection runtime = " << runtime << "s" << std::endl;
-    if (std::isnan(result.nmi) || std::isinf(result.nmi)) {
-        result.nmi = 0.00;
-    }
     evaluate::write_results(graph, result, runtime);
 }
 
 void run(Partition &partition) {
     timers::total_num_islands = partition.graph.num_islands();
     if (mpi.num_processes > 1) {
-        partition.blockmodel = sbp::dist::stochastic_block_partition(partition.graph, args);
+        std::cout << "Distributed TopDown SBP not fully implemented yet!" << std::endl;
+        partition.blockmodel = divisive::dist::run(partition.graph);
     } else {
-        partition.blockmodel = sbp::stochastic_block_partition(partition.graph, args);
+        partition.blockmodel = divisive::run(partition.graph);
     }
+    double mdl = partition.blockmodel.getOverall_entropy();
+    utils::save_partial_profile(-1, -1, mdl, entropy::normalize_mdl_v1(mdl, partition.graph),
+                                partition.blockmodel.num_blocks());
 }
 
 int main(int argc, char* argv[]) {
     // signal(SIGABRT, handler);
-    // long rank, num_processes;
+    // int rank, num_processes;
     MPI_Init(&argc, &argv);
-    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-    MPI_Comm_rank(mpi.comm, &mpi.rank);
-    MPI_Comm_size(mpi.comm, &mpi.num_processes);
-
-    // std::cout << "rank: " << mpi.rank << " np: " << mpi.num_processes << std::endl;
-
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi.num_processes);
     args = Args(argc, argv);
-    rng::init_generators();
-
+    rng::init_generators();  // TO-DO: automagically init generators. Initialized = false?
+    DIVISIVE_SBP = true;
     if (mpi.rank == 0) {
         std::cout << "Number of processes = " << mpi.num_processes << std::endl;
-        // std::cout << "Parsed out the arguments" << std::endl;
     }
     // TODO: figure out how to distribute the graph if it doesn't fit in memory
-    Graph graph = Graph::load();
-    sample::Sample detached;
     Partition partition;
+    partition.graph = Graph::load();
     double start = MPI_Wtime();
-    if (args.detach) {  // if we're getting rid of vertices with degree < 2
-        detached = sample::detach(graph);
-        partition.graph = std::move(detached.graph);
-        std::cout << "detached num vertices: " << partition.graph.num_vertices() << " E: "
-                  << partition.graph.num_edges() << std::endl;
-    } else {
-        partition.graph = std::move(graph);
-    }
-    if (args.samplesize <= 0.0) {
-        std::cerr << "ERROR " << "Sample size of " << args.samplesize << " is too low. Must be greater than 0.0" << std::endl;
-        exit(-5);
-    }
     if (args.samplesize < 1.0) {
         double sample_start_t = MPI_Wtime();
         std::cout << "Running sampling with size: " << args.samplesize << std::endl;
-//        sample::Sample s = sample::max_degree(partition.graph);
         sample::Sample s = sample::sample(partition.graph);
         if (mpi.num_processes > 1) {
             MPI_Bcast(s.mapping.data(), (int) partition.graph.num_vertices(), MPI_LONG, 0, mpi.comm);
@@ -127,15 +107,6 @@ int main(int argc, char* argv[]) {
         double finetune_start_t = MPI_Wtime();
         if (mpi.num_processes > 1) {
             MPI_Bcast(assignment.data(), (int) assignment.size(), MPI_LONG, 0, mpi.comm);
-            // if (mpi.rank > 0) {
-            //     std::vector<long> vertices;
-            //    for (const long &mapped_id : s.mapping) {
-            //        if (mapped_id >= 0)
-            //            vertices.push_back(mapped_id);
-            //    }
-            //    s = sample::from_vertices(partition.graph, vertices, s.mapping);
-            //}
-            // MPI_Barrier(mpi.comm);
             Rank_indices = std::vector<long>();  // reset the rank_indices
             auto blockmodel = TwoHopBlockmodel(sample_partition.blockmodel.num_blocks(), partition.graph, 0.5, assignment);
             partition.blockmodel = finetune::dist::finetune_assignment(blockmodel, partition.graph);
@@ -150,15 +121,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Running without sampling." << std::endl;
         run(partition);
     }
-    if (args.detach) {
-        std::cout << "Reattaching island and 1-degree vertices" << std::endl;
-        partition.blockmodel = sample::reattach(graph, partition.blockmodel, detached);
-    } else {
-        graph = std::move(partition.graph);
-    }
     // evaluate
     double end = MPI_Wtime();
-    evaluate_partition(graph, partition.blockmodel, end - start);
-//    finetune::dist::free_mpi_window();
+    evaluate_partition(partition.graph, partition.blockmodel, end - start);
+
     MPI_Finalize();
 }

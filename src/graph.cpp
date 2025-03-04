@@ -3,17 +3,22 @@
 #include <execution>
 #include "mpi.h"
 
+#include "globals.hpp"
 #include "utils.hpp"
 #include "mpi_data.hpp"
 
 void Graph::add_edge(long from, long to) {
-    utils::insert_nodup(this->_out_neighbors, from , to);
-    utils::insert_nodup(this->_in_neighbors, to, from);
+    utils::insert(this->_out_neighbors, from , to);
+    utils::insert(this->_in_neighbors, to, from);
     this->_num_edges++;
     if (from == to) {
         this->_self_edges[from] = true;
     }
     // TODO: undirected version?
+}
+
+long Graph::degree(size_t v) const {
+    return long(this->_out_neighbors[v].size() + this->_in_neighbors[v].size() - this->_self_edges[v]);
 }
 
 std::vector<long> Graph::degrees() const {
@@ -77,9 +82,9 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
         args.undirected = true;
     }
     // Find index at which edges start
-    long index = 0;
+    ulong index = 0;
     long num_vertices, num_edges;
-    for (long i = 0; i < csv_contents.size(); ++i) {
+    for (ulong i = 0; i < csv_contents.size(); ++i) {
         const std::vector<std::string> &line = csv_contents[i];
 //        std::cout << "line: ";
 //        utils::print<std::string>(line);
@@ -96,17 +101,17 @@ Graph Graph::load_matrix_market(std::vector<std::vector<std::string>> &csv_conte
     NeighborList out_neighbors;
     NeighborList in_neighbors;
     std::vector<bool> self_edges = utils::constant<bool>(num_vertices, false);
-    for (long i = index; i < csv_contents.size(); ++i) {
+    for (ulong i = index; i < csv_contents.size(); ++i) {
         const std::vector<std::string> &edge = csv_contents[i];
         long from = std::stoi(edge[0]) - 1;  // Graph storage format indices vertices from 1, not 0
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
-        utils::insert_nodup(in_neighbors, to , from);
+        utils::insert(out_neighbors, from , to);
+        utils::insert(in_neighbors, to , from);
         if (args.undirected && from != to) {  // Force symmetric graph to be directed by including reverse edges.
-            utils::insert_nodup(out_neighbors, to, from);
-            utils::insert_nodup(in_neighbors, from , to);
+            utils::insert(out_neighbors, to, from);
+            utils::insert(in_neighbors, from , to);
             num_edges++;
         }
         if (from == to) {
@@ -184,9 +189,9 @@ void Graph::parse_directed(NeighborList &in_neighbors, NeighborList &out_neighbo
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
-        utils::insert_nodup(in_neighbors, to, from);
-        while (self_edges.size() < num_vertices) {
+        utils::insert(out_neighbors, from , to);
+        utils::insert(in_neighbors, to, from);
+        while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
         if (from == to) {
@@ -208,10 +213,10 @@ void Graph::parse_undirected(NeighborList &in_neighbors, NeighborList &out_neigh
         long to = std::stoi(edge[1]) - 1;
         num_vertices = (from + 1 > num_vertices) ? from + 1 : num_vertices;
         num_vertices = (to + 1 > num_vertices) ? to + 1 : num_vertices;
-        utils::insert_nodup(out_neighbors, from , to);
+        utils::insert(out_neighbors, from , to);
         if (from != to)
-            utils::insert_nodup(out_neighbors, to, from);
-        while (self_edges.size() < num_vertices) {
+            utils::insert(out_neighbors, to, from);
+        while (self_edges.size() < (size_t) num_vertices) {
             self_edges.push_back(false);
         }
         if (from == to) {
@@ -236,7 +241,8 @@ void Graph::sort_vertices() {
 //    double start_t = MPI_Wtime();
     std::vector<long> vertex_degrees = this->degrees();
     std::vector<int> indices = utils::range<int>(0, this->_num_vertices);
-    std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + int(args.mh_percent * this->_num_vertices),
+    // std::nth_element(std::execution::par_unseq, indices.data(), indices.data() + int(args.mh_percent * this->_num_vertices),
+    std::stable_sort(std::execution::par_unseq, indices.data(),
               indices.data() + indices.size(), [&vertex_degrees](size_t i1, size_t i2) {
               return vertex_degrees[i1] > vertex_degrees[i2];
     });
@@ -266,7 +272,7 @@ void Graph::degree_product_sort() {
 //    double start_t = MPI_Wtime();
     std::vector<std::pair<std::pair<long, long>, long>> edge_info = this->sorted_edge_list();
     MapVector<bool> selected;
-    int num_to_select = int(args.mh_percent * this->_num_vertices);
+    auto num_to_select = size_t(args.mh_percent * this->_num_vertices);
     int edge_index = 0;
     while (selected.size() < num_to_select) {
         const std::pair<std::pair<long, long>, long> &edge = edge_info[edge_index];
@@ -303,7 +309,7 @@ std::vector<std::pair<std::pair<long, long>, long>> Graph::sorted_edge_list() co
             edge_info.emplace_back(std::make_pair(source, dest), information);
         }
     }
-    std::sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
+    std::stable_sort(std::execution::par_unseq, edge_info.begin(), edge_info.end(), [](const auto &i1, const auto &i2) {
         return i1.second > i2.second;
     });
     return edge_info;

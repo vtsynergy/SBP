@@ -3,7 +3,7 @@
 #define TCLAP_WRAPPER_ARGS
 
 #include <iostream>
-#include <limits.h>
+#include <limits>
 #include <omp.h>
 #include <string>
 #include <unistd.h>
@@ -21,6 +21,7 @@ public:  // Everything in here is public, because why not?
     std::string blocksizevar;
     size_t cachesize;
     std::string csv;  // TODO: get rid of this - results now saved to json
+    bool degreecorrected;
     bool degreeproductsort;
     std::string delimiter;
     bool detach;
@@ -31,18 +32,25 @@ public:  // Everything in here is public, because why not?
     bool greedy;
     std::string json;
     float mh_percent;
+    bool mix;
     bool modularity;
     bool nodelta;  // TODO: if delta is much faster, get rid of this and associated methods.
+    bool noduplicates;
+    bool nonblocking;
+    bool nonparametric;
     int numvertices;
+    bool ordered;
     std::string output_file;
     std::string overlap;
     double samplesize;
     std::string samplingalg;
+    std::string split;
+    std::string splitinit;
     int subgraphs;
     std::string subgraphpartition;
     std::string tag;
     int threads;
-    bool transpose;
+    bool no_transpose;
     std::string type;
     bool undirected;
 
@@ -76,6 +84,8 @@ public:  // Everything in here is public, because why not?
                                               "without the suffix, e.g.:\n"
                                               "if --csv=eval/test, results will be stored in eval/test.csv.",
                                               false, "./eval/test", "path", parser);
+            TCLAP::SwitchArg _degreecorrected("", "degreecorrected", "If set, will compute the degree-corrected description length.",
+                                              parser, false);
             TCLAP::SwitchArg _degreeproductsort("", "degreeproductsort", "If set, will use edge degree products to split vertices "
                                                 "into high and low influence sets.", parser, false);
             TCLAP::ValueArg<std::string> _delimiter("", "delimiter", "The delimiter used in the file storing the graph",
@@ -104,12 +114,20 @@ public:  // Everything in here is public, because why not?
                                                false, "output", "path", parser);
             TCLAP::ValueArg<float> _mh_percent("m", "mh_percent", "The percentage of vertices to process sequentially if alg==hybrid_mcmc",
                                                false, 0.075, "float", parser);
+            TCLAP::SwitchArg _mix("", "mix", "If set, will run block merges after golden ratio is found", parser, false);
             TCLAP::SwitchArg _modularity("", "modularity", "If set, will compute modularity at the end of execution.",
                                          parser, false);
             TCLAP::SwitchArg _nodelta("", "nodelta", "If set, do not use the blockmodel deltas for "
                                       "entropy calculations.", parser, false);
+            TCLAP::SwitchArg _noduplicates("", "noduplicates", "If set, will check for duplicate edges in the graph "
+                                           "and ensure that they're not inserted twice. Otherwise, the graph needs to "
+                                           "be manually checked to ensure that it's not a multigraph.", parser, false);
+            TCLAP::SwitchArg _nonblocking("", "nonblocking", "If set, will use MPI nonblocking single-sided communication in the MCMC phase.", parser, false);
+            TCLAP::SwitchArg _nonparametric("", "nonparametric", "If set, will use the nonparametric blockmodel entropy computations.",
+                                            parser, false);
             TCLAP::ValueArg<int> _numvertices("n", "numvertices", "The number of vertices in the graph", false, 1000,
                                               "int", parser);
+            TCLAP::SwitchArg _ordered("", "ordered", "If set, will loop through vertices in an ordered fashion", parser, false);
             TCLAP::ValueArg<std::string> _output_file("", "output_file", "The filename of the json output. Will be stored in <json>/<output_file>",
                                                       false, "", "string that ends in .json", parser);
             TCLAP::ValueArg<std::string> _overlap("o", "overlap", "The degree of overlap between communities", false,
@@ -118,6 +136,10 @@ public:  // Everything in here is public, because why not?
                                                false, 1.0, "0 < x <= 1.0", parser);
             TCLAP::ValueArg<std::string> _samplingalg("", "samplingalg", "The sampling algorithm to use, if --samplesize < 1.0",
                                                       false, "random", "random|max_degree|expansion_snowball", parser);
+            TCLAP::ValueArg<std::string> _split("", "split", "The type of split to use in TopDownSBP", false, "random",
+                                                "random|snowball|single-snowball", parser);
+            TCLAP::ValueArg<std::string> _splitinit("", "splitinit", "The type of split initialization to use", false, "random",
+                                                    "random|degree-weighted|high-degree", parser);
             TCLAP::ValueArg<int> _subgraphs("", "subgraphs", "If running divide and conquer SBP, the number of subgraphs"
                                             "to partition the data into. Must be <= number of MPI ranks. If <= 1, set to number of MPI ranks",
                                             false, 0, "<= number of MPI ranks>", parser);
@@ -128,8 +150,8 @@ public:  // Everything in here is public, because why not?
                                               "string or param1=value1;param2=value2", parser);
             TCLAP::ValueArg<int> _threads("", "threads", "The number of OpenMP threads to use. If less than 1, will set "
                                           "number of threads to number of logical CPU cores", false, 1, "int", parser);
-            TCLAP::SwitchArg _transpose("", "transpose", "If set, will also store the matrix transpose for faster column"
-                                        "indexing. Default = True", parser, true);
+            TCLAP::SwitchArg _notranspose("", "no_transpose", "If set, will NOT store the matrix no_transpose for faster column"
+                                        "indexing. Default = false", parser, false);
             TCLAP::ValueArg<std::string> _type("t", "type", "The type of streaming/name of the graph", false, "static",
                                                "string", parser);
             TCLAP::SwitchArg _undirected("", "undirected", "If set, graph will be treated as undirected", parser,
@@ -142,6 +164,7 @@ public:  // Everything in here is public, because why not?
             this->blocksizevar = _blocksizevar.getValue();
             this->cachesize = _cachesize.getValue();
             this->csv = _csv.getValue();
+            this->degreecorrected = _degreecorrected.getValue();
             this->degreeproductsort = _degreeproductsort.getValue();
             this->delimiter = _delimiter.getValue();
             this->detach = _detach.getValue();
@@ -152,9 +175,14 @@ public:  // Everything in here is public, because why not?
             this->greedy = _greedy.getValue();
             this->json = _json.getValue();
             this->mh_percent = _mh_percent.getValue();
+            this->mix = _mix.getValue();
             this->modularity = _modularity.getValue();
             this->nodelta = _nodelta.getValue();
+            this->noduplicates = _noduplicates.getValue();
+            this->nonblocking = _nonblocking.getValue();
+            this->nonparametric = _nonparametric.getValue();
             this->numvertices = _numvertices.getValue();
+            this->ordered = _ordered.getValue();
             this->output_file = _output_file.getValue();
             if (this->output_file.empty()) {
                 std::ostringstream output_file_stream;
@@ -164,13 +192,19 @@ public:  // Everything in here is public, because why not?
             this->overlap = _overlap.getValue();
             this->samplesize = _samplesize.getValue();
             this->samplingalg = _samplingalg.getValue();
+            this->split = _split.getValue();
+            this->splitinit = _splitinit.getValue();
             this->subgraphs = _subgraphs.getValue();
             this->subgraphpartition = _subgraphpartition.getValue();
             this->tag = _tag.getValue();
             this->threads = _threads.getValue();
-            this->transpose = _transpose.getValue();
+            this->no_transpose = _notranspose.getValue();
             this->type = _type.getValue();
             this->undirected = _undirected.getValue();
+            if (this->nonparametric) {
+                std::cout << "NOTE: using nonparametric entropy, setting greedy to false" << std::endl;
+                this->greedy = false;
+            }
         } catch (TCLAP::ArgException &exception) {
             std::cerr << "ERROR " << "ERROR: " << exception.error() << " for argument " << exception.argId() << std::endl;
             exit(-1);
@@ -178,6 +212,6 @@ public:  // Everything in here is public, because why not?
     }
 };
 
-extern Args args;
+//extern Args args;
 
 #endif // TCLAP_WRAPPER_ARGS

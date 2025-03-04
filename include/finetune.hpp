@@ -14,6 +14,7 @@
 #include "blockmodel/blockmodel.hpp"
 #include "blockmodel/blockmodel_triplet.hpp"
 #include "blockmodel/sparse/delta.hpp"
+#include "globals.hpp"
 #include "utils.hpp"
 #include "typedefs.hpp"
 
@@ -21,19 +22,6 @@
  * FINE-TUNE
  ******************/
 namespace finetune {
-
-/// The total number of MCMC iterations completed, to be dynamically updated during execution.
-extern long MCMC_iterations;
-
-/// The total amount of time spent performing MCMC iterations, to be dynamically updated during execution.
-extern double MCMC_time;
-
-/// The total amount of time spent in the main parallelizable loop of the MCMC iterations, to by dynamically
-/// updated during execution.
-extern double MCMC_sequential_time, MCMC_parallel_time, MCMC_vertex_move_time;
-
-/// The number of MCMC moves performed.
-extern ulong MCMC_moves;
 
 //struct Neighbors {
 //    EdgeWeights out_neighbors;
@@ -47,9 +35,12 @@ static const long MAX_NUM_ITERATIONS = 100;   // Maximum number of finetuning it
 
 bool accept(double delta_entropy, double hastings_correction);
 
-Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &asynchronous_gibbs(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
-//Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &asynchronous_gibbs_load_balanced(Blockmodel &blockmodel, const Graph &graph,
+                                             bool golden_ratio_not_reached);
+
+//Blockmodel &asynchronous_gibbs_v2(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 EdgeWeights block_edge_weights(const std::vector<long> &block_assignment, const EdgeWeights &neighbor_weights);
 
@@ -62,12 +53,12 @@ Delta blockmodel_delta(long vertex, long current_block, long proposed_block, con
 /// Counts the number of neighboring blocks for low degree vertices in the graph. Used for load balancing.
 std::pair<std::vector<long>, long> count_low_degree_block_neighbors(const Graph &graph, const Blockmodel &blockmodel);
 
-bool early_stop(long iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                 std::vector<double> &delta_entropies);
 
 bool early_stop(long iteration, double initial_entropy, std::vector<double> &delta_entropies);
 
-bool early_stop_parallel(long iteration, BlockmodelTriplet &blockmodels, double initial_entropy,
+bool early_stop_parallel(long iteration, bool golden_ratio_not_reached, double initial_entropy,
                          std::vector<double> &delta_entropies, std::vector<long> &vertex_moves);
 
 [[maybe_unused]] EdgeCountUpdates edge_count_updates(ISparseMatrix *blockmodel, long current_block, long proposed_block,
@@ -93,19 +84,27 @@ VertexMove_v2 eval_vertex_move_v2(long vertex, long current_block, utils::Propos
 
 /// Evaluates a potential move of `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using
 /// blockmodel deltas.
-VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                                    EdgeWeights &in_edges);
+//VertexMove eval_vertex_move_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
+//                                    const Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+//                                    EdgeWeights &in_edges);
 
 /// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
 /// Asynchronous Gibbs on the rest.
-Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &hybrid_mcmc(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 /// Runs the synchronous Metropolis Hastings algorithm on the high-degree vertices of `blockmodel`, and
 /// Asynchronous Gibbs on the rest. Attempts to manually balance the workload using number of block neighbors.
-Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &hybrid_mcmc_load_balanced(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 [[maybe_unused]] Blockmodel &finetune_assignment(Blockmodel &blockmodel, Graph &graph);
+
+/// Returns a vector of vectors, containing the vertices to be processed by each OpenMP thread.
+std::vector<std::vector<long>> load_balance(const Graph &graph);
+
+/// Returns a vector of vectors, containing the vertices to be processed by each OpenMP thread. The load balancing is
+/// performed on the subset of `all_vertices` bounded by `start_index` and `end_index`.
+std::vector<std::vector<long>> load_balance(const Graph &graph, const std::vector<long> &all_vertices,
+                                            size_t start_index, size_t end_index);
 
 /// Returns a vector which determines which blocks a thread is responsible for.
 std::vector<bool> load_balance(const Blockmodel &blockmodel, const std::vector<std::pair<long, long>> &block_properties);
@@ -117,17 +116,20 @@ std::vector<bool> load_balance_vertices(const Graph &graph, const std::vector<st
 std::vector<bool> load_balance_block_neighbors(const Graph &graph, const Blockmodel &blockmodel,
                                                const std::pair<std::vector<long>, long> &block_neighbors);
 
+/// Runs one of the available MCMC algorithms.
+Blockmodel &mcmc(int iteration, const Graph &graph, Blockmodel &blockmodel, BlockmodelTriplet &blockmodel_triplet);
+
 /// Runs the synchronous Metropolis Hastings algorithm on `blockmodel`.
-Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, BlockmodelTriplet &blockmodels);
+Blockmodel &metropolis_hastings(Blockmodel &blockmodel, const Graph &graph, bool golden_ratio_not_reached);
 
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic.
 VertexMove move_vertex(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal, Blockmodel &blockmodel,
                        const Graph &graph, EdgeWeights &out_edges, EdgeWeights &in_edges);
 
 /// Moves `vertex` from `current_block` to `proposal.proposal` using MCMC logic without using blockmodel deltas.
-VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
-                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
-                               EdgeWeights &in_edges);
+//VertexMove move_vertex_nodelta(long vertex, long current_block, utils::ProposalAndEdgeCounts proposal,
+//                               Blockmodel &blockmodel, const Graph &graph, EdgeWeights &out_edges,
+//                               EdgeWeights &in_edges);
 
 /// Computes the overall entropy of the given blockmodel.
 //double mdl(const Blockmodel &blockmodel, long num_vertices, long num_edges);
@@ -140,6 +142,10 @@ VertexMove propose_gibbs_move(const Blockmodel &blockmodel, long vertex, const G
 
 /// Proposes a new Asynchronous Gibbs vertex move.
 VertexMove_v2 propose_gibbs_move_v2(const Blockmodel &blockmodel, long vertex, const Graph &graph);
+
+/// Proposes a new Asynchronous Gibbs vertex move. Contains additional information needed for nonparametric entropy
+/// computations. Should be preferred over _v2.
+VertexMove_v3 propose_gibbs_move_v3(const Blockmodel &blockmodel, long vertex, const Graph &graph);
 
 /// Sorts blocks in order of number of neighbors - used for load balancing.
 std::vector<std::pair<long,long>> sort_blocks_by_neighbors(const Blockmodel &blockmodel);

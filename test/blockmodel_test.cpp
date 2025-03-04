@@ -9,7 +9,7 @@
 class BlockmodelTest : public ToyExample {
 protected:
     void SetUp() override {
-        args.transpose = true;
+        args.no_transpose = false;
         ToyExample::SetUp();
     }
 };
@@ -17,7 +17,7 @@ protected:
 class BlockmodelComplexTest : public ComplexExample {
 protected:
     void SetUp() override {
-        args.transpose = true;
+        args.no_transpose = false;
         ComplexExample::SetUp();
     }
 };
@@ -35,9 +35,9 @@ TEST_F(BlockmodelTest, BlockDegreesAreCorrectlyInstantiated) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(7, 2, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V7, 2, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -49,9 +49,9 @@ TEST_F(BlockmodelTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(7, 2, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V7, 2, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -63,9 +63,9 @@ TEST_F(BlockmodelTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
-    B.move_vertex(7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V7, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -77,9 +77,9 @@ TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
 }
 
 TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasDynamicBlockDegreesIsCorrect) {
-    B.move_vertex(7, Deltas, Proposal);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V7, Deltas, Proposal);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -92,8 +92,8 @@ TEST_F(BlockmodelTest, MoveVertexWithBlockmodelDeltasDynamicBlockDegreesIsCorrec
 
 TEST_F(BlockmodelTest, MoveVertexWithVertexEdgesIsCorrect) {
     B.move_vertex(Move);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -112,8 +112,8 @@ TEST_F(BlockmodelTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
     B.print_blockmatrix();
     std::cout << "Actual blockmatrix: " << std::endl;
     B3.print_blockmatrix();
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B3.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -125,9 +125,9 @@ TEST_F(BlockmodelTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(6, 3, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V6, 3, Proposal.proposal, Updates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -139,9 +139,9 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithDenseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
-    B.move_vertex(6, 3, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V6, 3, Proposal.proposal, SparseUpdates, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -153,9 +153,9 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithSparseEdgeCountUpdatesIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
-    B.move_vertex(6, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V6, Proposal.proposal, Deltas, new_block_degrees.block_degrees_out, new_block_degrees.block_degrees_in, new_block_degrees.block_degrees);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -167,9 +167,9 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasIsCorrect) {
 }
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithBlockmodelDeltasAndOnTheFlyBlockDegreesIsCorrect) {
-    B.move_vertex(6, Deltas, Proposal);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    B.move_vertex(V6, Deltas, Proposal);
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -188,8 +188,8 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithVertexEdgesIsCorrect) {
     B.print_blockmatrix();
     std::cout << "Actual blockmatrix: " << std::endl;
     B2.print_blockmatrix();
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)
@@ -202,8 +202,8 @@ TEST_F(BlockmodelComplexTest, MoveVertexWithVertexEdgesIsCorrect) {
 
 TEST_F(BlockmodelComplexTest, MoveVertexWithSelfEdgesUsingVertexEdgesIsCorrect) {
     B.move_vertex(SelfEdgeMove);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long val1 = B.blockmatrix()->get(row, col);
             long val2 = B3.blockmatrix()->get(row, col);
             EXPECT_EQ(val1, val2)

@@ -31,8 +31,8 @@ TEST_F(DictMatrixTest, NeighborsAreCorrectlyReturned) {
 
 TEST_F(DictMatrixTest, UpdateEdgeCountsIsCorrect) {
     B.blockmatrix()->update_edge_counts(Deltas);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long correct_val = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(B.blockmatrix()->get(row, col), correct_val);
         }
@@ -57,8 +57,8 @@ TEST_F(DictMatrixComplexTest, NeighborsAreCorrectlyReturned) {
 
 TEST_F(DictMatrixComplexTest, UpdateEdgeCountsIsCorrect) {
     B.blockmatrix()->update_edge_counts(Deltas);
-    for (long row = 0; row < B.getNum_blocks(); ++row) {
-        for (long col = 0; col < B.getNum_blocks(); ++col) {
+    for (long row = 0; row < B.num_blocks(); ++row) {
+        for (long col = 0; col < B.num_blocks(); ++col) {
             long correct_val = B2.blockmatrix()->get(row, col);
             EXPECT_EQ(B.blockmatrix()->get(row, col), correct_val);
         }
